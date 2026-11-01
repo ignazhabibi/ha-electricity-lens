@@ -44,8 +44,9 @@ import {
   type LineFigure,
   type Stack,
 } from "./history-figures";
+import { cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
-import { DOMAIN, readCategories } from "./model";
+import { readCategories } from "./model";
 import { cardStyles } from "./styles";
 import type {
   Category,
@@ -137,7 +138,6 @@ export class EnergyPaybackHistoryCard extends LitElement {
   hass?: HomeAssistant;
   private _config: HistoryCardConfig = { type: "" };
   private _info?: FiguresInfo | null;
-  private _infoAt = 0;
   private _infoLoading = false;
   /** The date selection's period; null without one, undefined until known. */
   private _selected?: Range | null;
@@ -205,12 +205,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
   private async _loadInfo(): Promise<void> {
     if (!this.hass || this._infoLoading) return;
     this._infoLoading = true;
-    try {
-      this._info = await this.hass.callWS<FiguresInfo>({ type: `${DOMAIN}/figures` });
-    } catch {
-      this._info = null;
-    }
-    this._infoAt = Date.now();
+    this._info = await loadInfo(this.hass);
     this._infoLoading = false;
   }
 
@@ -370,10 +365,8 @@ export class EnergyPaybackHistoryCard extends LitElement {
       });
     }
     if (!this._savings) {
-      const infoStale = Date.now() - this._infoAt > REFRESH_MS;
-      if ((this._info === undefined || infoStale) && !this._infoLoading) {
-        void this._loadInfo();
-      }
+      if (this._info === undefined) this._info = cachedInfo();
+      if (infoStale() && !this._infoLoading) void this._loadInfo();
     }
     const plan = this._savings ? this._savingsPlan() : this._figurePlan();
     const stale = !this._loaded || Date.now() - this._loaded.at > REFRESH_MS;
@@ -532,8 +525,11 @@ export class EnergyPaybackHistoryCard extends LitElement {
     const t = this._localize;
     if (this._config.title) return this._config.title;
     if (this._savings) return t("history_title");
+    const figure = this._config.figure ?? "energy";
     const area = this._info?.areas.find((item) => item.id === this._config.area);
-    return area ? figureLabel(t, this._config.figure ?? "energy", area) : t("history_title");
+    if (area) return figureLabel(t, figure, area);
+    const generic = `figure.${figure}`;
+    return hasText(generic) ? t(generic) : t("history_title");
   }
 
   protected render(): TemplateResult {
@@ -556,7 +552,13 @@ export class EnergyPaybackHistoryCard extends LitElement {
     const sum = values.reduce<number>((total, value) => total + (value ?? 0), 0);
     const hasData = values.some((value) => value);
     const unit = loaded?.plan.unit ?? "money";
-    const missing = !this._savings && this._info !== undefined && !this._figurePlan() && !calculating;
+    // Missing only once the integration answered without this area.
+    const missing =
+      !this._savings &&
+      this._info !== undefined &&
+      !this._info?.areas.some(
+        (area) => area.id === this._config.area && area.statistics[this._config.figure ?? "energy"]?.length
+      );
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${title}</h2>

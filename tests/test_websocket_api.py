@@ -60,6 +60,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "energy": ["sensor.heat_pump"],
         "solar": ["energy_payback:device_sensor_heat_pump_solar"],
         "cost": ["energy_payback:device_sensor_heat_pump_cost"],
+        "cheap": ["energy_payback:device_sensor_heat_pump_cheap"],
         "saving": ["energy_payback:heat_pump_saving"],
         "heat": ["energy_payback:heat_pump_heat"],
         "alternative_cost": ["energy_payback:heat_pump_alternative_cost"],

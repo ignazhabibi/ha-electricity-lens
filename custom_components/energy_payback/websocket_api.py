@@ -137,6 +137,17 @@ async def async_figures(
                 energy=meters,
                 solar=[household_statistic_id(f"{device}_solar") for device in devices],
                 cost=[household_statistic_id(f"{device}_cost") for device in devices],
+                **{
+                    level: [
+                        household_statistic_id(f"{device}_{level}")
+                        for device in devices
+                    ]
+                    for level, threshold in (
+                        (LEVEL_CHEAP, cheap_until),
+                        (LEVEL_EXPENSIVE, expensive_from),
+                    )
+                    if threshold is not None
+                },
                 saving=[saving_statistic_id(category)],
                 **{
                     figure: [category_statistic_id(category, figure)]

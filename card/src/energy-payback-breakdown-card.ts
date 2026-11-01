@@ -10,8 +10,8 @@ import { PERIODS, type PeriodOption } from "./energy-payback-figures-card";
 import { formatter, type Format } from "./format";
 import { fixedRange, rangeLabel, type Range } from "./history";
 import { barSeries, type BarSeries } from "./history-figures";
+import { cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
-import { DOMAIN } from "./model";
 import { cardStyles } from "./styles";
 import { loadSums } from "./sums";
 import type { FigureArea, FiguresInfo, HomeAssistant, StatisticMetadata } from "./types";
@@ -66,7 +66,6 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   hass?: HomeAssistant;
   private _config: BreakdownCardConfig = { type: "" };
   private _info?: FiguresInfo | null;
-  private _infoAt = 0;
   private _infoLoading = false;
   private _selected?: Range | null;
   private _sums?: { key: string; at: number; values: Record<string, number>; names: Record<string, string>; failed: boolean };
@@ -182,12 +181,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   private async _loadInfo(): Promise<void> {
     if (!this.hass || this._infoLoading) return;
     this._infoLoading = true;
-    try {
-      this._info = await this.hass.callWS<FiguresInfo>({ type: `${DOMAIN}/figures` });
-    } catch {
-      this._info = null;
-    }
-    this._infoAt = Date.now();
+    this._info = await loadInfo(this.hass);
     this._infoLoading = false;
   }
 
@@ -217,8 +211,8 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     if (!this.hass) return;
     if (changed.has("hass") || changed.has("_config")) this._follow();
     if (!this._byStatistics) {
-      const stale = Date.now() - this._infoAt > REFRESH_MS;
-      if ((this._info === undefined || stale) && !this._infoLoading) void this._loadInfo();
+      if (this._info === undefined) this._info = cachedInfo();
+      if (infoStale() && !this._infoLoading) void this._loadInfo();
       if (!this._info) return;
     }
     const range = this._range();

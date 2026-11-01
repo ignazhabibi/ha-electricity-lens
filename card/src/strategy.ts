@@ -20,9 +20,14 @@ const full = { grid_options: { columns: "full" } };
 const half = { grid_options: { columns: 6 } };
 const wide = { grid_options: { columns: 12 } };
 
-/** One key figure as a small card in the sidebar, two in a row. */
-const stat = (area: string, figure: string, options: Card = {}): Card =>
-  card("energy-lens-figures-card", { tiles: [{ area, figure }], ...half, ...options });
+/** One key figure as a small card in the sidebar, two in a row. name
+ * replaces the figure's name, for example without the area in its own view. */
+const stat = (area: string, figure: string, options: Card = {}, name?: string): Card =>
+  card("energy-lens-figures-card", {
+    tiles: [{ area, figure, ...(name ? { name } : {}) }],
+    ...half,
+    ...options,
+  });
 
 /** A view as the energy dashboards before it: the main column with the date
  * selection on top, and a sidebar with key figures and shares. Tabs show the
@@ -53,6 +58,11 @@ const view = (
 
 /** The views for what the household has. */
 export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
+  /** A figure in the view of its own area, named without the area. */
+  const own = (area: string, figure: string, options: Card = {}): Card =>
+    stat(area, figure, options, t(`figure.${figure}` as Parameters<Localize>[0]));
+  const titled = (type: string, key: Parameters<Localize>[0], options: Card = {}) =>
+    card(type, { title: t(key), ...options });
   const has = (id: string): FigureArea | undefined =>
     info.areas.find((area) => area.id === id);
   const levels = info.levels.cheap_until !== null;
@@ -90,18 +100,18 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
       t("strategy.consumption"),
       "consumption",
       [
-        card("energy-usage-graph"),
-        ...(solar ? [card("energy-solar-graph")] : []),
+        titled("energy-usage-graph", "strategy.usage_graph"),
+        ...(solar ? [titled("energy-solar-graph", "strategy.solar_graph")] : []),
         card("energy-lens-history-card", {
           area: "household",
           figure: "energy",
           stack: "source",
           line: "price",
         }),
-        card("energy-devices-detail-graph"),
+        titled("energy-devices-detail-graph", "strategy.devices_graph"),
       ],
       [
-        card("energy-distribution", wide),
+        titled("energy-distribution", "strategy.distribution", wide),
         card("energy-lens-breakdown-card", { area: "household", by: "source", ...wide }),
         card("energy-self-sufficiency-gauge", half),
         ...(solar ? [card("energy-solar-consumed-gauge", half)] : []),
@@ -155,11 +165,11 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
           card("energy-lens-history-card", { area: "heat_pump", figure: "saving" }),
         ],
         [
-          stat("heat_pump", "scop"),
-          stat("heat_pump", "heat_price"),
-          stat("heat_pump", "price"),
-          stat("heat_pump", "solar_share"),
-          stat("heat_pump", "saving", wide),
+          own("heat_pump", "scop"),
+          own("heat_pump", "heat_price"),
+          own("heat_pump", "price"),
+          own("heat_pump", "solar_share"),
+          own("heat_pump", "saving", wide),
         ]
       )
     );
@@ -185,11 +195,11 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
           card("energy-lens-history-card", { area: "wallbox", figure: "saving" }),
         ],
         [
-          stat("wallbox", "cost_per_100km"),
-          stat("wallbox", "price"),
-          stat("wallbox", "solar_share"),
-          stat("wallbox", "distance"),
-          stat("wallbox", "saving", wide),
+          own("wallbox", "cost_per_100km"),
+          own("wallbox", "price"),
+          own("wallbox", "solar_share"),
+          own("wallbox", "distance"),
+          own("wallbox", "saving", wide),
         ]
       )
     );

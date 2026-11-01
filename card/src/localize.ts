@@ -158,6 +158,10 @@ const en = {
   "strategy.heating": "Heating",
   "strategy.charging": "Charging",
   "strategy.balance": "Balance",
+  "strategy.usage_graph": "Electricity balance",
+  "strategy.solar_graph": "Solar",
+  "strategy.devices_graph": "Individual devices",
+  "strategy.distribution": "Energy distribution",
   "strategy.not_loaded": "Set up the Energy Lens integration to see this dashboard.",
 };
 
@@ -321,6 +325,10 @@ const de: Record<Key, string> = {
   "strategy.heating": "Heizen",
   "strategy.charging": "Laden",
   "strategy.balance": "Bilanz",
+  "strategy.usage_graph": "Strombilanz",
+  "strategy.solar_graph": "Solar",
+  "strategy.devices_graph": "Einzelgeräte",
+  "strategy.distribution": "Stromverteilung",
   "strategy.not_loaded": "Richte die Integration Energy Lens ein, um dieses Dashboard zu sehen.",
 };
 

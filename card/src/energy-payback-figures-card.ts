@@ -33,8 +33,8 @@ import {
   type FixedPeriod,
   type Range,
 } from "./history";
+import { cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
-import { DOMAIN } from "./model";
 import { cardStyles } from "./styles";
 import type {
   FigureArea,
@@ -135,7 +135,6 @@ export class EnergyPaybackFiguresCard extends LitElement {
   private _config?: FiguresCardConfig;
   /** The integration's areas; null when it is not loaded. */
   private _info?: FiguresInfo | null;
-  private _infoAt = 0;
   private _infoLoading = false;
   private _selected?: Range | null;
   private _loaded?: Loaded;
@@ -230,14 +229,7 @@ export class EnergyPaybackFiguresCard extends LitElement {
   private async _loadInfo(): Promise<void> {
     if (!this.hass || this._infoLoading) return;
     this._infoLoading = true;
-    try {
-      this._info = await this.hass.callWS<FiguresInfo>({
-        type: `${DOMAIN}/figures`,
-      });
-    } catch {
-      this._info = null;
-    }
-    this._infoAt = Date.now();
+    this._info = await loadInfo(this.hass);
     this._infoLoading = false;
   }
 
@@ -327,10 +319,8 @@ export class EnergyPaybackFiguresCard extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hass) return;
     if (changed.has("hass") || changed.has("_config")) this._follow();
-    const infoStale = Date.now() - this._infoAt > REFRESH_MS;
-    if ((this._info === undefined || infoStale) && !this._infoLoading) {
-      void this._loadInfo();
-    }
+    if (this._info === undefined) this._info = cachedInfo();
+    if (infoStale() && !this._infoLoading) void this._loadInfo();
     const request = this._request();
     const stale = !this._loaded || Date.now() - this._loaded.at > REFRESH_MS;
     if (
@@ -383,7 +373,12 @@ export class EnergyPaybackFiguresCard extends LitElement {
     const t = this._localize;
     const found = this._figure(tile);
     if (!found) {
-      return this._tile(tile.name ?? tile.figure ?? "", "–", t("figures_unavailable"));
+      const generic = `figure.${tile.figure ?? ""}`;
+      const label = tile.name ?? (hasText(generic) ? t(generic) : (tile.figure ?? ""));
+      // Until the integration answered, the tile is loading, not missing.
+      return this._info === undefined
+        ? this._tile(label, "…")
+        : this._tile(label, "–", t("figures_unavailable"));
     }
     const { area, figure } = found;
     const label = tile.name ?? figureLabel(this._localize, figure, area);
