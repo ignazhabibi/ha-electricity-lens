@@ -14,13 +14,16 @@ from .const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_WALLBOX,
     CONF_BEFORE,
+    CONF_CHEAP_UNTIL,
     CONF_CURRENT,
+    CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
     CONF_HEATING,
     CONF_INVESTMENT,
     CONF_METERS,
     CONF_RECOMPUTE,
     CONF_SETUP_AT,
+    CONF_STANDING_CHARGE,
     HEATING_GAS,
     VALUE_COMBUSTION_CONSUMPTION,
     VALUE_EV_CONSUMPTION,
@@ -108,8 +111,7 @@ class CategoryConfig:
             "before": dict(sorted(self.before.items())),
             "recompute": self.recompute,
         }
-        encoded = json.dumps(relevant, sort_keys=True).encode()
-        return hashlib.sha256(encoded).hexdigest()[:16]
+        return settings_hash(relevant)
 
 
 @dataclass(slots=True)
@@ -190,6 +192,83 @@ class CategoryState:
                 for key, points in data.get("timelines", {}).items()
             },
         )
+
+
+@dataclass(frozen=True, slots=True)
+class HouseholdConfig:
+    """What the user entered for the household, all optional."""
+
+    standing_charge: float | None = None
+    cheap_until: float | None = None
+    expensive_from: float | None = None
+    recompute: float | None = None
+
+    @classmethod
+    def from_options(cls, options: Mapping[str, Any]) -> HouseholdConfig:
+        """Create from the config entry's options."""
+        numbers = _numbers(options)
+        return cls(
+            standing_charge=numbers.get(CONF_STANDING_CHARGE),
+            cheap_until=numbers.get(CONF_CHEAP_UNTIL),
+            expensive_from=numbers.get(CONF_EXPENSIVE_FROM),
+            recompute=numbers.get(CONF_RECOMPUTE),
+        )
+
+    @property
+    def levels(self) -> tuple[float | None, float | None]:
+        """Return the thresholds of cheap and expensive grid power."""
+        return self.cheap_until, self.expensive_from
+
+
+@dataclass(slots=True)
+class HouseholdState:
+    """The persisted progress of the household."""
+
+    fingerprint: str = ""
+    data_start: float | None = None
+    next_hour: float | None = None
+    """Start of the next hour to compute; None before the past is computed."""
+    totals: dict[str, float] = field(default_factory=dict)
+    """Cumulative value of each figure, keyed like household_hour's result."""
+    last_prices: dict[str, float] = field(default_factory=dict)
+    standing_charge: Timeline = field(default_factory=Timeline)
+
+    def reset(self, fingerprint: str) -> None:
+        """Forget the computed past, keeping the standing charge's timeline."""
+        self.fingerprint = fingerprint
+        self.data_start = None
+        self.next_hour = None
+        self.totals = {}
+        self.last_prices = {}
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return the state for storage."""
+        return {
+            "fingerprint": self.fingerprint,
+            "data_start": self.data_start,
+            "next_hour": self.next_hour,
+            "totals": self.totals,
+            "last_prices": self.last_prices,
+            "standing_charge": self.standing_charge.as_list(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> HouseholdState:
+        """Restore the state from storage."""
+        return cls(
+            fingerprint=data.get("fingerprint", ""),
+            data_start=data.get("data_start"),
+            next_hour=data.get("next_hour"),
+            totals=_numbers(data.get("totals")),
+            last_prices=_numbers(data.get("last_prices")),
+            standing_charge=Timeline.from_list(data.get("standing_charge", [])),
+        )
+
+
+def settings_hash(relevant: Mapping[str, Any]) -> str:
+    """Return a short hash of settings that change the computed past."""
+    encoded = json.dumps(relevant, sort_keys=True).encode()
+    return hashlib.sha256(encoded).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)

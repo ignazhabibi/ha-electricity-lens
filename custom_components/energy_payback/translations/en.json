@@ -3,23 +3,41 @@
     "step": {
       "user": {
         "title": "Energy Payback",
-        "description": "Shows what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
         "data": {
-          "categories": "What should be evaluated?"
+          "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_devices": {
         "title": "Energy Payback",
-        "description": "Shows what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
         "data": {
-          "categories": "What should be evaluated?"
+          "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_solar": {
         "title": "Energy Payback",
-        "description": "Shows what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs solar production in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs solar production in the [energy dashboard](/config/energy).",
         "data": {
-          "categories": "What should be evaluated?"
+          "categories": "Which savings should be evaluated? (optional)"
+        }
+      },
+      "user_household_only": {
+        "title": "Energy Payback",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
+      },
+      "household": {
+        "title": "Household",
+        "description": "All optional. The standing charge is added to the grid costs. With price levels you see how much grid power you drew in cheap and in expensive hours.",
+        "data": {
+          "standing_charge": "Standing charge per month (optional)",
+          "cheap_until": "Cheap up to (optional)",
+          "expensive_from": "Expensive from (optional)"
+        },
+        "data_description": {
+          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
+          "cheap_until": "Grid power at this price or below counts as cheap",
+          "expensive_from": "Grid power at this price or above counts as expensive"
         }
       },
       "pv": {
@@ -180,7 +198,7 @@
       }
     },
     "error": {
-      "categories_required": "Choose at least one.",
+      "levels_order": "Expensive must be above cheap.",
       "meters_required": "Choose at least one meter.",
       "heating_required": "Choose the former heating.",
       "value_required": "Enter a value above 0.",
@@ -188,12 +206,47 @@
     },
     "abort": {
       "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Energy Payback.",
-      "nothing_to_evaluate": "The [energy dashboard](/config/energy) has neither solar production nor individual devices. Add at least one of them there.",
       "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Payback.",
       "single_instance_allowed": "Energy Payback is already set up. Add more on its integration page."
     },
     "create_entry": {
-      "default": "The past is now being computed; this usually takes less than a minute. You find the card \"Energy Payback\" under \"Add card\" when editing a dashboard."
+      "default": "The past is now being computed; with several years of data this can take a few minutes. You find the card \"Energy Payback\" under \"Add card\" when editing a dashboard."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "What do you want to change?",
+        "menu_options": {
+          "household": "Standing charge and price levels",
+          "recompute": "Recompute"
+        }
+      },
+      "household": {
+        "title": "Standing charge and price levels",
+        "description": "A new standing charge applies from the next full hour. New price levels sort the whole past again.",
+        "data": {
+          "standing_charge": "Standing charge per month (optional)",
+          "cheap_until": "Cheap up to (optional)",
+          "expensive_from": "Expensive from (optional)"
+        },
+        "data_description": {
+          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
+          "cheap_until": "Grid power at this price or below counts as cheap",
+          "expensive_from": "Grid power at this price or above counts as expensive"
+        }
+      },
+      "recompute": {
+        "title": "Recompute",
+        "description": "Computes everything again with the current data: the household and all savings. For example after you corrected a wrong reading in the statistics. Your values stay as they are."
+      }
+    },
+    "error": {
+      "levels_order": "Expensive must be above cheap."
+    },
+    "abort": {
+      "household_saved": "Saved. The standing charge applies from {time}.",
+      "recomputing": "Everything is being computed again. With several years of data this can take a few minutes."
     }
   },
   "config_subentries": {
@@ -245,7 +298,7 @@
         }
       },
       "error": {
-        "categories_required": "Choose at least one.",
+        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -463,7 +516,7 @@
         }
       },
       "error": {
-        "categories_required": "Choose at least one.",
+        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -572,7 +625,7 @@
         }
       },
       "error": {
-        "categories_required": "Choose at least one.",
+        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -683,6 +736,18 @@
       "options": {
         "gas": "Gas",
         "oil": "Oil"
+      }
+    },
+    "statistics": {
+      "options": {
+        "household": "Household",
+        "other": "Other",
+        "energy": "consumption",
+        "solar": "solar power",
+        "cost": "costs",
+        "cheap": "cheap grid power",
+        "expensive": "expensive grid power",
+        "grid_cost": "Grid costs"
       }
     }
   }

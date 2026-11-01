@@ -30,10 +30,31 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "overview": {
             "title": "Energy Payback",
-            "description": "Shows what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
+            "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
             "no_devices": "Heat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
             "no_solar": "The PV plant needs solar production in the [energy dashboard](/config/energy).",
-            "categories": "What should be evaluated?",
+            "household_only": "Without solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed.",
+            "categories": "Which savings should be evaluated? (optional)",
+        },
+        "household": {
+            "title": "Household",
+            "description": "All optional. The standing charge is added to the grid costs. With price levels you see how much grid power you drew in cheap and in expensive hours.",
+        },
+        "options": {
+            "title": "What do you want to change?",
+            "household": "Standing charge and price levels",
+            "household_description": "A new standing charge applies from the next full hour. New price levels sort the whole past again.",
+            "recompute": "Computes everything again with the current data: the household and all savings. For example after you corrected a wrong reading in the statistics. Your values stay as they are.",
+        },
+        "statistics": {
+            "household": "Household",
+            "other": "Other",
+            "energy": "consumption",
+            "solar": "solar power",
+            "cost": "costs",
+            "cheap": "cheap grid power",
+            "expensive": "expensive grid power",
+            "grid_cost": "Grid costs",
         },
         "pv": {
             "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
@@ -76,6 +97,18 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Purchase cost (optional)", "For the payback"),
+            "standing_charge": (
+                "Standing charge per month (optional)",
+                "As on the electricity bill; shared evenly over the hours of the month",
+            ),
+            "cheap_until": (
+                "Cheap up to (optional)",
+                "Grid power at this price or below counts as cheap",
+            ),
+            "expensive_from": (
+                "Expensive from (optional)",
+                "Grid power at this price or above counts as expensive",
+            ),
             "meters": (
                 "Electricity consumption",
                 "Total meter, or heating and hot water separately",
@@ -154,7 +187,7 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "heating": {"gas": "Gas", "oil": "Oil"},
         "errors": {
-            "categories_required": "Choose at least one.",
+            "levels_order": "Expensive must be above cheap.",
             "meters_required": "Choose at least one meter.",
             "heating_required": "Choose the former heating.",
             "value_required": "Enter a value above 0.",
@@ -162,7 +195,6 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "aborts": {
             "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Energy Payback.",
-            "nothing_to_evaluate": "The [energy dashboard](/config/energy) has neither solar production nor individual devices. Add at least one of them there.",
             "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Payback.",
             "single_instance_allowed": "Energy Payback is already set up. Add more on its integration page.",
             "already_configured": "This is already set up. You can change it with Reconfigure.",
@@ -170,8 +202,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "values_from": "The new values apply from {time}.",
             "recomputing": "It is being computed again. This usually takes less than a minute.",
             "investment_saved": "Saved. The purchase cost applies at once.",
+            "household_saved": "Saved. The standing charge applies from {time}.",
+            "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         },
-        "create_entry": 'The past is now being computed; this usually takes less than a minute. You find the card "Energy Payback" under "Add card" when editing a dashboard.',
+        "create_entry": 'The past is now being computed; with several years of data this can take a few minutes. You find the card "Energy Payback" under "Add card" when editing a dashboard.',
         "devices": {"total": "Energy Payback"},
         "entities": {
             "saving": "Saving",
@@ -224,10 +258,31 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "overview": {
             "title": "Energy Payback",
-            "description": "Zeigt, was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
+            "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
             "no_devices": "Für Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
             "no_solar": "Für die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
-            "categories": "Was soll ausgewertet werden?",
+            "household_only": "Ohne Solar und einzelne Geräte im [Energie-Dashboard](/config/energy) wird nur der Haushalt berechnet.",
+            "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)",
+        },
+        "household": {
+            "title": "Haushalt",
+            "description": "Alles optional. Der Grundpreis kommt zu den Netzkosten dazu. Mit Preisstufen siehst du, wie viel Netzstrom du in günstigen und in teuren Stunden bezogen hast.",
+        },
+        "options": {
+            "title": "Was möchtest du ändern?",
+            "household": "Grundpreis und Preisstufen",
+            "household_description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde. Neue Preisstufen ordnen die ganze Vergangenheit neu ein.",
+            "recompute": "Rechnet alles mit den aktuellen Messdaten neu: den Haushalt und alle Ersparnisse. Zum Beispiel nachdem du einen falschen Messwert in den Statistiken korrigiert hast. Deine Werte bleiben, wie sie sind.",
+        },
+        "statistics": {
+            "household": "Haushalt",
+            "other": "Sonstiges",
+            "energy": "Verbrauch",
+            "solar": "Solarstrom",
+            "cost": "Kosten",
+            "cheap": "günstiger Netzstrom",
+            "expensive": "teurer Netzstrom",
+            "grid_cost": "Netzkosten",
         },
         "pv": {
             "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
@@ -270,6 +325,18 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Anschaffungskosten (optional)", "Für die Amortisation"),
+            "standing_charge": (
+                "Grundpreis pro Monat (optional)",
+                "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
+            ),
+            "cheap_until": (
+                "Günstig bis (optional)",
+                "Netzstrom zu diesem Preis oder darunter zählt als günstig",
+            ),
+            "expensive_from": (
+                "Teuer ab (optional)",
+                "Netzstrom zu diesem Preis oder darüber zählt als teuer",
+            ),
             "meters": (
                 "Stromverbrauch",
                 "Gesamtzähler, oder Heizung und Warmwasser einzeln",
@@ -348,7 +415,7 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "heating": {"gas": "Gas", "oil": "Öl"},
         "errors": {
-            "categories_required": "Wähle mindestens eine Auswertung.",
+            "levels_order": "Teuer muss über günstig liegen.",
             "meters_required": "Wähle mindestens einen Zähler.",
             "heating_required": "Wähle die frühere Heizung.",
             "value_required": "Gib einen Wert über 0 an.",
@@ -356,7 +423,6 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "aborts": {
             "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Energy Payback hinzufügen.",
-            "nothing_to_evaluate": "Im [Energie-Dashboard](/config/energy) fehlen Solar und einzelne Geräte. Füge dort mindestens eins hinzu.",
             "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Payback gibt.",
             "single_instance_allowed": "Energy Payback ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu.",
             "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
@@ -364,8 +430,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "values_from": "Die neuen Werte gelten ab {time} Uhr.",
             "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
             "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort.",
+            "household_saved": "Gespeichert. Der Grundpreis gilt ab {time} Uhr.",
+            "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         },
-        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, das dauert meist unter einer Minute. Die Karte »Energy Payback« findest du im Dashboard unter »Karte hinzufügen«.",
+        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Energy Payback« findest du im Dashboard unter »Karte hinzufügen«.",
         "devices": {"total": "Energy Payback"},
         "entities": {
             "saving": "Ersparnis",
@@ -451,7 +519,19 @@ def overview_steps(t: dict[str, Any]) -> dict[str, Any]:
         "user_no_solar": form(
             o["title"], f"{o['description']}\n\n{o['no_solar']}", block
         ),
+        "user_household_only": form(
+            o["title"], f"{o['description']}\n\n{o['household_only']}", {}
+        ),
     }
+
+
+def household_step(t: dict[str, Any], title: str, description: str) -> dict[str, Any]:
+    """Return the household's form."""
+    return form(
+        title,
+        description,
+        fields(t, ["standing_charge", "cheap_until", "expensive_from"]),
+    )
 
 
 def pv_steps(t: dict[str, Any]) -> dict[str, Any]:
@@ -542,6 +622,9 @@ def config_steps(t: dict[str, Any]) -> dict[str, Any]:
     """Return the steps of the first setup."""
     return {
         **overview_steps(t),
+        "household": household_step(
+            t, t["household"]["title"], t["household"]["description"]
+        ),
         **pv_steps(t),
         "heat_pump": form(
             t["categories"]["heat_pump"], t["heat_pump"], meters_block(t, "heat_pump")
@@ -617,12 +700,33 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                 key: aborts[key]
                 for key in (
                     "no_energy_dashboard",
-                    "nothing_to_evaluate",
                     "energy_interface",
                     "single_instance_allowed",
                 )
             },
             "create_entry": {"default": t["create_entry"]},
+        },
+        "options": {
+            "step": {
+                "init": {
+                    "title": t["options"]["title"],
+                    "menu_options": {
+                        "household": t["options"]["household"],
+                        "recompute": t["recompute"]["title"],
+                    },
+                },
+                "household": household_step(
+                    t, t["options"]["household"], t["options"]["household_description"]
+                ),
+                "recompute": form(
+                    t["recompute"]["title"], t["options"]["recompute"], {}
+                ),
+            },
+            "error": {"levels_order": errors["levels_order"]},
+            "abort": {
+                "household_saved": aborts["household_saved"],
+                "recomputing": aborts["recomputing_all"],
+            },
         },
         "config_subentries": {
             category: {
@@ -672,6 +776,7 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
         "selector": {
             "categories": {"options": t["categories"]},
             "heating": {"options": t["heating"]},
+            "statistics": {"options": t["statistics"]},
         },
     }
 

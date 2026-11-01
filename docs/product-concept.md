@@ -129,11 +129,13 @@ they value solar power differently. The product says so where it shows them.
 
 ### 3.6 Results in Home Assistant
 
-- **Statistics** hold every time series: costs, mix, consumption parts, heat,
-  the alternative's costs, savings, and the recorded forecast. They belong to
-  the integration alone, so it can compute the past and compute it again
-  after corrections. They appear in Home Assistant's statistics pickers and
-  cards like any other statistic.
+- **Statistics** hold every time series Home Assistant has none for: costs,
+  mix, the household's and "Other"'s consumption, heat, the alternative's
+  costs, savings, and the recorded forecast. What Home Assistant already keeps,
+  such as a device's consumption, is not copied; cards read it from there.
+  The statistics belong to the integration alone, so it can compute the past
+  and compute it again after corrections. They appear in Home Assistant's
+  statistics pickers and cards like any other statistic.
 - **Sensors** hold current values for automations: per category saving,
   paid back (%), and saving per year; a device "Balance" with the overall
   balance. For example, a notification when the heat pump has paid off.
@@ -266,8 +268,8 @@ an electricity price. Without it, setup ends with a short explanation.
 | Grid import and export with prices | yes | Energy dashboard |
 | Solar, battery, devices, solar forecast | no, used if present | Energy dashboard |
 | Standing charge per month | no | Setup |
-| Cheap up to … ct/kWh | no | Setup |
-| Expensive from … ct/kWh | no | Setup |
+| Cheap up to … per kWh | no | Setup |
+| Expensive from … per kWh | no | Setup |
 
 - The standing charge is shared evenly over the hours of its month. Its first value applies from the beginning; a change applies from the next full hour.
 - An hour's grid power is cheap when its price is at most the first threshold, expensive when it is at least the second, otherwise normal. Without thresholds there are no levels, only solar and grid.
@@ -409,7 +411,7 @@ The other cards show "is being computed" while the past is computed, and
 | Price levels | Optional thresholds for cheap and expensive, set in the integration; a change reclassifies the past |
 | Standing charge | Optional, per month, shared over its hours |
 | Devices with costs | Every device of the energy dashboard, plus "Other" |
-| Time series | Statistics owned by the integration, not entities' statistics |
+| Time series | Statistics owned by the integration, not entities' statistics; only what Home Assistant has no statistic for |
 | Sensors | Current values: saving, paid back (%), saving per year, overall balance |
 | Cards | Key figure, history, breakdown, balance; generic, usable on any dashboard |
 | Sources in cards | Energy data of the integration, or any statistic or entity shown as it is |
@@ -431,9 +433,9 @@ The other cards show "is being computed" while the past is computed, and
 
 Each step is a release that works on its own.
 
-1. **Statistics owned by the integration.** The savings move to statistics of their own; the saving sensors keep only the current value. The history card reads the new statistics.
+1. **Statistics owned by the integration.** The savings move to statistics of their own; the saving sensors keep only the current value. The history card reads the new statistics. Done in 0.4.0.
 2. **Household.** The setup's household part; consumption, mix, and costs per device and for the household, as statistics.
-3. **Key figure card.**
+3. **Key figure card**, and recording the solar forecast.
 4. **History card**, replacing the current one, with sources and lines.
 5. **Breakdown card.**
 6. **Heat pump and car figures:** heat, the alternative's costs, seasonal COP, heat price, € per 100 km, the split saving (3.5).

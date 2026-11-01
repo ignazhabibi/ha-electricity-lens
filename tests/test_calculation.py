@@ -14,6 +14,8 @@ from custom_components.energy_payback.calculation import (
     electricity_prices,
     heat_pump_saving,
     heating_cost,
+    household_hour,
+    price_level,
     pv_saving,
     summarize,
     wallbox_saving,
@@ -128,3 +130,63 @@ def test_summarize() -> None:
     later = summarize(saving=3000, counting_since=0, until=2 * YEAR, investment=None)
     assert later.per_year == pytest.approx(1500)
     assert later.payback is None
+
+
+def test_price_level() -> None:
+    """Thresholds include their price; without them there are no levels."""
+    assert price_level(0.20, 0.20, 0.35) == "cheap"
+    assert price_level(0.35, 0.20, 0.35) == "expensive"
+    assert price_level(0.30, 0.20, 0.35) is None
+    assert price_level(0.10, None, None) is None
+
+
+def _hour(**changes: object) -> dict[str, float]:
+    arguments: dict[str, object] = {
+        "grid_import": 1.0,
+        "export": 0.0,
+        "solar": 3.0,
+        "battery_out": 0.0,
+        "battery_in": 0.0,
+        "devices": {"car": 2.0, "charger": 1.5, "pump": 1.0},
+        "top_level": ["car", "pump"],
+        "price": 0.30,
+        "feed_in": 0.08,
+        "export_revenue": 0.0,
+        "standing_charge": 0.02,
+        "tariffs": {"pump": 0.20},
+        "levels": (0.30, None),
+    }
+    return household_hour(**{**arguments, **changes})  # type: ignore[arg-type]
+
+
+def test_household_hour() -> None:
+    """Solar power is shared in proportion; own tariffs price their device."""
+    hour = _hour()
+    # 4 kWh used, 3 of them solar power: 75 %.
+    assert hour["household_energy"] == 4.0
+    assert hour["household_solar"] == 3.0
+    assert hour["household_cheap"] == pytest.approx(1.0)
+    assert hour["car_solar"] == pytest.approx(1.5)
+    assert hour["car_cost"] == pytest.approx(0.5 * 0.30 + 1.5 * 0.08)
+    assert hour["pump_cost"] == pytest.approx(0.25 * 0.20 + 0.75 * 0.08)
+    # The charger is part of the car, so "other" leaves it out.
+    assert hour["charger_solar"] == pytest.approx(1.125)
+    assert hour["other_energy"] == pytest.approx(1.0)
+    # A device's energy is in its own statistic already.
+    assert "car_energy" not in hour
+    assert hour["household_cost"] == pytest.approx(
+        hour["car_cost"] + hour["pump_cost"] + hour["other_cost"]
+    )
+    assert hour["grid_cost"] == pytest.approx(1.0 * 0.30 + 0.02)
+    assert "household_expensive" not in hour
+
+
+def test_household_hour_battery_from_grid() -> None:
+    """A battery charged from the grid gives no solar power to the house."""
+    hour = _hour(solar=0.0, battery_in=0.5, devices={}, top_level=[], tariffs={})
+    assert hour["household_energy"] == 0.5
+    assert hour["household_solar"] == 0.0
+    assert hour["other_energy"] == 0.5
+    # Bad readings leave the household at zero, not below.
+    hour = _hour(grid_import=0.0, solar=0.0, devices={}, top_level=[], tariffs={})
+    assert hour["household_energy"] == 0.0

@@ -1,8 +1,9 @@
 """Config flow for Energy Payback.
 
-The config entry stands for the whole household. Each category (PV plant,
-heat pump, electric car) is a config subentry with its own device, so
-categories can be added, changed, and removed on their own.
+The config entry stands for the whole household, which is always computed;
+its standing charge and price levels are the entry's options. Each category
+(PV plant, heat pump, electric car) is a config subentry with its own device,
+so categories can be added, changed, and removed on their own.
 
 Heat pump and electric car are set up in two steps: first the meters, then
 the averages for the time since their data begins. That date follows from the
@@ -20,6 +21,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     ConfigSubentryData,
     ConfigSubentryFlow,
+    OptionsFlow,
     SubentryFlowResult,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -45,13 +47,16 @@ from .const import (
     CATEGORY_PV,
     CATEGORY_WALLBOX,
     CONF_BEFORE,
+    CONF_CHEAP_UNTIL,
     CONF_CURRENT,
+    CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
     CONF_HEATING,
     CONF_INVESTMENT,
     CONF_METERS,
     CONF_RECOMPUTE,
     CONF_SETUP_AT,
+    CONF_STANDING_CHARGE,
     DOMAIN,
     HEATING_GAS,
     HEATING_OIL,
@@ -71,6 +76,7 @@ from .sources import (
 )
 
 CONF_CATEGORIES = "categories"
+HOUSEHOLD_FIELDS = (CONF_STANDING_CHARGE, CONF_CHEAP_UNTIL, CONF_EXPENSIVE_FROM)
 # The price fields are named after the former heating, so their label and unit
 # fit. They are stored as VALUE_PRICE and VALUE_PRICE_ENTITY.
 PRICE_FIELDS = {
@@ -160,6 +166,36 @@ def meter_selector(setup: EnergySetup, taken: Iterable[str]) -> SelectSelector:
             mode=SelectSelectorMode.DROPDOWN,
         )
     )
+
+
+def household_schema(hass: HomeAssistant) -> probatio.Schema:
+    """Return the household's form: standing charge and price levels."""
+    currency = hass.config.currency
+    return probatio.Schema(
+        {
+            probatio.Optional(CONF_STANDING_CHARGE): _number(currency),
+            probatio.Optional(CONF_CHEAP_UNTIL): _number(f"{currency}/kWh"),
+            probatio.Optional(CONF_EXPENSIVE_FROM): _number(f"{currency}/kWh"),
+        }
+    )
+
+
+def validate_household(user_input: Mapping[str, Any]) -> dict[str, str]:
+    """Return the errors of the household's form."""
+    cheap = user_input.get(CONF_CHEAP_UNTIL)
+    expensive = user_input.get(CONF_EXPENSIVE_FROM)
+    if cheap is not None and expensive is not None and cheap >= expensive:
+        return {CONF_EXPENSIVE_FROM: "levels_order"}
+    return {}
+
+
+def household_data(user_input: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the options of the household's form, leaving out empty fields."""
+    return {
+        key: user_input[key]
+        for key in HOUSEHOLD_FIELDS
+        if user_input.get(key) is not None
+    }
 
 
 def investment_schema(hass: HomeAssistant) -> probatio.Schema:
@@ -336,10 +372,18 @@ class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
         self._setup = EnergySetup()
         self._pending: list[str] = []
         self._subentries: list[ConfigSubentryData] = []
+        self._options: dict[str, Any] = {}
         self._data: dict[str, Any] = {}
         self._since = 0.0
         self._scop = False
         self._heat_start: float | None = None
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: ConfigEntry) -> HouseholdOptionsFlow:
+        """Change the household."""
+        return HouseholdOptionsFlow()
 
     @classmethod
     @callback
@@ -353,51 +397,67 @@ class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Show what the energy dashboard provides and ask what to evaluate."""
+        """Show what the energy dashboard provides and ask what to evaluate.
+
+        The household is always computed; the categories are optional.
+        """
         try:
             self._setup = await async_get_energy_setup(self.hass)
         except EnergyInterfaceError:
             return self.async_abort(reason="energy_interface")
         if not self._setup.is_usable:
             return self.async_abort(reason="no_energy_dashboard")
-        available = available_categories(self._setup)
-        if not available:
-            return self.async_abort(reason="nothing_to_evaluate")
 
-        errors: dict[str, str] = {}
         if user_input is not None:
             chosen = user_input.get(CONF_CATEGORIES, [])
             self._pending = [category for category in CATEGORIES if category in chosen]
-            if self._pending:
-                return await self._async_next_category()
-            errors[CONF_CATEGORIES] = "categories_required"
+            return await self.async_step_household()
 
-        schema = probatio.Schema(
-            {
-                probatio.Optional(CONF_CATEGORIES): SelectSelector(
-                    SelectSelectorConfig(
-                        options=available,
-                        multiple=True,
-                        mode=SelectSelectorMode.LIST,
-                        translation_key=CONF_CATEGORIES,
-                    )
+        fields: dict[Any, Any] = {}
+        if available := available_categories(self._setup):
+            fields[probatio.Optional(CONF_CATEGORIES)] = SelectSelector(
+                SelectSelectorConfig(
+                    options=available,
+                    multiple=True,
+                    mode=SelectSelectorMode.LIST,
+                    translation_key=CONF_CATEGORIES,
                 )
-            }
-        )
+            )
         return self.async_show_form(
             step_id=_overview_step(self._setup),
-            data_schema=schema,
-            errors=errors,
+            data_schema=probatio.Schema(fields),
             description_placeholders=overview_placeholders(self._setup),
         )
 
     async_step_user_no_devices = async_step_user
     async_step_user_no_solar = async_step_user
+    async_step_user_household_only = async_step_user
+
+    async def async_step_household(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the standing charge and the price levels, all optional."""
+        errors: dict[str, str] = {}
+        if user_input is not None and not (errors := validate_household(user_input)):
+            self._options = household_data(user_input)
+            return await self._async_next_category()
+        schema = household_schema(self.hass)
+        if user_input is not None:
+            schema = self.add_suggested_values_to_schema(schema, user_input)
+        return self.async_show_form(
+            step_id="household",
+            data_schema=schema,
+            errors=errors,
+            last_step=not self._pending,
+        )
 
     async def _async_next_category(self) -> ConfigFlowResult:
         if not self._pending:
             return self.async_create_entry(
-                title="Energy Payback", data={}, subentries=self._subentries
+                title="Energy Payback",
+                data={},
+                options=self._options,
+                subentries=self._subentries,
             )
         category = self._pending[0]
         if category == CATEGORY_PV:
@@ -530,6 +590,8 @@ class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
 
 def _overview_step(setup: EnergySetup) -> str:
     """Return the overview's step id, which names what is missing."""
+    if not setup.devices and not setup.solar:
+        return "user_household_only"
     if not setup.devices:
         return "user_no_devices"
     if not setup.solar:
@@ -896,3 +958,71 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             user_input if user_input is not None else subentry.data,
         )
         return self.async_show_form(step_id="meters", data_schema=schema, errors=errors)
+
+
+class HouseholdOptionsFlow(OptionsFlow):
+    """Change the household: standing charge and price levels, or recompute."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask what to change."""
+        return self.async_show_menu(
+            step_id="init", menu_options=["household", "recompute"]
+        )
+
+    def _async_save(
+        self, options: dict[str, Any], reason: str, placeholders: dict[str, str]
+    ) -> ConfigFlowResult:
+        """Store the options and close with a message saying what happens.
+
+        The entry's update listener reloads it, which applies the change.
+        """
+        self.hass.config_entries.async_update_entry(self.config_entry, options=options)
+        return self.async_abort(reason=reason, description_placeholders=placeholders)
+
+    async def async_step_household(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the standing charge and the price levels."""
+        options = self.config_entry.options
+        errors: dict[str, str] = {}
+        if user_input is not None and not (errors := validate_household(user_input)):
+            new = {
+                key: value
+                for key, value in options.items()
+                if key not in HOUSEHOLD_FIELDS
+            }
+            new.update(household_data(user_input))
+            levels = (CONF_CHEAP_UNTIL, CONF_EXPENSIVE_FROM)
+            if any(new.get(key) != options.get(key) for key in levels):
+                return self._async_save(new, "recomputing", {})
+            valid_from = dt_util.as_local(dt_util.utc_from_timestamp(next_full_hour()))
+            return self._async_save(
+                new, "household_saved", {"time": valid_from.strftime("%H:%M")}
+            )
+        return self.async_show_form(
+            step_id="household",
+            data_schema=self.add_suggested_values_to_schema(
+                household_schema(self.hass),
+                user_input if user_input is not None else options,
+            ),
+            errors=errors,
+        )
+
+    async def async_step_recompute(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Compute everything again, for example after fixing readings."""
+        if user_input is not None:
+            return self._async_save(
+                {
+                    **self.config_entry.options,
+                    CONF_RECOMPUTE: dt_util.utcnow().timestamp(),
+                },
+                "recomputing",
+                {},
+            )
+        return self.async_show_form(
+            step_id="recompute", data_schema=probatio.Schema({})
+        )

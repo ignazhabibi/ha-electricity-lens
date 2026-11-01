@@ -1,12 +1,16 @@
 # Energy Payback
 
-A Home Assistant integration with its own dashboard card. It shows what your
-PV plant, heat pump, and electric car have saved compared with what they
-replaced, and whether and when they pay off.
+A Home Assistant integration with its own dashboard cards. It computes what
+your household and each of its devices consumed and cost, how much of it was
+solar power or cheap grid power, and what your PV plant, heat pump, and
+electric car have saved compared with what they replaced, and whether and when
+they pay off.
 
 Home Assistant's energy dashboard shows what you consumed, produced, and paid.
 Energy Payback answers the questions that come next:
 
+- What did each device cost me, including the solar power it used?
+- How much of my grid power did I buy in cheap hours?
 - What has each investment saved so far?
 - Has it paid for itself yet? If not, roughly when?
 - Is the whole electrification in the plus already?
@@ -28,6 +32,33 @@ know, such as what the heat pump cost extra or what gas cost on average.
   electricity is expensive and gas is cheap, and the integration shows that.
 
 ## What it calculates
+
+### The household
+
+The household is always computed, from the energy dashboard alone. For every
+hour Energy Payback derives:
+
+- **Consumption** of the household (grid import − feed-in + solar production +
+  battery discharge − battery charge), of each individual device, and of
+  "Other", what the household used beyond its devices. Of a device and its
+  sub-devices (*Upstream device* in the energy dashboard), only the outer one
+  counts towards "Other".
+- **Mix**: how much of each consumption was solar power and, with price levels,
+  cheap or expensive grid power. Solar power used in the house is shared among
+  the consumers of that hour in proportion to their consumption. A home
+  battery counts as solar, as in the PV plant's saving.
+- **Costs** of each consumption: grid power at the hour's electricity price,
+  or at the own tariff of heat pump or electric car for their devices; solar
+  power at the feed-in compensation it did not earn, as evcc does.
+- **Grid costs**: imports at the hour's price, minus the feed-in compensation,
+  plus the standing charge if one is entered.
+
+Costs and savings answer different questions, so they value solar power
+differently: a device's costs count its solar power at the lost feed-in
+compensation; the savings below give the benefit of solar power to the PV
+plant.
+
+### Savings
 
 There are three categories. Each compares reality with the alternative it
 replaced.
@@ -105,38 +136,53 @@ Home Assistant 2026.10 or newer is required.
    dashboard resource to add: the integration serves the cards itself and
    updates them with the integration.
 
-The past is computed in the background right after setup. This usually takes
-less than a minute; until then the card says that it is calculating.
+The past is computed in the background right after setup. With several years
+of data this can take a few minutes; until then the card says that it is
+calculating.
 
 ## Configuration
 
 ### Setup
 
-1. **Overview**: what the energy dashboard provides, and what to evaluate.
+1. **Overview**: what the energy dashboard provides, and which savings to
+   evaluate. The household is always computed; the categories are optional.
    Nothing is preselected; only possible categories are offered.
-2. **PV plant**: since when it counts, and the purchase cost (optional).
-3. **Heat pump**:
+2. **Household**, all optional:
+   | Field | Description |
+   |---|---|
+   | Standing charge per month | As on the electricity bill. Shared evenly over the hours of its month and added to the grid costs. The first value applies from the beginning. |
+   | Cheap up to | Grid power at this price per kWh or below counts as cheap. |
+   | Expensive from | Grid power at this price per kWh or above counts as expensive. Without levels there is only solar and grid power. |
+3. **PV plant**: since when it counts, and the purchase cost (optional).
+4. **Heat pump**:
    | Field | Description |
    |---|---|
    | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
    | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
    | Former heating | Gas or oil. |
    | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. |
-4. **Heat pump, average since the first data**:
+5. **Heat pump, average since the first data**:
    | Field | Description |
    |---|---|
    | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. |
    | Seasonal COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
    | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
    | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. |
-5. **Electric car**: charging meters, and the extra purchase cost over a
+6. **Electric car**: charging meters, and the extra purchase cost over a
    combustion car (optional).
-6. **Electric car, average since the first data**: consumption of the electric
+7. **Electric car, average since the first data**: consumption of the electric
    car (measured at the wallbox, with charging losses; with several cars,
    their average), consumption of a comparable combustion car, fuel price, an
    own tariff (optional), and a fuel price sensor (optional).
 
 ### Changing things later
+
+**Configure** on the integration page changes the household:
+
+| Option | What it does |
+|---|---|
+| Standing charge and price levels | A new standing charge applies from the next full hour. New price levels sort the whole past again. |
+| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Categories are config subentries. On the integration page each category has
 **Reconfigure** and **Delete**, and there are buttons to add the categories not
@@ -152,8 +198,8 @@ set up yet; they lead through the same steps as the setup.
 | Recompute | Computes the category again with the current data, for example after you fixed a wrong reading in the statistics. All values stay. |
 | Purchase cost (PV plant) | Applies at once. |
 
-Changes in the energy dashboard are followed automatically and compute the
-affected category again.
+Changes in the energy dashboard are followed automatically. A new or removed
+meter computes the household again, and a category whose meters changed.
 
 ## Entities
 
@@ -166,6 +212,24 @@ overall balance.
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. |
+
+## Statistics
+
+Energy Payback keeps a long-term statistic of its own for every figure Home
+Assistant has no statistic for, including the computed past; it copies none. They appear in Home Assistant's statistics pickers, for
+example in the *Statistics graph* card, under their names such as
+"Household consumption" or "Washer costs".
+
+| Statistic | Content |
+|---|---|
+| `energy_payback:household_energy`, `…_solar`, `…_cheap`, `…_expensive`, `…_cost` | The household's consumption, its solar power, its cheap and expensive grid power (with price levels only), and its costs |
+| `energy_payback:other_…` | The same for "Other" |
+| `energy_payback:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
+| `energy_payback:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
+| `energy_payback:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
+
+Energy is in kWh, money in your currency. Hours in which a figure did not
+change are not stored; statistics cards carry the sum over them.
 
 ## The cards
 
@@ -236,8 +300,7 @@ actions:
 ## Troubleshooting
 
 - **Setup ends right away**: the energy dashboard has no grid import with an
-  electricity price, or neither solar production nor individual devices. The
-  message names what is missing and links to the energy dashboard.
+  electricity price. The message links to the energy dashboard.
 - **Heat pump or electric car are not offered**: their meters must be listed
   under *Individual devices* in the energy dashboard.
 - **A figure jumps implausibly**: a meter probably recorded a wrong reading.
@@ -259,8 +322,8 @@ actions:
 3. Uninstall Energy Payback in the Marketplace or HACS and restart Home
    Assistant.
 
-Deleting Energy Payback or a category also removes the statistics it wrote
-for the savings.
+Deleting Energy Payback removes all statistics it wrote; deleting a category
+removes that category's saving statistic.
 
 ## Development
 

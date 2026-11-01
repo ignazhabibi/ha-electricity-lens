@@ -13,15 +13,22 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
 from .calculation import (
+    AREA_HOUSEHOLD,
+    AREA_OTHER,
+    GRID_COST,
     HOUR,
+    LEVEL_CHEAP,
+    LEVEL_EXPENSIVE,
     average_price,
     effective_meters,
     electricity_prices,
     heat_pump_saving,
+    household_hour,
     pv_saving,
     summarize,
     wallbox_saving,
@@ -42,7 +49,15 @@ from .const import (
     VALUE_SCOP,
     VALUE_TARIFF,
 )
-from .models import CategoryConfig, CategoryResult, CategoryState, PaybackData
+from .models import (
+    CategoryConfig,
+    CategoryResult,
+    CategoryState,
+    HouseholdConfig,
+    HouseholdState,
+    PaybackData,
+    settings_hash,
+)
 from .sources import (
     EnergyInterfaceError,
     EnergySetup,
@@ -53,8 +68,12 @@ from .sources import (
     async_hourly_changes,
     async_hourly_values,
     async_remove_statistics,
+    async_statistic_ids,
     async_write_statistics,
     cost_stat,
+    device_area,
+    household_statistic_id,
+    is_saving_statistic,
     saving_statistic_id,
 )
 
@@ -82,6 +101,17 @@ def _ceil_hour(timestamp: float) -> float:
 def next_full_hour() -> float:
     """Return the start of the next full hour, from when new values apply."""
     return _ceil_hour(time() + 1)
+
+
+def _standing_charge(state: HouseholdState, hour: float) -> float:
+    """Return the standing charge of an hour: its month's share."""
+    monthly = state.standing_charge.value_at(hour)
+    if not isinstance(monthly, int | float):
+        return 0.0
+    local = dt_util.as_local(dt_util.utc_from_timestamp(hour))
+    month = local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (month + timedelta(days=32)).replace(day=1)
+    return monthly / ((next_month.timestamp() - month.timestamp()) / HOUR)
 
 
 def _number(hass: HomeAssistant, entity_id: str | None) -> float | None:
@@ -113,6 +143,11 @@ def _price_entity_at(state: CategoryState, hour: float) -> str | None:
     return entity if isinstance(entity, str) else None
 
 
+def coordinator_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str, Any]]:
+    """Return the store that keeps the progress of an entry."""
+    return Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
+
+
 class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
     """Compute each category's saving from the energy dashboard's statistics.
 
@@ -131,11 +166,11 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL,
         )
-        self._store: Store[dict[str, Any]] = Store(
-            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
-        )
+        self._store = coordinator_store(hass, entry)
         self.configs: dict[str, CategoryConfig] = {}
         self.states: dict[str, CategoryState] = {}
+        self.household = HouseholdConfig.from_options(entry.options)
+        self.household_state = HouseholdState()
         self._without_data: set[str] = set()
 
     async def async_load(self) -> None:
@@ -147,6 +182,10 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             and stored.get("statistics_version", 1) < STATISTICS_VERSION
         )
         valid_from = next_full_hour()
+        self.household_state = HouseholdState.from_dict(stored.get("household", {}))
+        self.household_state.standing_charge.set(
+            self.household.standing_charge, valid_from
+        )
         for subentry_id, subentry in self.config_entry.subentries.items():
             config = CategoryConfig.from_data(subentry.subentry_type, subentry.data)
             state = CategoryState.from_dict(stored_categories.get(subentry_id, {}))
@@ -154,8 +193,12 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 # Gas prices are per kWh, oil prices per litre: start over.
                 state.timelines = {}
                 state.heating = config.heating
-            if state.fingerprint != config.fingerprint or moving_statistics:
-                state.reset(config.fingerprint)
+            # Recomputing the household computes everything again.
+            fingerprint = config.fingerprint
+            if self.household.recompute is not None:
+                fingerprint += f":{self.household.recompute}"
+            if state.fingerprint != fingerprint or moving_statistics:
+                state.reset(fingerprint)
             for key in config.values:
                 state.timeline(key).set(config.current.get(key), valid_from)
             if config.category != CATEGORY_PV:
@@ -192,6 +235,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         await self._store.async_save(
             {
                 "statistics_version": STATISTICS_VERSION,
+                "household": self.household_state.as_dict(),
                 "categories": {
                     subentry_id: state.as_dict()
                     for subentry_id, state in self.states.items()
@@ -224,6 +268,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             # No grid data yet, so there is nothing to compute.
             self._without_data = set(self.configs)
             return self._results()
+        await self._async_advance_household(setup, end)
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
         await self._async_save()
@@ -361,7 +406,9 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             }
         changes = await async_hourly_changes(self.hass, sums, start, end)
         entity_values = await async_hourly_values(self.hass, values, start, end)
-        prices = self._grid_prices(setup, hours, changes, entity_values, state)
+        prices = self._grid_prices(
+            setup, hours, changes, entity_values, state.last_prices
+        )
 
         def change(stat: str, hour: float) -> float:
             return changes.get(stat, {}).get(hour, 0.0)
@@ -484,9 +531,12 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         hours: list[float],
         changes: dict[str, dict[float, float]],
         entity_values: dict[str, dict[float, float]],
-        state: CategoryState,
+        last_prices: dict[str, float],
     ) -> list[float | None]:
-        """Return the electricity price of each hour over all grid connections."""
+        """Return the electricity price of each hour over all grid connections.
+
+        last_prices holds the last price per grid import meter, to bridge gaps.
+        """
         per_grid: list[list[float | None]] = []
         energies: list[dict[float, float]] = []
         for grid in setup.priced_grids:
@@ -499,10 +549,10 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 costs=changes.get(costs or "", {}),
                 energy=energy,
                 fixed=grid.price,
-                last_known=state.last_prices.get(grid.import_stat),
+                last_known=last_prices.get(grid.import_stat),
             )
             if prices and prices[-1] is not None:
-                state.last_prices[grid.import_stat] = prices[-1]
+                last_prices[grid.import_stat] = prices[-1]
             per_grid.append(prices)
             energies.append(energy)
         return [
@@ -512,6 +562,210 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             )
             for index, hour in enumerate(hours)
         ]
+
+    def _household_fingerprint(self, setup: EnergySetup) -> str:
+        """Identify what changes the household's computed past.
+
+        The energy dashboard's meters, the price levels, recomputing, and the
+        own tariffs before the setup of heat pump and car, which price their
+        devices. The standing charge applies from now on, like current values.
+        """
+        return settings_hash(
+            {
+                "grids": sorted(
+                    [grid.import_stat or "", grid.export_stat or ""]
+                    for grid in setup.grids
+                ),
+                "solar": sorted(setup.solar),
+                "batteries": sorted(
+                    [battery.discharge_stat, battery.charge_stat]
+                    for battery in setup.batteries
+                ),
+                "devices": sorted(
+                    [device.stat, device.included_in or ""] for device in setup.devices
+                ),
+                "levels": list(self.household.levels),
+                "recompute": self.household.recompute,
+                "tariffs": sorted(
+                    [sorted(config.meters), config.before.get(VALUE_TARIFF) or 0.0]
+                    for config in self.configs.values()
+                    if config.category != CATEGORY_PV
+                ),
+            }
+        )
+
+    def _tariff_owners(self, setup: EnergySetup) -> dict[str, str]:
+        """Return the category whose own tariff prices each device.
+
+        A device measured by heat pump or car, or contained in one of their
+        meters, belongs to that category.
+        """
+        owned = {
+            meter: subentry_id
+            for subentry_id, config in self.configs.items()
+            if config.category != CATEGORY_PV
+            for meter in config.meters
+        }
+        parents = {device.stat: device.included_in for device in setup.devices}
+        owners: dict[str, str] = {}
+        for stat in parents:
+            node: str | None = stat
+            seen: set[str] = set()
+            while node is not None and node not in seen:
+                if node in owned:
+                    owners[stat] = owned[node]
+                    break
+                seen.add(node)
+                node = parents.get(node)
+        return owners
+
+    async def _async_advance_household(self, setup: EnergySetup, end: float) -> None:
+        """Compute the household up to end, writing its statistics chunk by chunk."""
+        state = self.household_state
+        if state.fingerprint != (fingerprint := self._household_fingerprint(setup)):
+            state.reset(fingerprint)
+        if state.data_start is None:
+            imports = [grid.import_stat for grid in setup.grids if grid.import_stat]
+            state.data_start = await async_first_hour(self.hass, imports)
+            if state.data_start is None:
+                return
+        counting_since = _ceil_hour(state.data_start)
+        start = state.next_hour
+        if start is None:
+            # Computing the past replaces what an earlier computation wrote,
+            # including devices no longer in the energy dashboard.
+            async_remove_statistics(
+                self.hass,
+                [
+                    statistic_id
+                    for statistic_id in await async_statistic_ids(self.hass)
+                    if not is_saving_statistic(statistic_id)
+                ],
+            )
+            start = counting_since
+        names = await self._async_household_names(setup)
+        currency = self.hass.config.currency
+        while start < end:
+            chunk_end = min(start + CHUNK, end)
+            rows = await self._async_compute_household(setup, state, start, chunk_end)
+            for key, series in rows.items():
+                async_write_statistics(
+                    self.hass,
+                    household_statistic_id(key),
+                    names.get(key, key),
+                    currency if key.endswith("_cost") else "kWh",
+                    series,
+                    replace=False,
+                )
+            start = chunk_end
+        state.next_hour = max(start, counting_since)
+
+    async def _async_household_names(self, setup: EnergySetup) -> dict[str, str]:
+        """Return the name of each household statistic in the system language."""
+        translations = await async_get_translations(
+            self.hass, self.hass.config.language, "selector", [DOMAIN]
+        )
+
+        def text(key: str) -> str:
+            return translations.get(
+                f"component.{DOMAIN}.selector.statistics.options.{key}", key
+            )
+
+        areas = {AREA_HOUSEHOLD: text(AREA_HOUSEHOLD), AREA_OTHER: text(AREA_OTHER)}
+        for device in setup.devices:
+            entity = self.hass.states.get(device.stat)
+            areas[device_area(device.stat)] = device.name or (
+                entity.name if entity else device.stat
+            )
+        names = {GRID_COST: text(GRID_COST)}
+        for area, area_name in areas.items():
+            for figure in ("energy", "solar", "cost", LEVEL_CHEAP, LEVEL_EXPENSIVE):
+                names[f"{area}_{figure}"] = f"{area_name} {text(figure)}"
+        return names
+
+    async def _async_compute_household(
+        self, setup: EnergySetup, state: HouseholdState, start: float, end: float
+    ) -> dict[str, list[tuple[float, float]]]:
+        """Add the household figures of the hours from start to end to state.
+
+        Return per figure the cumulative value at the end of each hour in which
+        it changed. Hours without change are left out; the recorder carries the
+        sum over them.
+        """
+        hours = _hours(start, end)
+        imports = [grid.import_stat for grid in setup.grids if grid.import_stat]
+        parents = {device.stat: device.included_in for device in setup.devices}
+        sums: set[str] = set(setup.solar) | set(parents)
+        values: set[str] = set()
+        for battery in setup.batteries:
+            sums |= {battery.discharge_stat, battery.charge_stat}
+        for grid in setup.grids:
+            sums |= _grid_sums(self.hass, grid)
+            values |= {
+                entity
+                for entity in (grid.price_entity, grid.export_price_entity)
+                if entity is not None
+            }
+        changes = await async_hourly_changes(self.hass, sums, start, end)
+        entity_values = await async_hourly_values(self.hass, values, start, end)
+        prices = self._grid_prices(
+            setup, hours, changes, entity_values, state.last_prices
+        )
+        export_prices = {
+            grid.export_stat: _export_prices(
+                self.hass, grid, hours, changes, entity_values
+            )
+            for grid in setup.grids
+            if grid.export_stat is not None
+        }
+        top_level = [device_area(stat) for stat in effective_meters(parents, parents)]
+        owners = self._tariff_owners(setup)
+
+        def change(stat: str, hour: float) -> float:
+            return changes.get(stat, {}).get(hour, 0.0)
+
+        rows: dict[str, list[tuple[float, float]]] = {}
+        for index, hour in enumerate(hours):
+            exported = {stat: change(stat, hour) for stat in export_prices}
+            tariffs: dict[str, float] = {}
+            for stat, subentry_id in owners.items():
+                tariff = value_at(
+                    self.configs[subentry_id],
+                    self.states[subentry_id],
+                    VALUE_TARIFF,
+                    hour,
+                )
+                if tariff is not None:
+                    tariffs[device_area(stat)] = tariff
+            figures = household_hour(
+                grid_import=sum(change(stat, hour) for stat in imports),
+                export=sum(exported.values()),
+                solar=sum(change(stat, hour) for stat in setup.solar),
+                battery_out=sum(
+                    change(b.discharge_stat, hour) for b in setup.batteries
+                ),
+                battery_in=sum(change(b.charge_stat, hour) for b in setup.batteries),
+                devices={device_area(stat): change(stat, hour) for stat in parents},
+                top_level=top_level,
+                price=prices[index] or 0.0,
+                feed_in=average_price(
+                    [rates[index] for rates in export_prices.values()],
+                    list(exported.values()),
+                )
+                or 0.0,
+                export_revenue=sum(
+                    exported[stat] * (rates[index] or 0.0)
+                    for stat, rates in export_prices.items()
+                ),
+                standing_charge=_standing_charge(state, hour),
+                tariffs=tariffs,
+                levels=self.household.levels,
+            )
+            for key, value in figures.items():
+                if value:
+                    total = state.totals[key] = state.totals.get(key, 0.0) + value
+                    rows.setdefault(key, []).append((hour, total))
+        return rows
 
     def _async_write_history(
         self,

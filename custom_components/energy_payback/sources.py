@@ -27,7 +27,7 @@ from homeassistant.components.recorder.statistics import (
     statistics_during_period,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import DOMAIN
 
@@ -426,6 +426,29 @@ def saving_statistic_id(category: str) -> str:
     return f"{DOMAIN}:{category}_saving"
 
 
+def is_saving_statistic(statistic_id: str) -> bool:
+    """Return whether a statistic holds a category's saving."""
+    return statistic_id.endswith("_saving")
+
+
+def household_statistic_id(key: str) -> str:
+    """Return the id of the statistic that holds a household figure."""
+    return f"{DOMAIN}:{key}"
+
+
+def device_area(stat: str) -> str:
+    """Return the area name of a device, made from its meter's statistic id."""
+    return f"device_{slugify(stat)}"
+
+
+async def async_statistic_ids(hass: HomeAssistant) -> list[str]:
+    """Return the ids of all statistics the integration wrote."""
+    metadata = await get_instance(hass).async_add_executor_job(
+        lambda: get_metadata(hass, statistic_source=DOMAIN)
+    )
+    return list(metadata)
+
+
 def async_write_statistics(
     hass: HomeAssistant,
     statistic_id: str,
@@ -457,7 +480,7 @@ def async_write_statistics(
         name=name,
         source=DOMAIN,
         statistic_id=statistic_id,
-        unit_class=None,
+        unit_class="energy" if unit == "kWh" else None,
         unit_of_measurement=unit,
     )
     async_add_external_statistics(hass, metadata, statistics)

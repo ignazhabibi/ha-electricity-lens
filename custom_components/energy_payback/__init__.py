@@ -21,7 +21,6 @@ from homeassistant.loader import async_get_integration
 
 from .const import (
     CARD_FILENAME,
-    CATEGORIES,
     CATEGORY_HEAT_PUMP,
     CATEGORY_WALLBOX,
     CONF_BEFORE,
@@ -44,6 +43,7 @@ from .const import (
 from .coordinator import (
     EnergyPaybackConfigEntry,
     EnergyPaybackCoordinator,
+    coordinator_store,
     next_full_hour,
 )
 from .sources import (
@@ -52,7 +52,7 @@ from .sources import (
     async_last_value,
     async_listen_energy_updates,
     async_remove_statistics,
-    saving_statistic_id,
+    async_statistic_ids,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -205,7 +205,6 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: EnergyPaybackConfigEntry
 ) -> None:
-    """Remove the statistics the integration wrote."""
-    async_remove_statistics(
-        hass, [saving_statistic_id(category) for category in CATEGORIES]
-    )
+    """Remove the statistics the integration wrote, and its progress."""
+    async_remove_statistics(hass, await async_statistic_ids(hass))
+    await coordinator_store(hass, entry).async_remove()

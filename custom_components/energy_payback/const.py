@@ -26,6 +26,14 @@ CONF_CURRENT: Final = "current"
 CONF_RECOMPUTE: Final = "recompute"
 """When the user last asked to compute the category again."""
 
+# Config entry options: the household
+CONF_STANDING_CHARGE: Final = "standing_charge"
+"""Standing charge per month, shared evenly over the hours of its month."""
+CONF_CHEAP_UNTIL: Final = "cheap_until"
+"""Grid power at or below this price per kWh counts as cheap."""
+CONF_EXPENSIVE_FROM: Final = "expensive_from"
+"""Grid power at or above this price per kWh counts as expensive."""
+
 # Keys inside CONF_BEFORE and CONF_CURRENT
 VALUE_PRICE: Final = "price"
 """Gas or oil price for the heat pump, fuel price for the car."""

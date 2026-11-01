@@ -3,23 +3,41 @@
     "step": {
       "user": {
         "title": "Energy Payback",
-        "description": "Zeigt, was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
         "data": {
-          "categories": "Was soll ausgewertet werden?"
+          "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_devices": {
         "title": "Energy Payback",
-        "description": "Zeigt, was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
         "data": {
-          "categories": "Was soll ausgewertet werden?"
+          "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_solar": {
         "title": "Energy Payback",
-        "description": "Zeigt, was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
         "data": {
-          "categories": "Was soll ausgewertet werden?"
+          "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
+        }
+      },
+      "user_household_only": {
+        "title": "Energy Payback",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nOhne Solar und einzelne Geräte im [Energie-Dashboard](/config/energy) wird nur der Haushalt berechnet."
+      },
+      "household": {
+        "title": "Haushalt",
+        "description": "Alles optional. Der Grundpreis kommt zu den Netzkosten dazu. Mit Preisstufen siehst du, wie viel Netzstrom du in günstigen und in teuren Stunden bezogen hast.",
+        "data": {
+          "standing_charge": "Grundpreis pro Monat (optional)",
+          "cheap_until": "Günstig bis (optional)",
+          "expensive_from": "Teuer ab (optional)"
+        },
+        "data_description": {
+          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
+          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig",
+          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer"
         }
       },
       "pv": {
@@ -180,7 +198,7 @@
       }
     },
     "error": {
-      "categories_required": "Wähle mindestens eine Auswertung.",
+      "levels_order": "Teuer muss über günstig liegen.",
       "meters_required": "Wähle mindestens einen Zähler.",
       "heating_required": "Wähle die frühere Heizung.",
       "value_required": "Gib einen Wert über 0 an.",
@@ -188,12 +206,47 @@
     },
     "abort": {
       "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Energy Payback hinzufügen.",
-      "nothing_to_evaluate": "Im [Energie-Dashboard](/config/energy) fehlen Solar und einzelne Geräte. Füge dort mindestens eins hinzu.",
       "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Payback gibt.",
       "single_instance_allowed": "Energy Payback ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu."
     },
     "create_entry": {
-      "default": "Die Vergangenheit wird jetzt nachgerechnet, das dauert meist unter einer Minute. Die Karte »Energy Payback« findest du im Dashboard unter »Karte hinzufügen«."
+      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Energy Payback« findest du im Dashboard unter »Karte hinzufügen«."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Was möchtest du ändern?",
+        "menu_options": {
+          "household": "Grundpreis und Preisstufen",
+          "recompute": "Neu berechnen"
+        }
+      },
+      "household": {
+        "title": "Grundpreis und Preisstufen",
+        "description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde. Neue Preisstufen ordnen die ganze Vergangenheit neu ein.",
+        "data": {
+          "standing_charge": "Grundpreis pro Monat (optional)",
+          "cheap_until": "Günstig bis (optional)",
+          "expensive_from": "Teuer ab (optional)"
+        },
+        "data_description": {
+          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
+          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig",
+          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer"
+        }
+      },
+      "recompute": {
+        "title": "Neu berechnen",
+        "description": "Rechnet alles mit den aktuellen Messdaten neu: den Haushalt und alle Ersparnisse. Zum Beispiel nachdem du einen falschen Messwert in den Statistiken korrigiert hast. Deine Werte bleiben, wie sie sind."
+      }
+    },
+    "error": {
+      "levels_order": "Teuer muss über günstig liegen."
+    },
+    "abort": {
+      "household_saved": "Gespeichert. Der Grundpreis gilt ab {time} Uhr.",
+      "recomputing": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern."
     }
   },
   "config_subentries": {
@@ -245,7 +298,7 @@
         }
       },
       "error": {
-        "categories_required": "Wähle mindestens eine Auswertung.",
+        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -463,7 +516,7 @@
         }
       },
       "error": {
-        "categories_required": "Wähle mindestens eine Auswertung.",
+        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -572,7 +625,7 @@
         }
       },
       "error": {
-        "categories_required": "Wähle mindestens eine Auswertung.",
+        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -683,6 +736,18 @@
       "options": {
         "gas": "Gas",
         "oil": "Öl"
+      }
+    },
+    "statistics": {
+      "options": {
+        "household": "Haushalt",
+        "other": "Sonstiges",
+        "energy": "Verbrauch",
+        "solar": "Solarstrom",
+        "cost": "Kosten",
+        "cheap": "günstiger Netzstrom",
+        "expensive": "teurer Netzstrom",
+        "grid_cost": "Netzkosten"
       }
     }
   }

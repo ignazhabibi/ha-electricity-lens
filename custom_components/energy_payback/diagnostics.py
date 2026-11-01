@@ -37,6 +37,10 @@ async def async_get_config_entry_diagnostics(
             }
             for subentry_id, subentry in entry.subentries.items()
         },
+        "household": {
+            "options": dict(entry.options),
+            "state": coordinator.household_state.as_dict(),
+        },
         "balance": coordinator.data.balance,
         "currency": hass.config.currency,
         "energy_dashboard": energy,

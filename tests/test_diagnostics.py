@@ -28,6 +28,7 @@ async def test_diagnostics(hass: HomeAssistant, config_entry: MockConfigEntry) -
     assert categories["pv"]["state"]["saving"] > 0
     assert categories["pv"]["result"]["calculating"] is False
     assert diagnostics["balance"] is not None
+    assert diagnostics["household"]["state"]["totals"]["household_energy"] > 0
 
     with patch(
         "custom_components.energy_payback.diagnostics.async_get_energy_setup",

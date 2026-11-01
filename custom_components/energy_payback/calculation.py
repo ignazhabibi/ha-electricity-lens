@@ -174,6 +174,88 @@ def wallbox_saving(
     return fuel * fuel_price - electricity * electricity_price
 
 
+AREA_HOUSEHOLD = "household"
+AREA_OTHER = "other"
+GRID_COST = "grid_cost"
+LEVEL_CHEAP = "cheap"
+LEVEL_EXPENSIVE = "expensive"
+
+
+def price_level(
+    price: float, cheap_until: float | None, expensive_from: float | None
+) -> str | None:
+    """Return the price level of an hour's grid power, None for normal."""
+    if cheap_until is not None and price <= cheap_until:
+        return LEVEL_CHEAP
+    if expensive_from is not None and price >= expensive_from:
+        return LEVEL_EXPENSIVE
+    return None
+
+
+def household_hour(
+    *,
+    grid_import: float,
+    export: float,
+    solar: float,
+    battery_out: float,
+    battery_in: float,
+    devices: Mapping[str, float],
+    top_level: Iterable[str],
+    price: float,
+    feed_in: float,
+    export_revenue: float,
+    standing_charge: float,
+    tariffs: Mapping[str, float],
+    levels: tuple[float | None, float | None],
+) -> dict[str, float]:
+    """Return consumption, mix, and costs of one hour, keyed by area and figure.
+
+    Areas are the household, each device, and "other", what the household used
+    beyond its top-level devices. devices, top_level, and tariffs name devices
+    by their area. Figures are energy, solar, cost, and the grid power's level,
+    cheap or expensive, if any. Devices have no energy figure: their own
+    statistic already holds it.
+
+    Solar power used in the house is shared among the consumers in proportion
+    to their consumption. It costs the feed-in compensation it did not earn;
+    grid power costs the hour's price, or a device's own tariff. The battery
+    belongs to the PV plant, as in pv_saving. GRID_COST is what the grid
+    connection cost: imports minus feed-in compensation plus the standing charge.
+    """
+    consumption = max(grid_import - export + solar + battery_out - battery_in, 0.0)
+    from_solar = min(max(consumption - grid_import, 0.0), consumption)
+    share = from_solar / consumption if consumption else 0.0
+    level = price_level(price, *levels)
+    result: dict[str, float] = {
+        GRID_COST: grid_import * price - export_revenue + standing_charge
+    }
+
+    def add(area: str, energy: float, unit_price: float) -> float:
+        solar_part = energy * share
+        grid_part = energy - solar_part
+        cost = grid_part * unit_price + solar_part * feed_in
+        result[f"{area}_solar"] = solar_part
+        result[f"{area}_cost"] = cost
+        if level is not None:
+            result[f"{area}_{level}"] = grid_part
+        return cost
+
+    household_cost = 0.0
+    top = set(top_level)
+    for stat, energy in devices.items():
+        cost = add(stat, energy, tariffs.get(stat, price))
+        if stat in top:
+            household_cost += cost
+    other = max(consumption - sum(devices.get(stat, 0.0) for stat in top), 0.0)
+    household_cost += add(AREA_OTHER, other, price)
+    add(AREA_HOUSEHOLD, consumption, price)
+    result[f"{AREA_OTHER}_energy"] = other
+    result[f"{AREA_HOUSEHOLD}_energy"] = consumption
+    # The household costs what its consumers cost, own tariffs included.
+    result[f"{AREA_HOUSEHOLD}_cost"] = household_cost
+    return result
+
+
 def effective_meters(
     selected: Iterable[str], parents: Mapping[str, str | None]
 ) -> list[str]:

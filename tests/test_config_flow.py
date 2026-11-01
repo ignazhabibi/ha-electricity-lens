@@ -75,12 +75,15 @@ def _suggested(result: Any) -> dict[str, Any]:
 
 
 async def _start(hass: HomeAssistant, categories: list[str]) -> Any:
+    """Choose categories in the overview and skip the household."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    return await hass.config_entries.flow.async_configure(
+    result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"categories": categories}
     )
+    assert result["step_id"] == "household"
+    return await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
 
 async def test_full_setup(hass: HomeAssistant) -> None:
@@ -103,6 +106,12 @@ async def test_full_setup(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"categories": ["pv", "heat_pump", "wallbox"]}
+    )
+    assert result["step_id"] == "household"
+    assert _fields(result) == ["standing_charge", "cheap_until", "expensive_from"]
+    assert _suggested(result) == {}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"standing_charge": 12.5, "cheap_until": 0.2}
     )
     assert result["step_id"] == "pv"
     assert "since" in result["description_placeholders"]
@@ -135,6 +144,7 @@ async def test_full_setup(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     entry = result["result"]
     assert entry.minor_version == 2
+    assert entry.options == {"standing_charge": 12.5, "cheap_until": 0.2}
     subentries = {s.subentry_type: s for s in entry.subentries.values()}
     assert subentries["pv"].data["investment"] == 14500
     assert subentries["pv"].title == "PV plant"
@@ -162,15 +172,7 @@ async def test_full_setup(hass: HomeAssistant) -> None:
 
 async def test_setup_validation(hass: HomeAssistant) -> None:
     """Missing choices and values of 0 are rejected."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    assert result["errors"] == {"categories": "categories_required"}
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"categories": ["heat_pump"]}
-    )
+    result = await _start(hass, ["heat_pump"])
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["errors"] == {
         "meters": "meters_required",
@@ -222,29 +224,50 @@ async def test_scop_only_where_heat_data_is_missing(
     assert result["description_placeholders"]["heat_until"]
 
 
-@pytest.mark.parametrize(
-    ("prefs", "reason"),
-    [
-        (
-            {"energy_sources": [], "device_consumption": []},
-            "no_energy_dashboard",
-        ),
-        (
-            {"energy_sources": PREFS["energy_sources"][:1], "device_consumption": []},
-            "nothing_to_evaluate",
-        ),
-    ],
-)
-async def test_setup_aborts(
-    hass: HomeAssistant, prefs: dict[str, Any], reason: str
-) -> None:
-    """Setup ends with an explanation when the energy dashboard lacks data."""
-    await set_energy_prefs(hass, prefs)
+async def test_household_only(hass: HomeAssistant) -> None:
+    """Without categories only the household is set up; its levels are checked."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "household"
+    assert result["last_step"] is True
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"cheap_until": 0.3, "expensive_from": 0.3}
+    )
+    assert result["errors"] == {"expensive_from": "levels_order"}
+    with patch("custom_components.energy_payback.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"cheap_until": 0.2, "expensive_from": 0.35}
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].options == {"cheap_until": 0.2, "expensive_from": 0.35}
+    assert not result["result"].subentries
+
+
+async def test_household_only_without_solar_and_devices(hass: HomeAssistant) -> None:
+    """Without solar and devices the overview offers no category."""
+    await set_energy_prefs(
+        hass,
+        {"energy_sources": PREFS["energy_sources"][:1], "device_consumption": []},
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    assert result["step_id"] == "user_household_only"
+    assert _fields(result) == []
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "household"
+
+
+async def test_setup_aborts(hass: HomeAssistant) -> None:
+    """Setup ends with an explanation without a grid import with a price."""
+    await set_energy_prefs(hass, {"energy_sources": [], "device_consumption": []})
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == reason
+    assert result["reason"] == "no_energy_dashboard"
 
 
 @pytest.mark.parametrize(
@@ -553,3 +576,54 @@ async def test_reconfigure_interface_error(hass: HomeAssistant) -> None:
             context={"source": SOURCE_RECONFIGURE, "subentry_id": subentry.subentry_id},
         )
     assert result["reason"] == "energy_interface"
+
+
+async def test_options_household(hass: HomeAssistant) -> None:
+    """A new standing charge applies from the next hour; new levels recompute."""
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(entry, options={"cheap_until": 0.2})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["household", "recompute"]
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "household"}
+    )
+    assert _suggested(result)["cheap_until"] == 0.2
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"cheap_until": 0.4, "expensive_from": 0.3}
+    )
+    assert result["errors"] == {"expensive_from": "levels_order"}
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"cheap_until": 0.2, "standing_charge": 14}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "household_saved"
+    assert result["description_placeholders"]["time"]
+    assert entry.options == {"cheap_until": 0.2, "standing_charge": 14}
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "household"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"standing_charge": 14}
+    )
+    assert result["reason"] == "recomputing"
+    assert entry.options == {"standing_charge": 14}
+
+
+async def test_options_recompute(hass: HomeAssistant) -> None:
+    """Recomputing keeps the household's values."""
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(entry, options={"standing_charge": 14})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "recompute"}
+    )
+    assert result["step_id"] == "recompute"
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {})
+    assert result["reason"] == "recomputing"
+    assert entry.options["standing_charge"] == 14
+    assert entry.options["recompute"] > 0
