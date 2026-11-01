@@ -3,8 +3,10 @@
 // by price level) or by consumer (top-level devices and Other), in energy or
 // costs; or the shares of any statistics, shown as they are.
 
-import { LitElement, css, html, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
+import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { keyed } from "lit/directives/keyed.js";
 
+import { chartReady, shareChart, shares } from "./chart";
 import { CSS_COLORS, palette } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import { PERIODS, type PeriodOption } from "./energy-payback-figures-card";
@@ -34,9 +36,13 @@ export interface BreakdownCardConfig {
 }
 
 const REFRESH_MS = 5 * 60 * 1000;
-const RADIUS = 64;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
+// Room for the 180 px ring and its labels outside, with the legend below.
+const RING_HEIGHT = "240px";
+// The legend icons of HA's chart legend: a checked and an empty circle.
+const CHECK =
+  "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z";
+const BLANK =
+  "M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
 
 interface Part {
   id: string;
@@ -56,6 +62,8 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     _info: { state: true },
     _selected: { state: true },
     _sums: { state: true },
+    _hasChart: { state: true },
+    _hidden: { state: true },
   };
 
   hass?: HomeAssistant;
@@ -66,6 +74,9 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   private _sums?: { key: string; at: number; values: Record<string, number>; names: Record<string, string>; failed: boolean };
   private _loading?: string;
   private _unfollow?: () => void;
+  private _hasChart?: boolean;
+  /** Parts hidden in the ring's legend. */
+  private _hidden = new Set<string>();
 
   static getStubConfig(): Partial<BreakdownCardConfig> {
     return { area: "household", by: "source", figure: "energy", display: "ring" };
@@ -208,6 +219,12 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hass) return;
     if (changed.has("hass") || changed.has("_config")) this._follow();
+    if (this._hasChart === undefined) {
+      this._hasChart = false;
+      chartReady().then((ok) => {
+        this._hasChart = ok;
+      });
+    }
     if (!this._byStatistics) {
       if (this._info === undefined) this._info = cachedInfo();
       if (infoStale() && !this._infoLoading) void this._loadInfo();
@@ -242,9 +259,12 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     }
     const parts = this._series().map((series) => {
       const value = this._sum(series.plus) - this._sum(series.minus);
+      // The mix takes the short source names of the energy cards, so the
+      // labels around the ring fit a sidebar.
+      const key = series.name.key?.replace(/^source\./, "mix.");
       const name =
         series.name.text ??
-        (series.name.key && hasText(series.name.key) ? t(series.name.key) : series.id);
+        (key && hasText(key) ? t(key) : series.name.key && hasText(series.name.key) ? t(series.name.key) : series.id);
       const part: Part = { id: series.id, name, color: series.color, value: series.floor ? Math.max(value, 0) : value };
       if (this._by === "consumer" && this._info) {
         const colors = palette(this);
@@ -285,37 +305,61 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     return t(this._figure === "cost" ? "breakdown_cost_by_consumer" : "breakdown_energy_by_consumer");
   }
 
-  private _ring(parts: Part[], total: number): TemplateResult {
+  /** The ring on HA's chart element, as in the user's energy cards, with
+   * HA's chart legend below: a tap hides a part and the ring closes up. */
+  private _ring(parts: Part[]): TemplateResult {
     const t = this._localize;
-    let offset = 0;
-    const segments = parts
-      .filter((part) => part.value > 0)
-      .map((part) => {
-        const length = (part.value / total) * CIRCUMFERENCE;
-        const gap = parts.length > 1 ? Math.min(2, length / 2) : 0;
-        const segment = svg`<circle cx="80" cy="80" r=${RADIUS} fill="none" stroke=${part.color}
-          stroke-width="22" stroke-dasharray="${length - gap} ${CIRCUMFERENCE - length + gap}"
-          stroke-dashoffset=${-offset} transform="rotate(-90 80 80)"></circle>`;
-        offset += length;
-        return segment;
-      });
-    const unitLabel = this._byStatistics ? "kWh" : t(this._figure === "cost" ? "breakdown_total_cost" : "breakdown_total_energy");
-    const center = this._figure === "cost" && !this._byStatistics ? this._fmt.value(total, "money") : this._fmt.number(total, total < 100 ? 1 : 0);
+    if (!this._hasChart) return html`<p class="summary">${t("history_no_chart")}</p>`;
+    const style = getComputedStyle(this);
+    const money = this._figure === "cost" && !this._byStatistics;
+    const chart = shareChart({
+      items: parts,
+      total: t("breakdown_total"),
+      format: (value) => this._value(value),
+      percent: (value) => this._fmt.value(value, "percent"),
+      centerColor: palette(this).line,
+      labelColor: style.getPropertyValue("--primary-text-color").trim() || "#212121",
+      hidden: this._hidden,
+    });
+    const percents = shares(parts.map((part) => (this._hidden.has(part.id) ? 0 : part.value)));
+    const toggle = (id: string) => {
+      const hidden = new Set(this._hidden);
+      if (hidden.has(id)) hidden.delete(id);
+      else hidden.add(id);
+      this._hidden = hidden;
+    };
     return html`<div class="ring">
-      <svg viewBox="0 0 160 160" role="img" aria-label=${parts.map((p) => `${p.name} ${this._value(p.value)}`).join(", ")}>
-        <circle cx="80" cy="80" r=${RADIUS} fill="none" stroke="var(--divider-color)" stroke-width="22"></circle>
-        ${segments}
-        <text x="80" y="78" text-anchor="middle" class="center">${center}</text>
-        <text x="80" y="98" text-anchor="middle" class="center-label">${this._figure === "cost" && !this._byStatistics ? "" : unitLabel}</text>
-      </svg>
-      <div class="legend">
-        ${parts.map(
-          (part) => html`<div class="legend-row">
-            <span class="dot" style="background: ${part.color}"></span>
-            <span class="name">${part.name}</span>
-            <span class="amount">${this._fmt.value(total > 0 ? (part.value / total) * 100 : 0, "percent")} · ${this._value(part.value)}</span>
-          </div>`
-        )}
+      ${keyed(
+        money,
+        html`<ha-chart-base
+          .hass=${this.hass}
+          .data=${chart.data}
+          .options=${chart.options}
+          .height=${RING_HEIGHT}
+        ></ha-chart-base>`
+      )}
+      <div class="chart-legend">
+        <ul>
+          ${parts.map((part, index) => {
+            const off = this._hidden.has(part.id);
+            const percent = this._fmt.value(percents[index], "percent");
+            return html`<li class=${off ? "hidden" : ""}>
+              <button
+                type="button"
+                class="leg"
+                aria-pressed=${String(!off)}
+                aria-label="${part.name}: ${percent}"
+                @click=${() => toggle(part.id)}
+              >
+                <svg class="icon" viewBox="0 0 24 24" style="color: ${off ? "var(--secondary-text-color)" : part.color}">
+                  <path fill="currentColor" d=${off ? BLANK : CHECK}></path>
+                </svg>
+                <span class="label">${part.name}</span>
+                <span class="value">${percent}</span>
+              </button>
+            </li>`;
+          })}
+        </ul>
       </div>
     </div>`;
   }
@@ -380,25 +424,18 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     const total = parts.reduce((sum, part) => sum + Math.max(part.value, 0), 0);
     const calculating = !this._byStatistics && this._info?.calculating === true;
     const missing = !this._byStatistics && this._info !== undefined && !this._area();
+    const display =
+      this._config.display ?? (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
+    // The ring names its total in the middle; the bars name it in the chip.
     let chip = range ? rangeLabel(range, this._language) : "";
-    if (this._sums && !this._sums.failed && total > 0) {
-      const solar = parts.find((part) => part.id === "solar");
-      chip = solar
-        ? t("breakdown_solar_chip", { percent: this._fmt.value((solar.value / total) * 100, "percent") })
-        : this._value(total);
-    }
+    if (display === "bars" && this._sums && !this._sums.failed && total > 0) chip = this._value(total);
     let body: TemplateResult;
     if (calculating) body = html`<p class="summary">${t("calculating_all")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
     else if (this._sums?.failed) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("calculating")}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
-    else {
-      const display =
-        this._config.display ??
-        (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
-      body = display === "bars" ? this._bars(parts) : this._ring(parts, total);
-    }
+    else body = display === "bars" ? this._bars(parts) : this._ring(parts);
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${this._title()}</h2>
@@ -414,42 +451,75 @@ export class EnergyPaybackBreakdownCard extends LitElement {
       .header {
         min-height: 32px;
       }
-      /* The ring with HA's chart legend centered below it. */
+      /* The ring with HA's chart legend centered below it, as in the
+         share cards of the energy cards. */
       .ring {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--ha-space-3, 12px);
-        padding: var(--ha-space-4, 16px);
+        padding: 0 var(--ha-space-4, 16px) var(--ha-space-4, 16px);
       }
-      .ring svg {
-        width: 180px;
-        height: 180px;
-        flex: none;
+      .chart-legend {
+        font-size: var(--ha-font-size-s, 12px);
+        color: var(--primary-text-color);
+        padding: 8px 0 0;
       }
-      .center {
-        font-size: 24px;
-        fill: var(--primary-text-color);
-      }
-      .center-label {
-        font-size: 11px;
-        fill: var(--secondary-text-color);
-      }
-      .legend {
+      .chart-legend ul {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
+        align-items: center;
         gap: var(--ha-space-2, 8px) var(--ha-space-3, 12px);
-        font-size: var(--ha-font-size-s, 12px);
+        margin: 0;
+        padding: 0;
+        list-style: none;
       }
-      .legend-row {
+      .chart-legend li {
         display: inline-flex;
         align-items: center;
-        gap: var(--ha-space-1, 4px);
-        white-space: nowrap;
+        box-sizing: border-box;
       }
-      .legend-row .amount {
+      .chart-legend li.hidden {
         color: var(--secondary-text-color);
+      }
+      .chart-legend button.leg {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 2px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font: inherit;
+        color: inherit;
+        border-radius: var(--ha-border-radius-sm, 4px);
+      }
+      .chart-legend button.leg:focus-visible {
+        outline: 2px solid var(--ha-color-focus, var(--primary-color));
+        outline-offset: 2px;
+      }
+      .chart-legend .icon {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        margin-inline-end: var(--ha-space-1, 4px);
+        transition: opacity 0.15s ease;
+      }
+      @media (hover: hover) {
+        .chart-legend button.leg:hover .icon {
+          opacity: 0.7;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .chart-legend .icon {
+          transition: none;
+        }
+      }
+      .chart-legend .label {
+        white-space: nowrap;
+        line-height: var(--ha-line-height-condensed, 20px);
+      }
+      .chart-legend .value {
+        color: var(--secondary-text-color);
+        white-space: nowrap;
+        margin-inline-start: var(--ha-space-1, 4px);
+        line-height: 1;
       }
       .dot {
         display: inline-block;
@@ -457,9 +527,6 @@ export class EnergyPaybackBreakdownCard extends LitElement {
         height: 10px;
         border-radius: 5px;
         margin-right: 4px;
-      }
-      .legend-row .dot {
-        margin: 0;
       }
       .percent,
       .bar-line {

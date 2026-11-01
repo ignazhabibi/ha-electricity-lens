@@ -334,10 +334,12 @@ tiles:
 ### Energy Lens breakdown
 
 Shares of a whole for a period, as a ring or as bars, set up in the card
-editor:
+editor. The ring is drawn like the pie of Home Assistant's devices graph:
+each share labeled outside, the total in the middle, and a legend below
+that hides a share with a tap.
 
 - **By source**: solar power and grid power by price level, for the
-  household, a device, or Other. The chip says the solar share.
+  household, a device, or Other.
 - **By consumer**: the household's consumption or costs by top-level device
   and Other, each with its consumption and average price. Bars can be
   colored by the sources of each consumer.

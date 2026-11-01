@@ -223,3 +223,151 @@ export function barChart(input: ChartInput) {
   };
   return { data, options };
 }
+
+export interface ShareItem {
+  id: string;
+  name: string;
+  /** A real color: ECharts cannot read CSS variables. */
+  color: string;
+  value: number;
+}
+
+export interface ShareChartInput {
+  items: ShareItem[];
+  /** Label of the sum in the middle. */
+  total: string;
+  /** The sum and each value, with their unit. */
+  format: (value: number) => string;
+  percent: (value: number) => string;
+  centerColor: string;
+  labelColor: string;
+  /** Parts hidden in the legend. */
+  hidden: Set<string>;
+}
+
+/** Shares of a whole, in percent; zero when there is nothing. */
+export function shares(values: number[]): number[] {
+  const sum = values.reduce((total, value) => total + Math.max(0, value), 0);
+  return values.map((value) => (sum > 0 ? (Math.max(0, value) / sum) * 100 : 0));
+}
+
+/** The data and options for a donut like HA's devices graph in its pie mode:
+ * a ring of parts with their labels outside and the sum in the middle. HA's
+ * ECharts build loads the pie chart only for its own cards, so each part is a
+ * custom series that draws its sector; a part hidden in the legend leaves the
+ * ring to the others. The ring has a fixed diameter, so it is the same size
+ * wherever the card sits. */
+export function shareChart(input: ShareChartInput) {
+  const values = input.items.map((item) => (input.hidden.has(item.id) ? 0 : item.value));
+  const pct = shares(values);
+  const sum = values.reduce((total, value) => total + Math.max(0, value), 0);
+  // Start at twelve o'clock and go clockwise, as ECharts' pie does.
+  const angles: Array<[number, number]> = [];
+  let at = -Math.PI / 2;
+  for (const p of pct) {
+    const to = at + (p / 100) * 2 * Math.PI;
+    angles.push([at, to]);
+    at = to;
+  }
+  // ECharts may keep the first renderItem of a series when the data changes,
+  // so everything that changes travels in the data and is read with value().
+  type Api = { getWidth(): number; getHeight(): number; value(dim: number): number };
+  const ring = (api: Api) => {
+    const r = Math.min(90, api.getWidth() / 2 - 8, api.getHeight() / 2 - 8);
+    return { cx: api.getWidth() / 2, cy: api.getHeight() / 2, r, r0: (r * 40) / 70 };
+  };
+  const data: Array<Record<string, unknown>> = input.items.map((item, k) => ({
+    id: item.id,
+    type: "custom",
+    name: item.name,
+    coordinateSystem: "none",
+    cursor: "default",
+    color: withAlpha(item.color, 0.5),
+    data: [[values[k], angles[k][0], angles[k][1], pct[k]]],
+    renderItem: (_params: unknown, api: Api) => {
+      const from = api.value(1);
+      const to = api.value(2);
+      if (!(to - from > 0)) return null;
+      const g = ring(api);
+      const children: Array<Record<string, unknown>> = [
+        {
+          type: "sector",
+          shape: { ...g, startAngle: from, endAngle: to, cornerRadius: 4 },
+          style: { fill: withAlpha(item.color, 0.5), stroke: item.color, lineWidth: 1 },
+        },
+      ];
+      // Labels outside the ring, from 15 degrees up, as HA's pie.
+      if (to - from >= (15 * Math.PI) / 180) {
+        const mid = (from + to) / 2;
+        const right = Math.cos(mid) >= 0;
+        const p0 = [g.cx + Math.cos(mid) * g.r, g.cy + Math.sin(mid) * g.r];
+        const p1 = [g.cx + Math.cos(mid) * (g.r + 10), g.cy + Math.sin(mid) * (g.r + 10)];
+        const p2 = [p1[0] + (right ? 10 : -10), p1[1]];
+        children.push(
+          { type: "polyline", silent: true, shape: { points: [p0, p1, p2] }, style: { stroke: item.color, fill: "none" } },
+          {
+            type: "text",
+            silent: true,
+            x: p2[0] + (right ? 4 : -4),
+            y: p2[1],
+            style: {
+              text: `${item.name}\n${input.percent(api.value(3))}`,
+              fill: input.labelColor,
+              fontSize: 12,
+              lineHeight: 16,
+              align: right ? "left" : "right",
+              verticalAlign: "middle",
+            },
+          }
+        );
+      }
+      return { type: "group", children };
+    },
+  }));
+  data.push({
+    id: "total",
+    type: "custom",
+    coordinateSystem: "none",
+    silent: true,
+    tooltip: { show: false },
+    data: [[sum]],
+    renderItem: (_params: unknown, api: Api) => {
+      const g = ring(api);
+      return {
+        type: "text",
+        x: g.cx,
+        y: g.cy,
+        style: {
+          text: `${input.total}\n${input.format(api.value(0))}`,
+          fill: input.centerColor,
+          fontSize: 14,
+          lineHeight: 24,
+          fontWeight: "bold",
+          align: "center",
+          verticalAlign: "middle",
+        },
+      };
+    },
+  });
+  const options = {
+    xAxis: { show: false },
+    yAxis: { show: false },
+    // The card draws its own legend below the chart.
+    legend: { show: false },
+    tooltip: {
+      show: true,
+      trigger: "item",
+      formatter: (p: { seriesId?: string; value?: number[] }): Node | string => {
+        const k = input.items.findIndex((item) => item.id === p.seriesId);
+        if (k < 0) return "";
+        const item = input.items[k];
+        const element = document.createElement("div");
+        element.innerHTML =
+          `<b>${escape(item.name)}</b><br>${marker(item.color)}` +
+          `${input.format(p.value?.[0] ?? values[k])} (${input.percent(p.value?.[3] ?? pct[k])})`;
+        return element;
+      },
+    },
+  };
+  return { data, options };
+}
