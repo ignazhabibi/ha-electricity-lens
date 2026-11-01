@@ -37,6 +37,8 @@ export const CSS_COLORS = {
   car: "var(--energy-non-fossil-color, #0f9d58)",
 } as const;
 
+const HOT_WATER = /warm\s*wasser|hot\s*water|dhw|eau chaude/i;
+
 const CONSUMERS = ["#76b7b2", "#b07aa1", "#9c755f", "#ff9da7", "#bab0ac", "#a3a948"];
 
 type Rgb = [number, number, number];
@@ -107,6 +109,9 @@ function categoryOf(
  * order for the others, grey for "Other". */
 export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, string> {
   const result = new Map<string, string>();
+  const anyHotWater = info.areas.some(
+    (area) => area.kind === "device" && categoryOf(info, area)?.id === "heat_pump" && HOT_WATER.test(area.name)
+  );
   let next = 0;
   for (const area of info.areas) {
     if (area.kind === "other") {
@@ -114,8 +119,10 @@ export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, 
     } else if (area.kind === "device") {
       const category = categoryOf(info, area);
       if (category?.id === "heat_pump") {
-        // The first meter set up, usually heating, takes the full color.
-        result.set(area.id, category.index === 0 ? colors.heat : colors.heatLight);
+        // Heating takes the full color, hot water the light one: by its name
+        // where it says so, otherwise by the order the meters were set up.
+        const hotWater = HOT_WATER.test(area.name) || (!anyHotWater && category.index > 0);
+        result.set(area.id, hotWater ? colors.heatLight : colors.heat);
       } else if (category?.id === "wallbox") {
         result.set(area.id, colors.car);
       } else {
