@@ -89,28 +89,34 @@ export function palette(element: Element): Palette {
   };
 }
 
-/** The category a device belongs to, by its meter. */
-function categoryOf(info: FiguresInfo, device: FigureArea): string | undefined {
+/** The category a device belongs to, and its place among the category's
+ * meters, in the order they were set up. */
+function categoryOf(
+  info: FiguresInfo,
+  device: FigureArea
+): { id: string; index: number } | undefined {
   const meter = device.statistics.energy?.[0];
-  return info.areas.find(
-    (area) => area.kind === "category" && meter && area.statistics.energy?.includes(meter)
-  )?.id;
+  for (const area of info.areas) {
+    const index = meter && area.kind === "category" ? (area.statistics.energy ?? []).indexOf(meter) : -1;
+    if (index >= 0) return { id: area.id, index };
+  }
+  return undefined;
 }
 
 /** The color of each consumer: category colors for their devices, a fixed
  * order for the others, grey for "Other". */
 export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, string> {
   const result = new Map<string, string>();
-  let heatIndex = 0;
   let next = 0;
   for (const area of info.areas) {
     if (area.kind === "other") {
       result.set(area.id, colors.other);
     } else if (area.kind === "device") {
       const category = categoryOf(info, area);
-      if (category === "heat_pump") {
-        result.set(area.id, heatIndex++ === 0 ? colors.heat : colors.heatLight);
-      } else if (category === "wallbox") {
+      if (category?.id === "heat_pump") {
+        // The first meter set up, usually heating, takes the full color.
+        result.set(area.id, category.index === 0 ? colors.heat : colors.heatLight);
+      } else if (category?.id === "wallbox") {
         result.set(area.id, colors.car);
       } else {
         result.set(area.id, colors.consumers[next++ % colors.consumers.length]);

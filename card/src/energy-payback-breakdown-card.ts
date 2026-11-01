@@ -279,7 +279,9 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     const t = this._localize;
     if (this._config.title) return this._config.title;
     if (this._byStatistics) return "";
-    if (this._by === "source") return t("breakdown_mix");
+    // Until the integration answered, the configured split names the card.
+    const by = this._area() ? this._by : (this._config.by ?? "source");
+    if (by === "source") return t("breakdown_mix");
     return t(this._figure === "cost" ? "breakdown_cost_by_consumer" : "breakdown_energy_by_consumer");
   }
 
