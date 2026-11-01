@@ -445,7 +445,7 @@ Each step is a release that works on its own.
 ## 13. Open
 
 - **Name.** Candidates: Energy Lens, Energy Studio, Energy Deck, Energy Pro.
-- **Views of the strategy.** Proposed: overview, electricity, solar, heating, charging, balance; under discussion.
+- **Views of the strategy.** Built as proposed: overview, electricity, solar, heating, charging, balance; open for changes after the first use.
 - `clean-install-mockup.html` shows the earlier journey and card states. `onboarding-flow.html` replaces its setup part; the household step is still to be added there.
 
 ## 14. Quality expectations

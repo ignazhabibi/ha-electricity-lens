@@ -8,6 +8,7 @@ import { EnergyPaybackHistoryCard } from "./energy-payback-history-card";
 import { EnergyPaybackFiguresCardEditor } from "./figures-editor";
 import { EnergyPaybackHistoryCardEditor } from "./history-editor";
 import { registerCards } from "./register";
+import { EnergyPaybackDashboardStrategy } from "./strategy";
 
 registerCards([
   {
@@ -49,5 +50,13 @@ registerCards([
       tag: "energy-payback-breakdown-card-editor",
       element: EnergyPaybackBreakdownCardEditor,
     },
+  },
+], [
+  {
+    type: "energy-payback",
+    element: EnergyPaybackDashboardStrategy,
+    name: "Energy Payback",
+    description:
+      "A finished energy dashboard with costs, electricity mix, solar, heat pump, car, and the balance.",
   },
 ]);

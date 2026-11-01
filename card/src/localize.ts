@@ -151,6 +151,12 @@ const en = {
   editor_statistics: "Statistics",
   "figure_choice.energy": "Consumption",
   "figure_choice.cost": "Costs",
+  "strategy.title": "Energy",
+  "strategy.overview": "Overview",
+  "strategy.electricity": "Electricity",
+  "strategy.solar": "Solar",
+  "strategy.balance": "Balance",
+  "strategy.not_loaded": "Set up the Energy Payback integration to see this dashboard.",
 };
 
 export type Key = keyof typeof en;
@@ -306,6 +312,12 @@ const de: Record<Key, string> = {
   editor_statistics: "Statistiken",
   "figure_choice.energy": "Verbrauch",
   "figure_choice.cost": "Kosten",
+  "strategy.title": "Energie",
+  "strategy.overview": "Übersicht",
+  "strategy.electricity": "Strom",
+  "strategy.solar": "Solar",
+  "strategy.balance": "Bilanz",
+  "strategy.not_loaded": "Richte die Integration Energy Payback ein, um dieses Dashboard zu sehen.",
 };
 
 const languages: Record<string, Record<Key, string>> = { en, de };

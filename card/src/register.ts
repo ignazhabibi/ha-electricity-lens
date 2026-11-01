@@ -23,12 +23,24 @@ const define = (tag: string, card: CustomElementConstructor): void => {
   }
 };
 
-export function registerCards(cards: CardEntry[]): void {
-  const defineAll = () =>
+export interface StrategyEntry {
+  /** Used as `custom:<type>` in the dashboard's strategy. */
+  type: string;
+  element: CustomElementConstructor;
+  name: string;
+  description: string;
+}
+
+export function registerCards(cards: CardEntry[], strategies: StrategyEntry[] = []): void {
+  const defineAll = () => {
     cards.forEach(({ tag, card, editor }) => {
       define(tag, card);
       if (editor) define(editor.tag, editor.element);
     });
+    strategies.forEach(({ type, element }) =>
+      define(`ll-strategy-dashboard-${type}`, element)
+    );
+  };
   defineAll();
 
   // Home Assistant's app replaces the custom element registry with a scoped
@@ -48,7 +60,20 @@ export function registerCards(cards: CardEntry[]): void {
 
   const registry = window as unknown as {
     customCards?: Array<Record<string, unknown>>;
+    customStrategies?: Array<Record<string, unknown>>;
   };
+  // Offered under "Community dashboards" when adding a dashboard.
+  registry.customStrategies = registry.customStrategies ?? [];
+  for (const { type, name, description } of strategies) {
+    if (registry.customStrategies.some((entry) => entry.type === type)) continue;
+    registry.customStrategies.push({
+      type,
+      strategyType: "dashboard",
+      name,
+      description,
+      documentationURL: DOCUMENTATION_URL,
+    });
+  }
   registry.customCards = registry.customCards ?? [];
   for (const { tag, name, description } of cards) {
     if (registry.customCards.some((card) => card.type === tag)) continue;

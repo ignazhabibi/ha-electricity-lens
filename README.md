@@ -349,6 +349,32 @@ display: bars
 color_by_source: true
 ```
 
+## The dashboard
+
+Energy Payback brings a finished energy dashboard. Add it under
+**Settings › Dashboards › Add dashboard**, under *Community dashboards*:
+**Energy Payback**. Or in YAML:
+
+```yaml
+strategy:
+  type: custom:energy-payback
+```
+
+It has no settings. It asks the integration what the household has and shows
+only the views that fit, each with the energy date selection on top:
+
+| View | Shows |
+|---|---|
+| Overview | Costs, average price, self-sufficiency, cheap grid power; the energy distribution; consumption by source with the price; the electricity mix; the balance |
+| Electricity | Grid and household figures; usage graph; costs by consumer; devices and sources tables |
+| Solar | Production, self-consumption, saving, forecast; solar graph and gauges; the PV plant's saving over time |
+| Heat pump | Heat, seasonal COP, heat price, costs, saving, solar share; heat with the COP; consumption by source with the price |
+| Electric car | Distance, costs per 100 km, costs, saving, solar share, price; charging by source; distance with the costs per 100 km |
+| Balance | The balance card and the savings over time |
+
+Whoever wants more takes control of the dashboard (⋮ › *Take control*) and
+builds on with the same cards.
+
 ## How the data updates
 
 Energy Payback reads the recorder's hourly long-term statistics of the meters
