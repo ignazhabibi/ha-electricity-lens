@@ -6,7 +6,7 @@ import { DOMAIN } from "./model";
 import type { FiguresInfo, HomeAssistant } from "./types";
 
 const KEEP_MS = 5 * 60 * 1000;
-const RETRY_MS = 5 * 1000;
+export const RETRY_MS = 5 * 1000;
 
 let cache: { at: number; value: FiguresInfo | null } | undefined;
 let pending: Promise<FiguresInfo | null> | undefined;

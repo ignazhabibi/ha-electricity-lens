@@ -45,7 +45,7 @@ import {
   type LineFigure,
   type Stack,
 } from "./history-figures";
-import { cachedInfo, infoStale, loadInfo } from "./info";
+import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
 import { readCategories } from "./model";
 import { cardStyles } from "./styles";
@@ -134,6 +134,7 @@ export class ElectricityLensHistoryCard extends LitElement {
   private _hasChart?: boolean;
   private _loading?: string;
   private _unfollow?: () => void;
+  private _retryTimer?: ReturnType<typeof setTimeout>;
   private _chart?: ReturnType<typeof barChart>;
 
   static getStubConfig(): Record<string, never> {
@@ -165,6 +166,8 @@ export class ElectricityLensHistoryCard extends LitElement {
     super.disconnectedCallback();
     this._unfollow?.();
     this._unfollow = undefined;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
   }
 
   private get _localize(): Localize {
@@ -196,6 +199,11 @@ export class ElectricityLensHistoryCard extends LitElement {
     this._infoLoading = true;
     this._info = await loadInfo(this.hass);
     this._infoLoading = false;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
+    if (this.isConnected && (!this._info || this._info.calculating)) {
+      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+    }
   }
 
   /** The period shown, and how long each bar is. */
@@ -353,6 +361,9 @@ export class ElectricityLensHistoryCard extends LitElement {
     if (!this._savings) {
       if (this._info === undefined) this._info = cachedInfo();
       if (infoStale() && !this._infoLoading) void this._loadInfo();
+      else if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
+        this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+      }
     }
     const plan = this._savings ? this._savingsPlan() : this._figurePlan();
     const stale = !this._loaded || Date.now() - this._loaded.at > REFRESH_MS;

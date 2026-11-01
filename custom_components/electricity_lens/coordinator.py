@@ -289,8 +289,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         await self._async_advance_household(setup, end)
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
-        await self._async_save()
         await async_wait_recorder(self.hass)
+        await self._async_save()
         return self._results()
 
     def _issue(
@@ -383,12 +383,12 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             rows = await self._async_compute(config, setup, state, start, chunk_end)
             for figure, series in rows.items():
                 history.setdefault(figure, []).extend(series)
-            state.next_hour = start = chunk_end
-        if computing_past:
-            state.next_hour = max(start, counting_since)
+            start = chunk_end
         await self._async_write_history(
             subentry_id, config, history, replace=computing_past
         )
+        await async_wait_recorder(self.hass)
+        state.next_hour = max(start, counting_since)
 
     async def _async_compute(
         self,
@@ -710,6 +710,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 series,
                 replace=False,
             )
+        await async_wait_recorder(self.hass)
         state.next_hour = max(start, counting_since)
 
     async def async_texts(self) -> Callable[[str], str]:

@@ -34,7 +34,7 @@ import {
   type FixedPeriod,
   type Range,
 } from "./history";
-import { cachedInfo, infoStale, loadInfo } from "./info";
+import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
 import { cardStyles } from "./styles";
 import type {
@@ -141,6 +141,7 @@ export class ElectricityLensFiguresCard extends LitElement {
   private _loaded?: Loaded;
   private _loading?: string;
   private _unfollow?: () => void;
+  private _retryTimer?: ReturnType<typeof setTimeout>;
 
   static getStubConfig(): Partial<FiguresCardConfig> {
     return {
@@ -180,6 +181,8 @@ export class ElectricityLensFiguresCard extends LitElement {
     super.disconnectedCallback();
     this._unfollow?.();
     this._unfollow = undefined;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
   }
 
   private get _localize(): Localize {
@@ -232,6 +235,11 @@ export class ElectricityLensFiguresCard extends LitElement {
     this._infoLoading = true;
     this._info = await loadInfo(this.hass);
     this._infoLoading = false;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
+    if (this.isConnected && (!this._info || this._info.calculating)) {
+      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+    }
   }
 
   private _request(): Request | undefined {
@@ -239,7 +247,7 @@ export class ElectricityLensFiguresCard extends LitElement {
     if (!range) return undefined;
     const tiles = this._tiles;
     const needsInfo = tiles.some((tile) => sourceOf(tile) === "energy");
-    if (needsInfo && this._info === undefined) return undefined;
+    if (needsInfo && !this._info) return undefined;
     const ids = new Set<string>();
     const statistics = new Set<string>();
     let forecast = false;
@@ -252,7 +260,9 @@ export class ElectricityLensFiguresCard extends LitElement {
         const found = this._figure(tile);
         if (!found) continue;
         if (isForecast(found.figure)) forecast = true;
-        statisticsOf(found.area, found.figure).forEach((id) => ids.add(id));
+        if (!this._info?.calculating) {
+          statisticsOf(found.area, found.figure).forEach((id) => ids.add(id));
+        }
       }
     }
     const sorted = [...ids].sort();
@@ -322,6 +332,9 @@ export class ElectricityLensFiguresCard extends LitElement {
     if (changed.has("hass") || changed.has("_config")) this._follow();
     if (this._info === undefined) this._info = cachedInfo();
     if (infoStale() && !this._infoLoading) void this._loadInfo();
+    else if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
+      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+    }
     const request = this._request();
     const stale = !this._loaded || Date.now() - this._loaded.at > REFRESH_MS;
     if (

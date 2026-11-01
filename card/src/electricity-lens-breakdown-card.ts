@@ -13,7 +13,7 @@ import { followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
 import { fixedRange, rangeLabel, type Range } from "./history";
 import { barSeries, type BarSeries } from "./history-figures";
-import { cachedInfo, infoStale, loadInfo } from "./info";
+import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { hasText, localizer, type Localize } from "./localize";
 import { cardStyles } from "./styles";
 import { loadSums } from "./sums";
@@ -74,6 +74,7 @@ export class ElectricityLensBreakdownCard extends LitElement {
   private _sums?: { key: string; at: number; values: Record<string, number>; names: Record<string, string>; failed: boolean };
   private _loading?: string;
   private _unfollow?: () => void;
+  private _retryTimer?: ReturnType<typeof setTimeout>;
   private _hasChart?: boolean;
   /** Parts hidden in the ring's legend. */
   private _hidden = new Set<string>();
@@ -110,6 +111,8 @@ export class ElectricityLensBreakdownCard extends LitElement {
     super.disconnectedCallback();
     this._unfollow?.();
     this._unfollow = undefined;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
   }
 
   private get _localize(): Localize {
@@ -192,6 +195,11 @@ export class ElectricityLensBreakdownCard extends LitElement {
     this._infoLoading = true;
     this._info = await loadInfo(this.hass);
     this._infoLoading = false;
+    clearTimeout(this._retryTimer);
+    this._retryTimer = undefined;
+    if (this.isConnected && (!this._info || this._info.calculating)) {
+      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+    }
   }
 
   private async _load(key: string, ids: string[], range: Range): Promise<void> {
@@ -228,7 +236,10 @@ export class ElectricityLensBreakdownCard extends LitElement {
     if (!this._byStatistics) {
       if (this._info === undefined) this._info = cachedInfo();
       if (infoStale() && !this._infoLoading) void this._loadInfo();
-      if (!this._info) return;
+      else if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
+        this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+      }
+      if (!this._info || this._info.calculating) return;
     }
     const range = this._range();
     if (!range) return;

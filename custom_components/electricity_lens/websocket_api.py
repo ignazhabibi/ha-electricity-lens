@@ -180,7 +180,8 @@ async def async_figures(
         )
     )
     return {
-        "calculating": coordinator.household_state.next_hour is None,
+        "calculating": coordinator.household_state.next_hour is None
+        or any(result.calculating for result in coordinator.data.categories.values()),
         "levels": {"cheap_until": cheap_until, "expensive_from": expensive_from},
         "areas": areas,
     }
