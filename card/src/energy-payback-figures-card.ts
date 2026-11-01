@@ -385,7 +385,8 @@ export class EnergyPaybackFiguresCard extends LitElement {
     if (this._info?.calculating && !isForecast(figure)) {
       return this._tile(label, "…", t("calculating"));
     }
-    if (!this._loaded || this._loaded.failed) return this._tile(label, "–");
+    if (!this._loaded) return this._tile(label, "…");
+    if (this._loaded.failed) return this._tile(label, "–");
     const forecast =
       figure === "forecast_today"
         ? this._loaded.forecast.today
