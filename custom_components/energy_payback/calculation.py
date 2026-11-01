@@ -156,6 +156,24 @@ def heat_pump_saving(
     return heating_cost(heat, heating, fuel_price) - electricity * electricity_price
 
 
+def wallbox_distance(electricity: float, ev_consumption: float) -> float:
+    """Return the distance charged, in km.
+
+    The electric car's consumption is per 100 km, measured at the wallbox.
+    """
+    return electricity / ev_consumption * 100
+
+
+def fuel_cost(
+    distance: float, combustion_consumption: float, fuel_price: float
+) -> float:
+    """Return what a combustion car would have paid for fuel for a distance.
+
+    Its consumption is in litres per 100 km.
+    """
+    return distance * combustion_consumption / 100 * fuel_price
+
+
 def wallbox_saving(
     *,
     electricity: float,
@@ -169,9 +187,11 @@ def wallbox_saving(
     Consumptions are per 100 km: kWh for the electric car, measured at the
     wallbox, and litres for the combustion car.
     """
-    distance = electricity / ev_consumption * 100
-    fuel = distance * combustion_consumption / 100
-    return fuel * fuel_price - electricity * electricity_price
+    distance = wallbox_distance(electricity, ev_consumption)
+    return (
+        fuel_cost(distance, combustion_consumption, fuel_price)
+        - electricity * electricity_price
+    )
 
 
 AREA_HOUSEHOLD = "household"

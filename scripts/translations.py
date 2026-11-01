@@ -57,6 +57,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "cheap": "cheap grid power",
             "expensive": "expensive grid power",
             "grid_cost": "Grid costs",
+            "heat": "heat",
+            "distance": "distance",
+            "alternative_cost": "comparison costs",
         },
         "pv": {
             "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
@@ -287,6 +290,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "cheap": "günstiger Netzstrom",
             "expensive": "teurer Netzstrom",
             "grid_cost": "Netzkosten",
+            "heat": "Wärme",
+            "distance": "Strecke",
+            "alternative_cost": "Vergleichskosten",
         },
         "pv": {
             "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",

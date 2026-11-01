@@ -29,7 +29,7 @@ from homeassistant.components.recorder.statistics import (
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util, slugify
 
-from .const import DOMAIN
+from .const import CATEGORIES, DOMAIN
 
 ENERGY_DOMAIN = "energy"
 HOUR = 3600.0
@@ -427,14 +427,23 @@ async def async_last_value(hass: HomeAssistant, entity_id: str) -> float | None:
     return None
 
 
+def category_statistic_id(category: str, figure: str) -> str:
+    """Return the id of the statistic that holds a figure of a category."""
+    return f"{DOMAIN}:{category}_{figure}"
+
+
 def saving_statistic_id(category: str) -> str:
     """Return the id of the statistic that holds a category's saving."""
-    return f"{DOMAIN}:{category}_saving"
+    return category_statistic_id(category, "saving")
 
 
-def is_saving_statistic(statistic_id: str) -> bool:
-    """Return whether a statistic holds a category's saving."""
-    return statistic_id.endswith("_saving")
+def statistic_category(statistic_id: str) -> str | None:
+    """Return the category a statistic of the integration belongs to, if any."""
+    figure = statistic_id.removeprefix(f"{DOMAIN}:")
+    return next(
+        (category for category in CATEGORIES if figure.startswith(f"{category}_")),
+        None,
+    )
 
 
 def household_statistic_id(key: str) -> str:

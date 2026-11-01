@@ -28,16 +28,19 @@ from .calculation import (
     average_price,
     effective_meters,
     electricity_prices,
+    fuel_cost,
     heat_pump_saving,
+    heating_cost,
     household_hour,
     pv_saving,
     summarize,
+    wallbox_distance,
     wallbox_saving,
 )
 from .const import (
-    CATEGORIES,
     CATEGORY_HEAT_PUMP,
     CATEGORY_PV,
+    CATEGORY_WALLBOX,
     DOMAIN,
     ISSUE_ENERGY_INTERFACE,
     ISSUE_MISSING_METER,
@@ -72,11 +75,11 @@ from .sources import (
     async_remove_statistics,
     async_statistic_ids,
     async_write_statistics,
+    category_statistic_id,
     cost_stat,
     device_area,
     household_statistic_id,
-    is_saving_statistic,
-    saving_statistic_id,
+    statistic_category,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,8 +89,9 @@ UPDATE_INTERVAL = timedelta(minutes=15)
 CHUNK = 30 * 24 * HOUR
 STORAGE_VERSION = 1
 # Version 2 keeps the savings in statistics of the integration's own instead
-# of the saving sensors' statistics.
-STATISTICS_VERSION = 2
+# of the saving sensors' statistics. Version 3 adds heat, distance, and the
+# alternative's costs per category.
+STATISTICS_VERSION = 3
 
 type EnergyPaybackConfigEntry = ConfigEntry[EnergyPaybackCoordinator]
 
@@ -103,6 +107,13 @@ def _ceil_hour(timestamp: float) -> float:
 def next_full_hour() -> float:
     """Return the start of the next full hour, from when new values apply."""
     return _ceil_hour(time() + 1)
+
+
+# The figures each category keeps besides its saving.
+CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
+    CATEGORY_HEAT_PUMP: ("heat", "alternative_cost"),
+    CATEGORY_WALLBOX: ("distance", "alternative_cost"),
+}
 
 
 def _standing_charge(state: HouseholdState, hour: float) -> float:
@@ -211,9 +222,10 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             self.states[subentry_id] = state
         configured = {config.category for config in self.configs.values()}
         stale = [
-            saving_statistic_id(category)
-            for category in CATEGORIES
-            if category not in configured
+            statistic_id
+            for statistic_id in await async_statistic_ids(self.hass)
+            if (category := statistic_category(statistic_id)) is not None
+            and category not in configured
         ]
         if moving_statistics:
             # The past is computed again into the new statistics; the saving
@@ -363,16 +375,18 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         counting_since = _ceil_hour(state.data_start)
         computing_past = state.next_hour is None
         start = state.next_hour if state.next_hour is not None else counting_since
-        history: list[tuple[float, float]] = []
+        history: dict[str, list[tuple[float, float]]] = {}
         while start < end:
             chunk_end = min(start + CHUNK, end)
-            history.extend(
-                await self._async_compute(config, setup, state, start, chunk_end)
-            )
+            rows = await self._async_compute(config, setup, state, start, chunk_end)
+            for figure, series in rows.items():
+                history.setdefault(figure, []).extend(series)
             state.next_hour = start = chunk_end
         if computing_past:
             state.next_hour = max(start, counting_since)
-        self._async_write_history(subentry_id, config, history, replace=computing_past)
+        await self._async_write_history(
+            subentry_id, config, history, replace=computing_past
+        )
 
     async def _async_compute(
         self,
@@ -381,10 +395,12 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         state: CategoryState,
         start: float,
         end: float,
-    ) -> list[tuple[float, float]]:
+    ) -> dict[str, list[tuple[float, float]]]:
         """Add the saving of the hours from start to end to state.
 
-        Return the cumulative saving at the end of each hour.
+        Return per figure the cumulative value at the end of each hour: the
+        saving for every hour; heat, distance, and the alternative's costs for
+        the hours in which they changed.
         """
         hours = _hours(start, end)
         meters = self._key_stats(config, setup)
@@ -419,6 +435,13 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             return changes.get(stat, {}).get(hour, 0.0)
 
         history: list[tuple[float, float]] = []
+        figures: dict[str, list[tuple[float, float]]] = {"saving": history}
+
+        def add(figure: str, hour: float, amount: float) -> None:
+            if amount:
+                total = state.totals[figure] = state.totals.get(figure, 0.0) + amount
+                figures.setdefault(figure, []).append((hour, total))
+
         if is_pv:
             exporting = [source for source in setup.grids if source.export_stat]
             export_prices = {
@@ -445,7 +468,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                     ),
                 )
                 history.append((hour, state.saving))
-            return history
+            return figures
 
         def value(key: str, hour: float) -> float | None:
             return value_at(config, state, key, hour)
@@ -456,12 +479,19 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             electricity_price = tariff if tariff is not None else prices[index] or 0.0
             fuel_price = self._fuel_price(config, state, entity_values, hour)
             if config.category == CATEGORY_HEAT_PUMP:
+                heat = self._heat(config, state, changes, electricity, hour)
                 state.saving += heat_pump_saving(
                     electricity=electricity,
-                    heat=self._heat(config, state, changes, electricity, hour),
+                    heat=heat,
                     heating=config.heating,
                     fuel_price=fuel_price,
                     electricity_price=electricity_price,
+                )
+                add("heat", hour, heat)
+                add(
+                    "alternative_cost",
+                    hour,
+                    heating_cost(heat, config.heating, fuel_price),
                 )
             elif (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
                 combustion := value(VALUE_COMBUSTION_CONSUMPTION, hour)
@@ -473,8 +503,15 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                     fuel_price=fuel_price,
                     electricity_price=electricity_price,
                 )
+                distance = wallbox_distance(electricity, ev)
+                add("distance", hour, distance)
+                add(
+                    "alternative_cost",
+                    hour,
+                    fuel_cost(distance, combustion, fuel_price),
+                )
             history.append((hour, state.saving))
-        return history
+        return figures
 
     def _fuel_price(
         self,
@@ -644,7 +681,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 [
                     statistic_id
                     for statistic_id in await async_statistic_ids(self.hass)
-                    if not is_saving_statistic(statistic_id)
+                    if statistic_category(statistic_id) is None
                 ],
             )
             start = counting_since
@@ -779,28 +816,34 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                     rows.setdefault(key, []).append((hour, total))
         return rows
 
-    def _async_write_history(
+    async def _async_write_history(
         self,
         subentry_id: str,
         config: CategoryConfig,
-        history: list[tuple[float, float]],
+        history: dict[str, list[tuple[float, float]]],
         *,
         replace: bool,
     ) -> None:
-        """Write the computed hours to the category's saving statistic."""
+        """Write the computed hours to the category's statistics."""
         registry = er.async_get(self.hass)
         entity_id = registry.async_get_entity_id(
             Platform.SENSOR, DOMAIN, f"{subentry_id}_saving"
         )
         sensor = self.hass.states.get(entity_id) if entity_id else None
-        async_write_statistics(
-            self.hass,
-            saving_statistic_id(config.category),
-            sensor.name if sensor else self.config_entry.subentries[subentry_id].title,
-            self.hass.config.currency,
-            history,
-            replace=replace,
-        )
+        title = self.config_entry.subentries[subentry_id].title
+        text = await self.async_texts()
+        units = {"heat": "kWh", "distance": "km"}
+        for figure in {"saving", *CATEGORY_FIGURES.get(config.category, ())}:
+            async_write_statistics(
+                self.hass,
+                category_statistic_id(config.category, figure),
+                (sensor.name if sensor else title)
+                if figure == "saving"
+                else f"{title} {text(figure)}",
+                units.get(figure, self.hass.config.currency),
+                history.get(figure, []),
+                replace=replace,
+            )
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState

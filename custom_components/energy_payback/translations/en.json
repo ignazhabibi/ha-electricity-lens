@@ -749,7 +749,10 @@
         "cost": "costs",
         "cheap": "cheap grid power",
         "expensive": "expensive grid power",
-        "grid_cost": "Grid costs"
+        "grid_cost": "Grid costs",
+        "heat": "heat",
+        "distance": "distance",
+        "alternative_cost": "comparison costs"
       }
     }
   }

@@ -749,7 +749,10 @@
         "cost": "Kosten",
         "cheap": "günstiger Netzstrom",
         "expensive": "teurer Netzstrom",
-        "grid_cost": "Netzkosten"
+        "grid_cost": "Netzkosten",
+        "heat": "Wärme",
+        "distance": "Strecke",
+        "alternative_cost": "Vergleichskosten"
       }
     }
   }

@@ -228,6 +228,8 @@ example in the *Statistics graph* card, under their names such as
 | `energy_payback:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
 | `energy_payback:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
 | `energy_payback:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
+| `energy_payback:heat_pump_heat`, `…heat_pump_alternative_cost` | The heat pump's heat (measured or estimated) and what the former heating would have cost for it |
+| `energy_payback:wallbox_distance`, `…wallbox_alternative_cost` | The distance charged and what a combustion car would have paid for fuel |
 
 Energy is in kWh, money in your currency. Hours in which a figure did not
 change are not stored; statistics cards carry the sum over them.
@@ -301,7 +303,8 @@ Areas and their figures:
 | Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
 | Grid | Grid import, feed-in, grid costs |
 | Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard) |
-| Heat pump, electric car | Consumption, saving |
+| Heat pump | Consumption, costs, average price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power |
+| Electric car | Consumption, costs, average price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power |
 | Each device, Other | Consumption, costs, average price, solar share, cheap and expensive grid power |
 
 The card computes nothing beyond adding up the hours of the period and

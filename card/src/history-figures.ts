@@ -6,22 +6,43 @@
 import { figuresOf, type Figure } from "./figures";
 import type { FigureArea, FiguresInfo } from "./types";
 
-export type BarFigure = "energy" | "cost" | "saving" | "export";
+export type BarFigure =
+  | "energy"
+  | "cost"
+  | "saving"
+  | "export"
+  | "heat"
+  | "distance"
+  | "alternative_cost";
 export type LineFigure =
   | "price"
   | "solar_share"
   | "cheap_share"
   | "expensive_share"
-  | "self_consumption";
+  | "self_consumption"
+  | "scop"
+  | "heat_price"
+  | "cost_per_100km";
 export type Stack = "source" | "consumer" | "none";
 
-const BARS: BarFigure[] = ["energy", "cost", "saving", "export"];
+const BARS: BarFigure[] = [
+  "energy",
+  "cost",
+  "saving",
+  "export",
+  "heat",
+  "distance",
+  "alternative_cost",
+];
 const LINES: LineFigure[] = [
   "price",
   "solar_share",
   "cheap_share",
   "expensive_share",
   "self_consumption",
+  "scop",
+  "heat_price",
+  "cost_per_100km",
 ];
 
 export const barFiguresOf = (area: FigureArea): BarFigure[] =>
@@ -111,7 +132,12 @@ export function barSeries(
     {
       id: figure,
       name: { text: area.name },
-      color: figure === "saving" || figure === "export" ? colors.solar : colors.grid,
+      color:
+        figure === "saving" || figure === "export"
+          ? colors.solar
+          : figure === "heat"
+            ? "#8e021b"
+            : colors.grid,
       plus: of(figure),
       minus: [],
     },

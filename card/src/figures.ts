@@ -15,10 +15,23 @@ export type Figure =
   | "self_consumption"
   | "export"
   | "saving"
+  | "heat"
+  | "alternative_cost"
+  | "scop"
+  | "heat_price"
+  | "distance"
+  | "cost_per_100km"
   | "forecast_today"
   | "forecast_tomorrow";
 
-export type Unit = "energy" | "money" | "price" | "percent" | "number";
+export type Unit =
+  | "energy"
+  | "money"
+  | "price"
+  | "percent"
+  | "number"
+  | "distance"
+  | "per_100km";
 
 /** The statistics of an area a figure needs, by their key. */
 const NEEDS: Record<Figure, string[]> = {
@@ -32,6 +45,12 @@ const NEEDS: Record<Figure, string[]> = {
   self_consumption: ["self_used", "energy"],
   export: ["export"],
   saving: ["saving"],
+  heat: ["heat"],
+  alternative_cost: ["alternative_cost"],
+  scop: ["heat", "energy"],
+  heat_price: ["cost", "heat"],
+  distance: ["distance"],
+  cost_per_100km: ["cost", "distance"],
   forecast_today: [],
   forecast_tomorrow: [],
 };
@@ -40,6 +59,9 @@ const NEEDS: Record<Figure, string[]> = {
 const LINE_NEEDS: Partial<Record<Figure, string[]>> = {
   energy: ["solar", "export"],
   cost: ["energy", "solar"],
+  saving: ["alternative_cost", "cost"],
+  heat: ["energy"],
+  distance: ["energy"],
 };
 
 export const FIGURES = Object.keys(NEEDS) as Figure[];
@@ -198,8 +220,91 @@ export function valueOf(
     }
     case "export":
       return { value: sum("export"), unit: "energy" };
-    case "saving":
-      return { value: sum("saving"), unit: "money" };
+    case "saving": {
+      const saving = sum("saving");
+      const alternative = sum("alternative_cost");
+      const cost = sum("cost");
+      if (saving === null || alternative === null || cost === null) {
+        return { value: saving, unit: "money" };
+      }
+      // With solar power at the lost feed-in compensation, as in the
+      // device's costs; in the balance its benefit belongs to the PV plant.
+      const withSolar = alternative - cost;
+      return {
+        value: saving,
+        unit: "money",
+        line: {
+          key: "line_saving_split",
+          values: {
+            total: { value: withSolar, unit: "money" },
+            solar: { value: withSolar - saving, unit: "money" },
+          },
+        },
+      };
+    }
+    case "heat": {
+      const heat = sum("heat");
+      if (heat === null || energy === null) return { value: heat, unit: "energy" };
+      return {
+        value: heat,
+        unit: "energy",
+        line: { key: "line_from_electricity", values: { energy: kwh(energy) } },
+      };
+    }
+    case "alternative_cost":
+      return { value: sum("alternative_cost"), unit: "money" };
+    case "scop": {
+      const heat = sum("heat");
+      if (heat === null || !energy) return { value: null, unit: "number" };
+      return {
+        value: heat / energy,
+        unit: "number",
+        line: {
+          key: "line_heat_from",
+          values: { heat: plain(heat), energy: kwh(energy) },
+        },
+      };
+    }
+    case "heat_price": {
+      const heat = sum("heat");
+      const cost = sum("cost");
+      if (heat === null || cost === null || !heat) return { value: null, unit: "price" };
+      return {
+        value: cost / heat,
+        unit: "price",
+        line: {
+          key: "line_cost_for_heat",
+          values: { cost: { value: cost, unit: "money" }, heat: kwh(heat) },
+        },
+      };
+    }
+    case "distance": {
+      const distance = sum("distance");
+      if (distance === null || energy === null) return { value: distance, unit: "distance" };
+      return {
+        value: distance,
+        unit: "distance",
+        line: { key: "line_charged", values: { energy: kwh(energy) } },
+      };
+    }
+    case "cost_per_100km": {
+      const distance = sum("distance");
+      const cost = sum("cost");
+      if (distance === null || cost === null || !distance) {
+        return { value: null, unit: "per_100km" };
+      }
+      return {
+        value: (cost / distance) * 100,
+        unit: "per_100km",
+        line: {
+          key: "line_cost_for",
+          values: {
+            cost: { value: cost, unit: "money" },
+            energy: { value: distance, unit: "distance" },
+          },
+        },
+      };
+    }
     case "forecast_today":
     case "forecast_tomorrow":
       return { value: forecast, unit: "energy" };

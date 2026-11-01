@@ -160,6 +160,30 @@ async def test_history_is_written(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_heat_distance_and_alternative_costs(
+    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
+) -> None:
+    """Heat pump and car keep heat, distance, and what the alternative cost."""
+    await setup_entry(hass, config_entry)
+    heat = HP_KWH * 4.0
+    assert (await _sums(hass, "energy_payback:heat_pump_heat", data_start))[
+        -1
+    ] == pytest.approx(COUNTED * heat)
+    assert (await _sums(hass, "energy_payback:heat_pump_alternative_cost", data_start))[
+        -1
+    ] == pytest.approx(COUNTED * heat / 0.92 * 0.10)
+    distance = 1.0 / 20 * 100
+    assert (await _sums(hass, "energy_payback:wallbox_distance", data_start))[
+        -1
+    ] == pytest.approx(COUNTED * distance)
+    assert (await _sums(hass, "energy_payback:wallbox_alternative_cost", data_start))[
+        -1
+    ] == pytest.approx(COUNTED * distance * 7 / 100 * 1.80)
+    # The PV plant keeps only its saving.
+    assert await _sums(hass, "energy_payback:pv_heat", data_start) == []
+
+
+@pytest.mark.usefixtures("energy")
 async def test_new_hours_continue_the_history(
     hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
 ) -> None:

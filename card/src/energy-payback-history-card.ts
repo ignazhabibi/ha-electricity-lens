@@ -98,6 +98,9 @@ const UNITS: Record<BarFigure, Unit> = {
   cost: "money",
   saving: "money",
   export: "energy",
+  heat: "energy",
+  distance: "distance",
+  alternative_cost: "money",
 };
 
 interface Plan {
@@ -473,23 +476,24 @@ export class EnergyPaybackHistoryCard extends LitElement {
       values: this._barValues(bar),
     }));
     const lines = this._lines();
+    const lineUnits: Partial<Record<Unit, string>> = {
+      price: this.hass?.config.currency === "EUR" ? "ct/kWh" : `${fmt.currencySymbol()}/kWh`,
+      percent: "%",
+      per_100km: `${fmt.currencySymbol()}/100 km`,
+    };
     const lineUnit =
       plan.lineFigure && !plan.lines.length
-        ? valueOf(plan.lineFigure.figure, plan.lineFigure.area, () => 0, null).unit === "price"
-          ? this.hass?.config.currency === "EUR"
-            ? "ct/kWh"
-            : `${fmt.currencySymbol()}/kWh`
-          : "%"
+        ? (lineUnits[valueOf(plan.lineFigure.figure, plan.lineFigure.area, () => 0, null).unit] ?? "")
         : "";
     return barChart({
       labels: this._labels(loaded.slots, plan.period),
       series,
-      unit: plan.unit === "money" ? fmt.currencySymbol() : "kWh",
+      unit: plan.unit === "money" ? fmt.currencySymbol() : plan.unit === "distance" ? "km" : "kWh",
       total: t("history_total"),
       format: (value) =>
         plan.unit === "money"
           ? fmt.value(value, "money")
-          : `${fmt.number(value, Math.abs(value) < 10 ? 2 : 1)} kWh`,
+          : `${fmt.number(value, Math.abs(value) < 10 ? 2 : 1)} ${plan.unit === "distance" ? "km" : "kWh"}`,
       tick: (value) => fmt.number(value, Math.abs(value) < 10 ? 2 : 0),
       lines,
       lineUnit,

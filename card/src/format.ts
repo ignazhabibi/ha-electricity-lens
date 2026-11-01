@@ -44,7 +44,16 @@ export function formatter(language: string, currency: string): Format {
           maximumFractionDigits: 0,
         }).format(amount / 100);
       case "number":
-        return number(amount, Math.abs(amount) < 100 ? 1 : 0);
+        return number(amount, Math.abs(amount) < 10 ? 2 : Math.abs(amount) < 100 ? 1 : 0);
+      case "distance":
+        return `${number(amount, Math.abs(amount) < 100 ? 1 : 0)} km`;
+      case "per_100km":
+        return `${new Intl.NumberFormat(language, {
+          style: "currency",
+          currency,
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        }).format(amount)}/100 km`;
     }
   };
   const currencySymbol = (): string =>

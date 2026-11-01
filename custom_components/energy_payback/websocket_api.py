@@ -23,10 +23,11 @@ from .calculation import (
     effective_meters,
 )
 from .const import CATEGORY_PV, DOMAIN
-from .coordinator import EnergyPaybackCoordinator
+from .coordinator import CATEGORY_FIGURES, EnergyPaybackCoordinator
 from .sources import (
     EnergyInterfaceError,
     async_get_energy_setup,
+    category_statistic_id,
     device_area,
     household_statistic_id,
     saving_statistic_id,
@@ -126,13 +127,21 @@ async def async_figures(
     for category, (subentry_id, config) in categories.items():
         if category == CATEGORY_PV:
             continue
+        meters = effective_meters(config.meters, parents)
+        devices = [device_area(meter) for meter in meters]
         areas.append(
             area(
                 "category",
                 category,
                 coordinator.config_entry.subentries[subentry_id].title,
-                energy=effective_meters(config.meters, parents),
+                energy=meters,
+                solar=[household_statistic_id(f"{device}_solar") for device in devices],
+                cost=[household_statistic_id(f"{device}_cost") for device in devices],
                 saving=[saving_statistic_id(category)],
+                **{
+                    figure: [category_statistic_id(category, figure)]
+                    for figure in CATEGORY_FIGURES[category]
+                },
             )
         )
     # Only top-level devices add up to the household, beside "Other".

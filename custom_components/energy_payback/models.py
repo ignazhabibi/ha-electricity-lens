@@ -134,6 +134,8 @@ class CategoryState:
     measured_electricity: float = 0.0
     estimated: bool = False
     """Whether some heat was estimated instead of measured."""
+    totals: dict[str, float] = field(default_factory=dict)
+    """Cumulative heat, distance, and the alternative's costs."""
     timelines: dict[str, Timeline] = field(default_factory=dict)
 
     def reset(self, fingerprint: str) -> None:
@@ -148,6 +150,7 @@ class CategoryState:
         self.measured_heat = 0.0
         self.measured_electricity = 0.0
         self.estimated = False
+        self.totals = {}
 
     def timeline(self, key: str) -> Timeline:
         """Return the timeline of a value, creating it if needed."""
@@ -167,6 +170,7 @@ class CategoryState:
             "measured_heat": self.measured_heat,
             "measured_electricity": self.measured_electricity,
             "estimated": self.estimated,
+            "totals": self.totals,
             "timelines": {
                 key: timeline.as_list() for key, timeline in self.timelines.items()
             },
@@ -187,6 +191,7 @@ class CategoryState:
             measured_heat=float(data.get("measured_heat", 0.0)),
             measured_electricity=float(data.get("measured_electricity", 0.0)),
             estimated=bool(data.get("estimated", False)),
+            totals=_numbers(data.get("totals")),
             timelines={
                 key: Timeline.from_list(points)
                 for key, points in data.get("timelines", {}).items()

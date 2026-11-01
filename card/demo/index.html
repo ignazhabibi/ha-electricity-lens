@@ -80,6 +80,8 @@
     "sensor.goe": 485.6, "energy_payback:device_sensor_goe_solar": 135.8,
     "energy_payback:device_sensor_goe_cost": 77.5, "energy_payback:device_sensor_goe_cheap": 260.1,
     "sensor.wp_heizung": 222.7, "sensor.wp_dhw": 120.0, "energy_payback:heat_pump_saving": 82.4,
+    "energy_payback:heat_pump_heat": 1636.5, "energy_payback:heat_pump_alternative_cost": 213.5, "energy_payback:hp_cost": 77.5, "energy_payback:hp_solar": 41.2,
+    "energy_payback:wallbox_saving": 159.2, "energy_payback:wallbox_distance": 2428.0, "energy_payback:wallbox_alternative_cost": 378.8,
   };
   const levels = (area) => ({ solar: [`energy_payback:${area}_solar`], cost: [`energy_payback:${area}_cost`], cheap: [`energy_payback:${area}_cheap`] });
   const figuresInfo = (calculating) => ({
@@ -89,7 +91,10 @@
       { id: "household", kind: "household", name: "Haushalt", statistics: { energy: ["energy_payback:household_energy"], ...levels("household") } },
       { id: "grid", kind: "grid", name: "Netz", statistics: { energy: ["sensor.grid_import"], export: ["sensor.grid_export"], cost: ["energy_payback:grid_cost"] } },
       { id: "solar", kind: "solar", name: "Solar", forecast: true, statistics: { energy: ["sensor.solar"], self_used: ["energy_payback:household_solar"], saving: ["energy_payback:pv_saving"] } },
-      { id: "heat_pump", kind: "category", name: "Wärmepumpe", statistics: { energy: ["sensor.wp_heizung", "sensor.wp_dhw"], saving: ["energy_payback:heat_pump_saving"] } },
+      { id: "heat_pump", kind: "category", name: "Wärmepumpe", statistics: { energy: ["sensor.wp_heizung", "sensor.wp_dhw"], saving: ["energy_payback:heat_pump_saving"],
+        heat: ["energy_payback:heat_pump_heat"], alternative_cost: ["energy_payback:heat_pump_alternative_cost"], cost: ["energy_payback:hp_cost"], solar: ["energy_payback:hp_solar"] } },
+      { id: "wallbox", kind: "category", name: "E-Auto", statistics: { energy: ["sensor.goe"], saving: ["energy_payback:wallbox_saving"],
+        distance: ["energy_payback:wallbox_distance"], alternative_cost: ["energy_payback:wallbox_alternative_cost"], cost: ["energy_payback:device_sensor_goe_cost"], solar: ["energy_payback:device_sensor_goe_solar"] } },
       { id: "device_sensor_waschkuche", kind: "device", name: "Wäsche", statistics: { energy: ["sensor.waschkuche"], ...levels("device_sensor_waschkuche") } },
       { id: "device_sensor_goe", kind: "device", name: "E-Auto", statistics: { energy: ["sensor.goe"], ...levels("device_sensor_goe") } },
     ],
@@ -166,6 +171,9 @@
     ["l · Kennzahlen: Solar und Geräte, 3 Spalten", hass(household), { period: "last_month", columns: 3, tiles: [
       { area: "solar", figure: "energy" }, { area: "solar", figure: "self_consumption" }, { area: "solar", figure: "forecast_today" },
       { area: "device_sensor_goe", figure: "cost" }, { area: "device_sensor_goe", figure: "solar_share" }, { area: "grid", figure: "cost" } ] }],
+    ["q · Kennzahlen: Wärmepumpe und E-Auto", hass(household), { title: "Wärmepumpe und E-Auto", period: "last_month", tiles: [
+      { area: "heat_pump", figure: "scop" }, { area: "heat_pump", figure: "heat_price" }, { area: "heat_pump", figure: "saving" },
+      { area: "wallbox", figure: "cost_per_100km" }, { area: "wallbox", figure: "distance" }, { area: "wallbox", figure: "saving" } ] }],
     ["m · Kennzahlen: wird berechnet, Bereich fehlt", hass(household, { calculating: true }), { title: "Haushalt", period: "this_month", tiles: [
       { area: "household", figure: "cost" }, { area: "device_sensor_weg", figure: "cost", name: "Trockner" } ] }],
   ];
