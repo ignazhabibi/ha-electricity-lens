@@ -49,6 +49,8 @@ TEXTS: dict[str, dict[str, Any]] = {
         "statistics": {
             "household": "Household",
             "other": "Other",
+            "area_grid": "Grid",
+            "area_solar": "Solar",
             "energy": "consumption",
             "solar": "solar power",
             "cost": "costs",
@@ -277,6 +279,8 @@ TEXTS: dict[str, dict[str, Any]] = {
         "statistics": {
             "household": "Haushalt",
             "other": "Sonstiges",
+            "area_grid": "Netz",
+            "area_solar": "Solar",
             "energy": "Verbrauch",
             "solar": "Solarstrom",
             "cost": "Kosten",

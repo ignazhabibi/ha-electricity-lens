@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import timedelta
 import logging
 import math
@@ -59,6 +60,7 @@ from .models import (
     settings_hash,
 )
 from .sources import (
+    DeviceMeter,
     EnergyInterfaceError,
     EnergySetup,
     GridSource,
@@ -171,6 +173,8 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         self.states: dict[str, CategoryState] = {}
         self.household = HouseholdConfig.from_options(entry.options)
         self.household_state = HouseholdState()
+        self.setup: EnergySetup | None = None
+        """The energy dashboard as of the last update."""
         self._without_data: set[str] = set()
 
     async def async_load(self) -> None:
@@ -247,6 +251,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         """Compute all hours the recorder has compiled since the last update."""
         try:
             setup = await async_get_energy_setup(self.hass)
+            self.setup = setup
         except EnergyInterfaceError as err:
             self._issue(ISSUE_ENERGY_INTERFACE, ISSUE_ENERGY_INTERFACE)
             raise UpdateFailed(
@@ -660,8 +665,8 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             start = chunk_end
         state.next_hour = max(start, counting_since)
 
-    async def _async_household_names(self, setup: EnergySetup) -> dict[str, str]:
-        """Return the name of each household statistic in the system language."""
+    async def async_texts(self) -> Callable[[str], str]:
+        """Return the names of areas and figures in the system language."""
         translations = await async_get_translations(
             self.hass, self.hass.config.language, "selector", [DOMAIN]
         )
@@ -671,12 +676,19 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 f"component.{DOMAIN}.selector.statistics.options.{key}", key
             )
 
+        return text
+
+    def device_name(self, device: DeviceMeter) -> str:
+        """Return a device's name: as in the energy dashboard, else its entity's."""
+        entity = self.hass.states.get(device.stat)
+        return device.name or (entity.name if entity else device.stat)
+
+    async def _async_household_names(self, setup: EnergySetup) -> dict[str, str]:
+        """Return the name of each household statistic in the system language."""
+        text = await self.async_texts()
         areas = {AREA_HOUSEHOLD: text(AREA_HOUSEHOLD), AREA_OTHER: text(AREA_OTHER)}
         for device in setup.devices:
-            entity = self.hass.states.get(device.stat)
-            areas[device_area(device.stat)] = device.name or (
-                entity.name if entity else device.stat
-            )
+            areas[device_area(device.stat)] = self.device_name(device)
         names = {GRID_COST: text(GRID_COST)}
         for area, area_name in areas.items():
             for figure in ("energy", "solar", "cost", LEVEL_CHEAP, LEVEL_EXPENSIVE):

@@ -742,6 +742,8 @@
       "options": {
         "household": "Household",
         "other": "Other",
+        "area_grid": "Grid",
+        "area_solar": "Solar",
         "energy": "consumption",
         "solar": "solar power",
         "cost": "costs",

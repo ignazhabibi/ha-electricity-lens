@@ -131,8 +131,9 @@ Home Assistant 2026.10 or newer is required.
    **Energy Payback**.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
-6. Add the card **Energy Payback** to a dashboard from the card picker, and
-   **Energy Payback history** if you like. They have no options. There is no
+6. Add the cards **Energy Payback**, **Energy Payback history**, and
+   **Energy Payback key figures** to a dashboard from the card picker. The
+   first two have no options. There is no
    dashboard resource to add: the integration serves the cards itself and
    updates them with the integration.
 
@@ -257,6 +258,52 @@ keeps for the savings, which include the computed past.
 With an *Energy date selection* card on the same dashboard, it follows the
 selected period: hours for a day, days for a week or month, months for a year.
 Without one it shows one bar per year since counting began.
+
+### Energy Payback key figures
+
+Tiles with one figure each for a period, set up in the card editor without
+YAML. The period is *Follow the date selection* (this month without an
+*Energy date selection* card), or a fixed one such as today, last month, or
+this year, so the card also works on dashboards without a date selection.
+Columns are automatic, or 1 to 4 on wide cards.
+
+Each tile has one of three sources:
+
+| Source | Shows |
+|---|---|
+| Energy data | A figure of an area, computed by Energy Payback, with a line below that explains it |
+| Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
+| Entity | Any entity's current state |
+
+Areas and their figures:
+
+| Area | Figures |
+|---|---|
+| Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
+| Grid | Grid import, feed-in, grid costs |
+| Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard) |
+| Heat pump, electric car | Consumption, saving |
+| Each device, Other | Consumption, costs, average price, solar share, cheap and expensive grid power |
+
+The card computes nothing beyond adding up the hours of the period and
+dividing two such sums, for example costs by consumption; every cost and
+share per hour comes from the integration. In YAML:
+
+```yaml
+type: custom:energy-payback-figures-card
+title: Household
+period: energy_date
+tiles:
+  - area: household
+    figure: cost
+  - area: household
+    figure: solar_share
+  - statistic: sensor.outside_temperature
+    value: mean
+    secondary: range
+  - entity: sensor.electricity_price
+    name: Price now
+```
 
 ## How the data updates
 

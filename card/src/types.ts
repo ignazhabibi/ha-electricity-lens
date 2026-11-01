@@ -48,3 +48,41 @@ export interface CategoryFigures {
   heating: "gas" | "oil" | null;
   heatEstimated: boolean;
 }
+
+/** One area of `energy_payback/figures`: where each of its figures is kept. */
+export interface FigureArea {
+  id: string;
+  kind: "household" | "grid" | "solar" | "category" | "device" | "other";
+  name: string;
+  /** Statistics whose changes add up, by figure key such as "energy". */
+  statistics: Record<string, string[] | undefined>;
+  /** Whether the energy dashboard has a solar forecast. */
+  forecast?: boolean;
+}
+
+export interface FiguresInfo {
+  calculating: boolean;
+  levels: { cheap_until: number | null; expensive_from: number | null };
+  areas: FigureArea[];
+}
+
+/** Rows of `recorder/statistics_during_period` with all types. */
+export type StatisticsRows = Record<
+  string,
+  | Array<{
+      start: number | string;
+      change?: number | null;
+      mean?: number | null;
+      min?: number | null;
+      max?: number | null;
+    }>
+  | undefined
+>;
+
+/** An entry of `recorder/get_statistics_metadata`. */
+export interface StatisticMetadata {
+  statistic_id: string;
+  name?: string | null;
+  statistics_unit_of_measurement?: string | null;
+  unit_class?: string | null;
+}

@@ -66,7 +66,56 @@
       states[id("payback")] = { entity_id: id("payback"), state: payback === null ? "unknown" : String(payback), attributes: {} };
       states[id("per_year")] = { entity_id: id("per_year"), state: c.perYear == null ? "unknown" : String(c.perYear), attributes: {} };
     }
-    return { states, entities, locale: { language }, config: { currency: "EUR" }, connection: {}, callWS: statistics, ...extra };
+    return { states, entities, locale: { language }, config: { currency: "EUR" }, connection: {}, callWS: (m) => ws(m, extra.calculating), ...extra };
+  }
+
+  // October 2026 of the real test household, for the key figure card.
+  const october = {
+    "energy_payback:household_energy": 2027.8, "energy_payback:household_solar": 509.1,
+    "energy_payback:household_cost": 437.2, "energy_payback:household_cheap": 592.0,
+    "sensor.grid_import": 1518.7, "sensor.grid_export": 233.9, "energy_payback:grid_cost": 385.0,
+    "sensor.solar": 743.0, "energy_payback:pv_saving": 178.2,
+    "sensor.waschkuche": 105.2, "energy_payback:device_sensor_waschkuche_solar": 26.4,
+    "energy_payback:device_sensor_waschkuche_cost": 22.3, "energy_payback:device_sensor_waschkuche_cheap": 31.0,
+    "sensor.goe": 485.6, "energy_payback:device_sensor_goe_solar": 135.8,
+    "energy_payback:device_sensor_goe_cost": 77.5, "energy_payback:device_sensor_goe_cheap": 260.1,
+    "sensor.wp_heizung": 222.7, "sensor.wp_dhw": 120.0, "energy_payback:heat_pump_saving": 82.4,
+  };
+  const levels = (area) => ({ solar: [`energy_payback:${area}_solar`], cost: [`energy_payback:${area}_cost`], cheap: [`energy_payback:${area}_cheap`] });
+  const figuresInfo = (calculating) => ({
+    calculating: !!calculating,
+    levels: { cheap_until: 0.22, expensive_from: null },
+    areas: [
+      { id: "household", kind: "household", name: "Haushalt", statistics: { energy: ["energy_payback:household_energy"], ...levels("household") } },
+      { id: "grid", kind: "grid", name: "Netz", statistics: { energy: ["sensor.grid_import"], export: ["sensor.grid_export"], cost: ["energy_payback:grid_cost"] } },
+      { id: "solar", kind: "solar", name: "Solar", forecast: true, statistics: { energy: ["sensor.solar"], self_used: ["energy_payback:household_solar"], saving: ["energy_payback:pv_saving"] } },
+      { id: "heat_pump", kind: "category", name: "Wärmepumpe", statistics: { energy: ["sensor.wp_heizung", "sensor.wp_dhw"], saving: ["energy_payback:heat_pump_saving"] } },
+      { id: "device_sensor_waschkuche", kind: "device", name: "Wäsche", statistics: { energy: ["sensor.waschkuche"], ...levels("device_sensor_waschkuche") } },
+      { id: "device_sensor_goe", kind: "device", name: "E-Auto", statistics: { energy: ["sensor.goe"], ...levels("device_sensor_goe") } },
+    ],
+  });
+  async function ws(message, calculating) {
+    if (message.type === "energy_payback/figures") return figuresInfo(calculating);
+    if (message.type === "energy/solar_forecast") {
+      const today = new Date(); today.setHours(12, 0, 0, 0);
+      return { forecast: { wh_hours: { [today.toISOString()]: 12400 } } };
+    }
+    if (message.type === "recorder/get_statistics_metadata") {
+      return message.statistic_ids.map((id) => ({ statistic_id: id,
+        name: id === "sensor.aussentemperatur" ? "Außentemperatur" : "Wäsche",
+        statistics_unit_of_measurement: id === "sensor.aussentemperatur" ? "°C" : "kWh",
+        unit_class: id === "sensor.aussentemperatur" ? "temperature" : "energy" }));
+    }
+    if (message.types?.includes("mean")) {
+      const result = {};
+      for (const id of message.statistic_ids) {
+        result[id] = id === "sensor.aussentemperatur"
+          ? [{ start: Date.parse(message.start_time), mean: 11.9, min: 7.1, max: 18.9 }]
+          : october[id] === undefined ? [] : [{ start: Date.parse(message.start_time), change: october[id] }];
+      }
+      return result;
+    }
+    return statistics(message);
   }
 
   // Monthly savings for recorder/statistics_during_period, by category.
@@ -103,6 +152,32 @@
     ["g · Nicht eingerichtet", hass([]), "total"],
   ];
   const grid = document.getElementById("grid");
+  const figureCases = [
+    ["j · Kennzahlen: Haushalt", hass(household), { title: "Haushalt", period: "last_month", tiles: [
+      { area: "household", figure: "cost" }, { area: "household", figure: "price" },
+      { area: "household", figure: "solar_share" }, { area: "household", figure: "cheap_share" } ] }],
+    ["k · Kennzahlen: andere Statistiken", { ...hass(household), states: { ...hass(household).states,
+      "sensor.strompreis_helfer": { entity_id: "sensor.strompreis_helfer", state: "31.8", attributes: { friendly_name: "Strompreis", unit_of_measurement: "ct/kWh" } } } },
+      { title: "Oktober im Haus", period: "last_month", tiles: [
+      { statistic: "sensor.waschkuche", value: "change" },
+      { statistic: "sensor.aussentemperatur", value: "mean", secondary: "range" },
+      { entity: "sensor.strompreis_helfer", name: "Strompreis jetzt" },
+      { area: "heat_pump", figure: "saving" } ] }],
+    ["l · Kennzahlen: Solar und Geräte, 3 Spalten", hass(household), { period: "last_month", columns: 3, tiles: [
+      { area: "solar", figure: "energy" }, { area: "solar", figure: "self_consumption" }, { area: "solar", figure: "forecast_today" },
+      { area: "device_sensor_goe", figure: "cost" }, { area: "device_sensor_goe", figure: "solar_share" }, { area: "grid", figure: "cost" } ] }],
+    ["m · Kennzahlen: wird berechnet, Bereich fehlt", hass(household, { calculating: true }), { title: "Haushalt", period: "this_month", tiles: [
+      { area: "household", figure: "cost" }, { area: "device_sensor_weg", figure: "cost", name: "Trockner" } ] }],
+  ];
+  for (const [label, mock, config] of figureCases) {
+    const wrap = document.createElement("section");
+    wrap.innerHTML = `<p class="label">${label}</p>`;
+    const card = document.createElement("energy-payback-figures-card");
+    card.setConfig({ type: "custom:energy-payback-figures-card", ...config });
+    card.hass = mock;
+    wrap.append(card);
+    grid.append(wrap);
+  }
   for (const [label, mock] of [["h · Verlauf ohne Datumsauswahl", hass(household)], ["i · Verlauf, nicht eingerichtet", hass([])]]) {
     const wrap = document.createElement("section");
     wrap.innerHTML = `<p class="label">${label}</p>`;

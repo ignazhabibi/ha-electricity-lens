@@ -19,6 +19,7 @@ from homeassistant.helpers.dispatcher import (
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
+from . import websocket_api
 from .const import (
     CARD_FILENAME,
     CATEGORY_HEAT_PUMP,
@@ -71,6 +72,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     frontend.add_extra_js_url(
         hass, f"{FRONTEND_URL}/{CARD_FILENAME}?v={integration.version}"
     )
+
+    websocket_api.async_register(hass)
 
     async def _energy_prefs_updated() -> None:
         async_dispatcher_send(hass, SIGNAL_ENERGY_PREFS_UPDATED)

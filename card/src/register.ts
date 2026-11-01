@@ -9,6 +9,8 @@ export interface CardEntry {
   card: CustomElementConstructor;
   name: string;
   description: string;
+  /** The card's editor, if it has its own. */
+  editor?: { tag: string; element: CustomElementConstructor };
 }
 
 const define = (tag: string, card: CustomElementConstructor): void => {
@@ -22,7 +24,11 @@ const define = (tag: string, card: CustomElementConstructor): void => {
 };
 
 export function registerCards(cards: CardEntry[]): void {
-  const defineAll = () => cards.forEach(({ tag, card }) => define(tag, card));
+  const defineAll = () =>
+    cards.forEach(({ tag, card, editor }) => {
+      define(tag, card);
+      if (editor) define(editor.tag, editor.element);
+    });
   defineAll();
 
   // Home Assistant's app replaces the custom element registry with a scoped

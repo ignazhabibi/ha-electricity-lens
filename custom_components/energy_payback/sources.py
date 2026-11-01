@@ -90,6 +90,8 @@ class EnergySetup:
     solar: tuple[str, ...] = ()
     batteries: tuple[Battery, ...] = ()
     devices: tuple[DeviceMeter, ...] = ()
+    forecasts: tuple[str, ...] = ()
+    """Config entries of the solar forecasts."""
 
     @property
     def priced_grids(self) -> tuple[GridSource, ...]:
@@ -167,6 +169,7 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
         grids: list[GridSource] = []
         solar: list[str] = []
         batteries: list[Battery] = []
+        forecasts: list[str] = []
         for source in prefs["energy_sources"]:
             match source["type"]:
                 case "grid" if "flow_from" in source:
@@ -175,6 +178,7 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
                     grids.append(_grid_from_unified(source))
                 case "solar":
                     solar.append(source["stat_energy_from"])
+                    forecasts.extend(source.get("config_entry_solar_forecast") or ())
                 case "battery":
                     batteries.append(
                         Battery(source["stat_energy_from"], source["stat_energy_to"])
@@ -191,7 +195,9 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
         raise EnergyInterfaceError(
             f"Unexpected energy preferences format: {err!r}"
         ) from err
-    return EnergySetup(tuple(grids), tuple(solar), tuple(batteries), devices)
+    return EnergySetup(
+        tuple(grids), tuple(solar), tuple(batteries), devices, tuple(forecasts)
+    )
 
 
 async def _async_manager(hass: HomeAssistant) -> Any:

@@ -75,8 +75,7 @@ hour:
 - **Costs** of each of them (3.5).
 - **Household costs:** grid import minus feed-in compensation, plus the
   standing charge if one is entered.
-- **Solar forecast** from the energy dashboard, recorded so that its accuracy
-  can be shown later.
+- **Solar forecast** from the energy dashboard, shown as it is.
 
 ### 3.3 Three categories for savings
 
@@ -131,7 +130,7 @@ they value solar power differently. The product says so where it shows them.
 
 - **Statistics** hold every time series Home Assistant has none for: costs,
   mix, the household's and "Other"'s consumption, heat, the alternative's
-  costs, savings, and the recorded forecast. What Home Assistant already keeps,
+  costs, and savings. What Home Assistant already keeps,
   such as a device's consumption, is not copied; cards read it from there.
   The statistics belong to the integration alone, so it can compute the past
   and compute it again after corrections. They appear in Home Assistant's
@@ -399,6 +398,7 @@ The other cards show "is being computed" while the past is computed, and
 - **Other alternatives** than a gas or oil heating and a combustion car.
 - **Comparing with the previous year** in the history card.
 - **CO₂ figures.**
+- **Recording the solar forecast** to show its accuracy. The cards show the live forecast of the energy dashboard.
 
 ## 11. Decisions
 
@@ -435,7 +435,7 @@ Each step is a release that works on its own.
 
 1. **Statistics owned by the integration.** The savings move to statistics of their own; the saving sensors keep only the current value. The history card reads the new statistics. Done in 0.4.0.
 2. **Household.** The setup's household part; consumption, mix, and costs per device and for the household, as statistics.
-3. **Key figure card**, and recording the solar forecast.
+3. **Key figure card.** The forecast tiles show the energy dashboard's live forecast; recording it to show its accuracy later is set aside (section 10).
 4. **History card**, replacing the current one, with sources and lines.
 5. **Breakdown card.**
 6. **Heat pump and car figures:** heat, the alternative's costs, seasonal COP, heat price, € per 100 km, the split saving (3.5).

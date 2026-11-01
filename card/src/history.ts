@@ -96,3 +96,61 @@ export function valuesPerSlot(
   }
   return values;
 }
+
+/** Fixed periods a card can show instead of following the date selection. */
+export type FixedPeriod =
+  | "today"
+  | "yesterday"
+  | "this_month"
+  | "last_month"
+  | "this_year"
+  | "last_year";
+
+/** The range of a fixed period, in the browser's time zone. */
+export function fixedRange(period: FixedPeriod, now = new Date()): Range {
+  const range = (start: Date, end: Date): Range => ({
+    start: start.getTime(),
+    end: end.getTime() - 1,
+  });
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+  switch (period) {
+    case "today":
+      return range(new Date(y, m, d), new Date(y, m, d + 1));
+    case "yesterday":
+      return range(new Date(y, m, d - 1), new Date(y, m, d));
+    case "this_month":
+      return range(new Date(y, m, 1), new Date(y, m + 1, 1));
+    case "last_month":
+      return range(new Date(y, m - 1, 1), new Date(y, m, 1));
+    case "this_year":
+      return range(new Date(y, 0, 1), new Date(y + 1, 0, 1));
+    case "last_year":
+      return range(new Date(y - 1, 0, 1), new Date(y, 0, 1));
+  }
+}
+
+/** A short name of a range: a day, a month, a year, or from–to. */
+export function rangeLabel({ start, end }: Range, language: string): string {
+  const from = new Date(start);
+  const to = new Date(end);
+  const format = (options: Intl.DateTimeFormatOptions, date: Date) =>
+    new Intl.DateTimeFormat(language, options).format(date);
+  const sameDay = from.toDateString() === to.toDateString();
+  if (sameDay) return format({ day: "numeric", month: "short" }, from);
+  const wholeMonths =
+    from.getDate() === 1 && new Date(end + 1).getDate() === 1;
+  if (wholeMonths && from.getMonth() === 0 && to.getMonth() === 11 &&
+      from.getFullYear() === to.getFullYear()) {
+    return format({ year: "numeric" }, from);
+  }
+  if (wholeMonths && from.getMonth() === to.getMonth() &&
+      from.getFullYear() === to.getFullYear()) {
+    return format({ month: "short", year: "numeric" }, from);
+  }
+  return new Intl.DateTimeFormat(language, {
+    day: "numeric",
+    month: "short",
+  }).formatRange(from, to);
+}

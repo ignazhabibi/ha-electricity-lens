@@ -742,6 +742,8 @@
       "options": {
         "household": "Haushalt",
         "other": "Sonstiges",
+        "area_grid": "Netz",
+        "area_solar": "Solar",
         "energy": "Verbrauch",
         "solar": "Solarstrom",
         "cost": "Kosten",
