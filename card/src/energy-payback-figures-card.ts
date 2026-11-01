@@ -13,6 +13,7 @@ import {
 } from "lit";
 
 import { followEnergyDate } from "./energy-date";
+import { formatter, type Format } from "./format";
 import {
   figuresOf,
   isForecast,
@@ -85,6 +86,8 @@ const BAR_COLORS: Partial<Record<Figure, string>> = {
 interface Loaded {
   key: string;
   at: number;
+  range: Range;
+  period: string;
   rows: StatisticsRows;
   metadata: Record<string, StatisticMetadata>;
   forecast: { today: number | null; tomorrow: number | null };
@@ -272,9 +275,12 @@ export class EnergyPaybackFiguresCard extends LitElement {
   private async _load(request: Request): Promise<void> {
     if (!this.hass) return;
     this._loading = request.key;
+    const period = statisticsPeriod(periodOf(request.range));
     const loaded: Loaded = {
       key: request.key,
       at: Date.now(),
+      range: request.range,
+      period,
       rows: {},
       metadata: {},
       forecast: { today: null, tomorrow: null },
@@ -288,7 +294,7 @@ export class EnergyPaybackFiguresCard extends LitElement {
               start_time: new Date(request.range.start).toISOString(),
               end_time: new Date(request.range.end + 1).toISOString(),
               statistic_ids: request.ids,
-              period: statisticsPeriod(periodOf(request.range)),
+              period,
               types: ["change", "mean", "min", "max"],
               units: { energy: "kWh" },
             })
@@ -336,55 +342,39 @@ export class EnergyPaybackFiguresCard extends LitElement {
     }
   }
 
-  // Formatting
+  private get _fmt(): Format {
+    return formatter(this._language, this.hass?.config.currency ?? "EUR");
+  }
 
   private _number(value: number, digits?: number): string {
-    const abs = Math.abs(value);
-    const fraction = digits ?? (abs < 10 ? 2 : abs < 100 ? 1 : 0);
-    return new Intl.NumberFormat(this._language, {
-      maximumFractionDigits: fraction,
-      minimumFractionDigits: digits ?? 0,
-    }).format(value);
+    return this._fmt.number(value, digits);
   }
 
   private _format(value: number, unit: Unit): string {
-    const language = this._language;
-    const currency = this.hass?.config.currency ?? "EUR";
-    switch (unit) {
-      case "energy":
-        return `${this._number(value, Math.abs(value) < 100 ? 1 : 0)} kWh`;
-      case "money": {
-        const cents = Math.abs(value) < 100;
-        return new Intl.NumberFormat(language, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: cents ? 2 : 0,
-          minimumFractionDigits: cents ? 2 : 0,
-        }).format(value);
-      }
-      case "price":
-        if (currency === "EUR") return `${this._number(value * 100, 1)} ct/kWh`;
-        return `${new Intl.NumberFormat(language, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: 3,
-        }).format(value)}/kWh`;
-      case "percent":
-        return new Intl.NumberFormat(language, {
-          style: "percent",
-          maximumFractionDigits: 0,
-        }).format(value / 100);
-      case "number":
-        return this._number(value, Math.abs(value) < 100 ? 1 : 0);
-    }
+    return this._fmt.value(value, unit);
   }
 
   // Tiles
 
+  /** The rows of a statistic within the period. Days and months begin at
+   * midnight of the server's time zone, which may be a few hours off the
+   * browser's, so the recorder can return a day just outside the period. */
+  private _rows(id: string): NonNullable<StatisticsRows[string]> {
+    const loaded = this._loaded;
+    if (!loaded) return [];
+    const tolerance = loaded.period === "hour" ? 0 : 12 * 3_600_000;
+    return (loaded.rows[id] ?? []).filter((row) => {
+      const at =
+        (typeof row.start === "number" ? row.start : Date.parse(row.start)) +
+        tolerance;
+      return at >= loaded.range.start && at <= loaded.range.end;
+    });
+  }
+
   private _sum(ids: string[] | undefined): number {
     let total = 0;
     for (const id of ids ?? []) {
-      for (const row of this._loaded?.rows[id] ?? []) total += row.change ?? 0;
+      for (const row of this._rows(id)) total += row.change ?? 0;
     }
     return total;
   }
@@ -442,7 +432,7 @@ export class EnergyPaybackFiguresCard extends LitElement {
       metadata?.name ??
       (this.hass?.states[id]?.attributes.friendly_name as string | undefined) ??
       id;
-    const rows = this._loaded?.rows[id] ?? [];
+    const rows = this._rows(id);
     const unit =
       metadata?.unit_class === "energy"
         ? "kWh"

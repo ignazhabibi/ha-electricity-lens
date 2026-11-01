@@ -1,6 +1,6 @@
-// The savings chart on Home Assistant's own chart element `ha-chart-base`
+// The history chart on Home Assistant's own chart element `ha-chart-base`
 // (ECharts), set up like HA's energy graphs: stacked bars with rounded caps,
-// HA's legend, and the axis tooltip. `ha-chart-base` is internal to the
+// optional lines on a second axis, HA's legend, and the axis tooltip. `ha-chart-base` is internal to the
 // frontend and loaded lazily; outside Home Assistant there is none.
 
 const WAIT_MS = 10_000;
@@ -44,16 +44,25 @@ export interface ChartSeries {
   values: Array<number | null>;
 }
 
+export interface ChartLine extends ChartSeries {
+  /** A value as shown in the tooltip, with its unit. */
+  format: (value: number) => string;
+}
+
 export interface ChartInput {
   /** Axis label and tooltip heading of each slot. */
   labels: Array<{ axis: string; tooltip: string }>;
   series: ChartSeries[];
-  /** The currency symbol, as the axis name. */
+  /** The bars' unit, as the axis name. */
   unit: string;
   total: string;
-  money: (value: number) => string;
+  /** A bar's value as shown in the tooltip, with its unit. */
+  format: (value: number) => string;
   /** Axis ticks in the user's number format. */
   tick: (value: number) => string;
+  /** Lines on a second axis, for example a price or a temperature. */
+  lines?: ChartLine[];
+  lineUnit?: string;
 }
 
 const hex2 = (alpha: number) =>
@@ -91,10 +100,12 @@ interface TooltipParam {
   value?: number | null;
 }
 
-/** The data and options for `ha-chart-base`. Savings can be negative, for
- * example a heat pump in a month of cheap gas: those bars stack downwards. */
-export function savingsChart(input: ChartInput) {
-  const data = input.series.map((series, k) => ({
+/** The data and options for `ha-chart-base`. Values can be negative, for
+ * example a heat pump's saving in a month of cheap gas: those bars stack
+ * downwards. */
+export function barChart(input: ChartInput) {
+  const lines = input.lines ?? [];
+  const bars = input.series.map((series, k) => ({
     id: series.id,
     type: "bar",
     name: series.name,
@@ -118,43 +129,79 @@ export function savingsChart(input: ChartInput) {
       };
     }),
   }));
+  const lineData = lines.map((line) => ({
+    id: line.id,
+    type: "line",
+    name: line.name,
+    yAxisIndex: 1,
+    color: line.color,
+    symbol: "circle",
+    symbolSize: 5,
+    connectNulls: true,
+    data: line.values,
+  }));
+  const data = [...bars, ...lineData];
+  const lineFormat = new Map(lines.map((line) => [line.name, line.format]));
 
   const tooltip = (params: unknown): Node => {
     const list = (Array.isArray(params) ? params : [params]) as TooltipParam[];
-    const shown = list.filter((p) => p.value);
     const element = document.createElement("div");
     if (!list.length) return element;
+    const isLine = (p: TooltipParam) => lineFormat.has(p.seriesName ?? "");
+    const shown = list.filter((p) => p.value && !isLine(p));
+    const shownLines = list.filter(
+      (p) => isLine(p) && p.value !== null && p.value !== undefined
+    );
     const rows = shown.map(
       (p) =>
-        `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.money(p.value ?? 0)}`
+        `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.format(p.value ?? 0)}`
+    );
+    const lineRows = shownLines.map(
+      (p) =>
+        `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesName ?? "")?.(p.value ?? 0) ?? ""}`
     );
     const sum = shown.reduce((total, p) => total + (p.value ?? 0), 0);
     element.innerHTML =
       `<b>${escape(input.labels[list[0].dataIndex]?.tooltip ?? "")}</b>` +
       (rows.length ? `<br>${rows.join("<br>")}` : "") +
-      (shown.length > 1 ? `<br><b>${escape(input.total)}: ${input.money(sum)}</b>` : "");
+      (shown.length > 1 ? `<br><b>${escape(input.total)}: ${input.format(sum)}</b>` : "") +
+      (lineRows.length ? `<br>${lineRows.join("<br>")}` : "");
     return element;
   };
 
+  const barAxis = {
+    type: "value",
+    name: input.unit,
+    nameGap: 2,
+    nameTextStyle: { align: "left" },
+    axisLabel: { formatter: input.tick },
+    splitLine: { show: true },
+  };
+  const lineAxis = {
+    type: "value",
+    name: input.lineUnit ?? "",
+    nameGap: 2,
+    nameTextStyle: { align: "right" },
+    axisLabel: { formatter: input.tick },
+    splitLine: { show: false },
+    scale: true,
+  };
   const options = {
     xAxis: {
       type: "category",
       data: input.labels.map((label) => label.axis),
       axisTick: { show: false },
     },
-    yAxis: {
-      type: "value",
-      name: input.unit,
-      nameGap: 2,
-      nameTextStyle: { align: "left" },
-      axisLabel: { formatter: input.tick },
-      splitLine: { show: true },
-    },
+    // One axis is given as an object, as HA's own energy graphs do.
+    yAxis: lines.length ? [barAxis, lineAxis] : barAxis,
     grid: { top: 15, bottom: 0, left: 1, right: 1, containLabel: true },
     legend: {
       show: true,
       type: "custom",
-      data: input.series.map((series) => ({ id: series.id, name: series.name })),
+      data: [...input.series, ...lines].map((series) => ({
+        id: series.id,
+        name: series.name,
+      })),
     },
     // HA renders the tooltip with lit, which shows a string as text.
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, formatter: tooltip },

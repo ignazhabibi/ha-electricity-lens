@@ -27,7 +27,8 @@ export interface HomeAssistant {
 /** Rows of `recorder/statistics_during_period`, by statistic id. */
 export type StatisticsResult = Record<
   string,
-  Array<{ start: number | string; change?: number | null }> | undefined
+  | Array<{ start: number | string; change?: number | null; mean?: number | null }>
+  | undefined
 >;
 
 export type Category = "pv" | "heat_pump" | "wallbox";
@@ -58,6 +59,8 @@ export interface FigureArea {
   statistics: Record<string, string[] | undefined>;
   /** Whether the energy dashboard has a solar forecast. */
   forecast?: boolean;
+  /** For devices: whether it is not part of another device. */
+  top_level?: boolean;
 }
 
 export interface FiguresInfo {
@@ -83,6 +86,7 @@ export type StatisticsRows = Record<
 export interface StatisticMetadata {
   statistic_id: string;
   name?: string | null;
+  has_sum?: boolean;
   statistics_unit_of_measurement?: string | null;
   unit_class?: string | null;
 }

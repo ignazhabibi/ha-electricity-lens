@@ -250,14 +250,33 @@ and can be used with keyboard and screen reader.
 
 ### Energy Payback history
 
-What each category saved per hour, day, month, or year, as stacked bars in
-the look of the energy dashboard. A month in which a category cost more than
-it saved shows below the line. The card reads the statistics Energy Payback
-keeps for the savings, which include the computed past.
+A figure per hour, day, month, or year as bars, in the look of the energy
+dashboard, set up in the card editor. Without options it shows what each
+category saved, stacked by category; a month in which a category cost more
+than it saved shows below the line.
 
-With an *Energy date selection* card on the same dashboard, it follows the
-selected period: hours for a day, days for a week or month, months for a year.
-Without one it shows one bar per year since counting began.
+| Option | Choices |
+|---|---|
+| Period | *Follow the date selection*, or a fixed period such as last month or this year |
+| Area and figure | The savings of all categories, or an area's consumption, costs, savings, or feed-in |
+| Stacking | By source (solar, cheap, normal, and expensive grid power) for consumption; by consumer (top-level devices and Other) for the household's consumption and costs; or not stacked |
+| Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency |
+| Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
+
+With an *Energy date selection* card on the same dashboard it follows the
+selected period: hours for a day, days for a week or month, months for a
+year. Without one it shows the savings per year since counting began, other
+figures for this month. In YAML:
+
+```yaml
+type: custom:energy-payback-history-card
+area: household
+figure: energy
+stack: source
+line: price
+lines:
+  - statistic: sensor.outside_temperature
+```
 
 ### Energy Payback key figures
 

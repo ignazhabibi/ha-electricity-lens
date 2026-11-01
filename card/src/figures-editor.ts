@@ -212,7 +212,8 @@ export class EnergyPaybackFiguresCardEditor extends LitElement {
   private _tileChanged(index: number, event: CustomEvent<{ value: FormData }>): void {
     const value = event.detail.value;
     const old = this._tiles[index];
-    const source = value.source as Source;
+    // A cleared selection keeps what the tile had.
+    const source = (value.source as Source | undefined) ?? sourceOf(old);
     const name = typeof value.name === "string" && value.name ? value.name : undefined;
     let tile: Tile;
     if (source !== sourceOf(old)) {
@@ -223,12 +224,13 @@ export class EnergyPaybackFiguresCardEditor extends LitElement {
             ? { statistic: "", value: "change" }
             : { entity: "" };
     } else if (source === "energy") {
-      const area = this._info?.areas.find((item) => item.id === value.area);
+      const areaId = (value.area as string | undefined) ?? old.area;
+      const area = this._info?.areas.find((item) => item.id === areaId);
       const figures = area ? figuresOf(area) : [];
       const figure = figures.includes(value.figure as never)
         ? (value.figure as Tile["figure"])
         : figures[0];
-      tile = { area: value.area as string, figure };
+      tile = { area: areaId, figure };
     } else if (source === "statistic") {
       tile = {
         statistic: (value.statistic as string) ?? "",

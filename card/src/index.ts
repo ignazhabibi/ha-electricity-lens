@@ -4,6 +4,7 @@ import { EnergyPaybackCard } from "./energy-payback-card";
 import { EnergyPaybackFiguresCard } from "./energy-payback-figures-card";
 import { EnergyPaybackHistoryCard } from "./energy-payback-history-card";
 import { EnergyPaybackFiguresCardEditor } from "./figures-editor";
+import { EnergyPaybackHistoryCardEditor } from "./history-editor";
 import { registerCards } from "./register";
 
 registerCards([
@@ -19,7 +20,11 @@ registerCards([
     card: EnergyPaybackHistoryCard,
     name: "Energy Payback history",
     description:
-      "The savings of your PV plant, heat pump, and electric car per period. Follows the energy date selection.",
+      "Savings, consumption, or costs per period as bars, stacked by source or consumer, with lines. Follows the energy date selection.",
+    editor: {
+      tag: "energy-payback-history-card-editor",
+      element: EnergyPaybackHistoryCardEditor,
+    },
   },
   {
     tag: "energy-payback-figures-card",

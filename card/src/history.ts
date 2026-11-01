@@ -154,3 +154,26 @@ export function rangeLabel({ start, end }: Range, language: string): string {
     month: "short",
   }).formatRange(from, to);
 }
+
+/** The mean of one statistic per slot; null where it has no rows. */
+export function meansPerSlot(
+  rows: StatisticsResult[string],
+  slots: number[],
+  period: Period
+): Array<number | null> {
+  const sums = slots.map(() => 0);
+  const counts = slots.map(() => 0);
+  const tolerance = period === "hour" ? 0 : 12 * HOUR;
+  for (const row of rows ?? []) {
+    if (row.mean === null || row.mean === undefined) continue;
+    const at =
+      (typeof row.start === "number" ? row.start : Date.parse(row.start)) +
+      tolerance;
+    let index = -1;
+    for (let i = 0; i < slots.length && slots[i] <= at; i += 1) index = i;
+    if (index < 0) continue;
+    sums[index] += row.mean;
+    counts[index] += 1;
+  }
+  return sums.map((sum, i) => (counts[i] ? sum / counts[i] : null));
+}

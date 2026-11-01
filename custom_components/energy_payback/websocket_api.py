@@ -135,13 +135,18 @@ async def async_figures(
                 saving=[saving_statistic_id(category)],
             )
         )
+    # Only top-level devices add up to the household, beside "Other".
+    top_level = set(effective_meters(parents, parents))
     areas.extend(
-        area(
-            "device",
-            device_area(device.stat),
-            coordinator.device_name(device),
-            **household(device_area(device.stat), energy=[device.stat]),
-        )
+        {
+            **area(
+                "device",
+                device_area(device.stat),
+                coordinator.device_name(device),
+                **household(device_area(device.stat), energy=[device.stat]),
+            ),
+            "top_level": device.stat in top_level,
+        }
         for device in setup.devices
     )
     areas.append(

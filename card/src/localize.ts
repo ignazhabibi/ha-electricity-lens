@@ -107,6 +107,20 @@ const en = {
   editor_entity: "Entity",
   editor_name: "Name (optional)",
   editor_not_loaded: "Energy data need the Energy Payback integration.",
+  "source.solar": "Solar power",
+  "source.grid": "Grid power",
+  "source.normal": "Normal grid power",
+  "source.cheap": "Cheap grid power",
+  "source.expensive": "Expensive grid power",
+  "stack.source": "By source",
+  "stack.consumer": "By consumer",
+  "stack.none": "Not stacked",
+  editor_savings: "Savings of all categories",
+  editor_stack: "Stacking",
+  editor_line: "Line",
+  editor_lines: "Further lines from statistics",
+  editor_line_none: "None",
+  history_empty_figure: "No data in this period.",
 };
 
 export type Key = keyof typeof en;
@@ -218,6 +232,20 @@ const de: Record<Key, string> = {
   editor_entity: "Entität",
   editor_name: "Name (optional)",
   editor_not_loaded: "Energiedaten brauchen die Integration Energy Payback.",
+  "source.solar": "Solarstrom",
+  "source.grid": "Netzstrom",
+  "source.normal": "Normaler Netzstrom",
+  "source.cheap": "Günstiger Netzstrom",
+  "source.expensive": "Teurer Netzstrom",
+  "stack.source": "Nach Quelle",
+  "stack.consumer": "Nach Verbraucher",
+  "stack.none": "Nicht gestapelt",
+  editor_savings: "Ersparnisse aller Kategorien",
+  editor_stack: "Stapelung",
+  editor_line: "Linie",
+  editor_lines: "Weitere Linien aus Statistiken",
+  editor_line_none: "Keine",
+  history_empty_figure: "Keine Daten in diesem Zeitraum.",
 };
 
 const languages: Record<string, Record<Key, string>> = { en, de };

@@ -63,6 +63,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     washer = areas["device_sensor_washer"]
     assert washer["name"] == "Washer"
     assert washer["kind"] == "device"
+    assert washer["top_level"] is True
     # A device's consumption is its own statistic.
     assert washer["statistics"]["energy"] == ["sensor.washer"]
     assert washer["statistics"]["cost"] == ["energy_payback:device_sensor_washer_cost"]
