@@ -213,7 +213,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             fingerprint = config.fingerprint
             if self.household.recompute is not None:
                 fingerprint += f":{self.household.recompute}"
-            if state.fingerprint != fingerprint or moving_statistics:
+            if (
+                state.fingerprint != fingerprint
+                or moving_statistics
+                or (
+                    config.category == CATEGORY_HEAT_PUMP
+                    and len(config.heat_meters) == len(config.meters) > 1
+                    and state.next_hour is not None
+                    and f"{device_area(config.meters[0])}_saving" not in state.totals
+                )
+            ):
                 state.reset(fingerprint)
             for key in config.values:
                 state.timeline(key).set(config.current.get(key), valid_from)
@@ -497,6 +506,23 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     hour,
                     heating_cost(heat, config.heating, fuel_price),
                 )
+                if len(config.heat_meters) == len(meters) > 1 and all(
+                    hour in changes.get(m, {}) for m in config.heat_meters
+                ):
+                    for meter, heat_meter in zip(
+                        meters, config.heat_meters, strict=True
+                    ):
+                        add(
+                            f"{device_area(meter)}_saving",
+                            hour,
+                            heat_pump_saving(
+                                electricity=change(meter, hour),
+                                heat=change(heat_meter, hour),
+                                heating=config.heating,
+                                fuel_price=fuel_price,
+                                electricity_price=electricity_price,
+                            ),
+                        )
             elif (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
                 combustion := value(VALUE_COMBUSTION_CONSUMPTION, hour)
             ) is not None:
@@ -855,6 +881,25 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 history.get(figure, []),
                 replace=replace,
             )
+        if (
+            config.category == CATEGORY_HEAT_PUMP
+            and self.setup is not None
+            and len(config.heat_meters)
+            == len(meters := self._key_stats(config, self.setup))
+            > 1
+        ):
+            for meter in meters:
+                dev = self.setup.device(meter)
+                dev_name = self.device_name(dev) if dev else meter
+                figure = f"{device_area(meter)}_saving"
+                async_write_statistics(
+                    self.hass,
+                    category_statistic_id(config.category, figure),
+                    f"{dev_name} {text('saving')}",
+                    self.hass.config.currency,
+                    history.get(figure, []),
+                    replace=replace,
+                )
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState

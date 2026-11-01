@@ -56,9 +56,15 @@ export const lineFiguresOf = (area: FigureArea): LineFigure[] =>
 export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {
   const stacks: Stack[] = [];
   if (figure === "energy" && area.statistics.solar?.length) stacks.push("source");
+  if (area.kind === "household" && (figure === "energy" || figure === "cost")) {
+    stacks.push("consumer");
+  }
   if (
-    (area.kind === "household" || (area.kind === "category" && (area.statistics.energy?.length ?? 0) > 1)) &&
-    (figure === "energy" || figure === "cost")
+    area.kind === "category" &&
+    (area.statistics.energy?.length ?? 0) > 1 &&
+    (figure === "energy" ||
+      figure === "cost" ||
+      ((figure === "heat" || figure === "saving") && (area.statistics.heat_meters?.length ?? 0) > 1))
   ) {
     stacks.push("consumer");
   }

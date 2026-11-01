@@ -143,7 +143,16 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       [
         titled("energy-usage-graph", "strategy.usage_graph"),
         ...(solar ? [titled("energy-solar-graph", "strategy.solar_graph")] : []),
-        ...(devices ? [titled("energy-devices-detail-graph", "strategy.devices_graph")] : []),
+        ...(devices
+          ? [
+              card("electricity-lens-history-card", {
+                title: t("strategy.devices_graph"),
+                area: "household",
+                figure: "energy",
+                stack: "consumer",
+              }),
+            ]
+          : []),
       ],
       [
         titled("energy-distribution", "strategy.distribution", wide),
@@ -194,10 +203,10 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         t("strategy.heating"),
         "heating",
         [
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "heat", line: "scop" }),
+          card("electricity-lens-history-card", { area: "heat_pump", figure: "heat", stack: "consumer", line: "scop" }),
           sourceHistory("heat_pump"),
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "cost", line: "price" }),
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "saving" }),
+          card("electricity-lens-history-card", { area: "heat_pump", figure: "cost", stack: "consumer", line: "price" }),
+          card("electricity-lens-history-card", { area: "heat_pump", figure: "saving", stack: "consumer" }),
         ],
         [
           own("heat_pump", "scop"),

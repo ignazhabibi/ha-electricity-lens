@@ -22,7 +22,7 @@ from .calculation import (
     LEVEL_EXPENSIVE,
     effective_meters,
 )
-from .const import CATEGORY_PV, DOMAIN
+from .const import CATEGORY_HEAT_PUMP, CATEGORY_PV, DOMAIN
 from .coordinator import CATEGORY_FIGURES, ElectricityLensCoordinator
 from .sources import (
     EnergyInterfaceError,
@@ -162,6 +162,12 @@ async def async_figures(
         )
     # Only top-level devices add up to the household, beside "Other".
     top_level = set(effective_meters(parents, parents))
+    paired_heat: dict[str, str] = {}
+    if CATEGORY_HEAT_PUMP in categories:
+        hp_config = categories[CATEGORY_HEAT_PUMP][1]
+        hp_meters = effective_meters(hp_config.meters, parents)
+        if len(hp_config.heat_meters) == len(hp_meters) > 1:
+            paired_heat = dict(zip(hp_meters, hp_config.heat_meters, strict=True))
     areas.extend(
         {
             **area(
@@ -169,6 +175,19 @@ async def async_figures(
                 device_area(device.stat),
                 coordinator.device_name(device),
                 **household(device_area(device.stat), energy=[device.stat]),
+                **(
+                    {
+                        "heat": [paired_heat[device.stat]],
+                        "saving": [
+                            category_statistic_id(
+                                CATEGORY_HEAT_PUMP,
+                                f"{device_area(device.stat)}_saving",
+                            )
+                        ],
+                    }
+                    if device.stat in paired_heat
+                    else {}
+                ),
             ),
             "top_level": device.stat in top_level,
         }
