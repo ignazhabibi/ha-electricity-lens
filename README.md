@@ -1,13 +1,14 @@
-# Energy Lens
+# Electricity Lens
 
-A Home Assistant integration with its own dashboard cards. It computes what
+A Home Assistant integration with its own dashboard cards and electricity
+dashboard strategy. It computes what
 your household and each of its devices consumed and cost, how much of it was
 solar power or cheap grid power, and what your PV plant, heat pump, and
 electric car have saved compared with what they replaced, and whether and when
 they pay off.
 
 Home Assistant's energy dashboard shows what you consumed, produced, and paid.
-Energy Lens answers the questions that come next:
+Electricity Lens answers the questions that come next:
 
 - What did each device cost me, including the solar power it used?
 - How much of my grid power did I buy in cheap hours?
@@ -20,10 +21,6 @@ takes from the energy dashboard; it asks only for what Home Assistant cannot
 know, such as what the heat pump cost extra or what gas cost on average.
 
 ![The card](docs/card.png)
-
-Energy Lens was called Energy Payback until version 0.9. Its integration
-domain (`energy_payback`), its statistic ids, and the old card types stay, so
-existing installations and dashboards keep working.
 
 ## Use cases
 
@@ -40,7 +37,7 @@ existing installations and dashboards keep working.
 ### The household
 
 The household is always computed, from the energy dashboard alone. For every
-hour Energy Lens derives:
+hour Electricity Lens derives:
 
 - **Consumption** of the household (grid import − feed-in + solar production +
   battery discharge − battery charge), of each individual device, and of
@@ -81,7 +78,7 @@ replaced.
   energy dashboard charged for it, so dynamic tariffs are handled hour by
   hour. With several tariffs, such as day and night, the average of the hour
   counts. Heat pump and electric car can have an own tariff instead.
-- **Measurements are facts.** Energy Lens never filters or corrects
+- **Measurements are facts.** Electricity Lens never filters or corrects
   readings. If a meter recorded a wrong value, fix it in Home Assistant's
   statistics tools, which also fixes the energy dashboard, then choose
   *Recompute* (see below).
@@ -101,7 +98,7 @@ Each category counts from the first hour Home Assistant has data for it.
 
 ## Supported setups
 
-Energy Lens works with any energy dashboard that has:
+Electricity Lens works with any energy dashboard that has:
 
 - a grid import with an electricity price (a fixed price, a price entity, or a
   cost statistic), and
@@ -127,19 +124,20 @@ Home Assistant 2026.10 or newer is required.
 1. Set up the [energy dashboard](https://my.home-assistant.io/redirect/config_energy/)
    with grid import and electricity price, your solar production, and the
    meters of heat pump and wallbox under *Individual devices*.
-2. Install Energy Lens from the Marketplace (Settings › Marketplace) or HACS
-   as a custom repository: `https://github.com/ignazhabibi/ha-energy-payback`,
+2. Install Electricity Lens from the Marketplace (Settings › Marketplace) or HACS
+   as a custom repository: `https://github.com/ignazhabibi/ha-electricity-lens`,
    type *Integration*.
 3. Restart Home Assistant.
 4. Go to **Settings › Devices & services › Add integration** and choose
-   **Energy Lens**.
+   **Electricity Lens**.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
-6. Add the cards **Energy Lens balance**, **Energy Lens history**,
-   **Energy Lens key figures**, and **Energy Lens breakdown** to a
-   dashboard from the card picker. The first has no options. There is no
-   dashboard resource to add: the integration serves the cards itself and
-   updates them with the integration.
+6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
+   dashboard**, or add the cards **Electricity Lens balance**, **Electricity
+   Lens history**, **Electricity Lens key figures**, and **Electricity Lens
+   breakdown** to a dashboard from the card picker. The first has no options.
+   There is no dashboard resource to add: the integration serves the cards
+   itself and updates them with the integration.
 
 The past is computed in the background right after setup. With several years
 of data this can take a few minutes; until then the card says that it is
@@ -213,34 +211,34 @@ overall balance.
 
 | Entity | Description |
 |---|---|
-| Saving | Total saving since counting began, in your currency. Its history is the statistic *energy_payback:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
+| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. |
 
 ## Statistics
 
-Energy Lens keeps a long-term statistic of its own for every figure Home
+Electricity Lens keeps a long-term statistic of its own for every figure Home
 Assistant has no statistic for, including the computed past; it copies none. They appear in Home Assistant's statistics pickers, for
 example in the *Statistics graph* card, under their names such as
 "Household consumption" or "Washer costs".
 
 | Statistic | Content |
 |---|---|
-| `energy_payback:household_energy`, `…_solar`, `…_cheap`, `…_expensive`, `…_cost` | The household's consumption, its solar power, its cheap and expensive grid power (with price levels only), and its costs |
-| `energy_payback:other_…` | The same for "Other" |
-| `energy_payback:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
-| `energy_payback:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
-| `energy_payback:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
-| `energy_payback:heat_pump_heat`, `…heat_pump_alternative_cost` | The heat pump's heat (measured or estimated) and what the former heating would have cost for it |
-| `energy_payback:wallbox_distance`, `…wallbox_alternative_cost` | The distance charged and what a combustion car would have paid for fuel |
+| `electricity_lens:household_energy`, `…_solar`, `…_cheap`, `…_expensive`, `…_cost` | The household's consumption, its solar power, its cheap and expensive grid power (with price levels only), and its costs |
+| `electricity_lens:other_…` | The same for "Other" |
+| `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
+| `electricity_lens:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
+| `electricity_lens:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
+| `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost` | The heat pump's heat (measured or estimated) and what the former heating would have cost for it |
+| `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost` | The distance charged and what a combustion car would have paid for fuel |
 
 Energy is in kWh, money in your currency. Hours in which a figure did not
 change are not stored; statistics cards carry the sum over them.
 
 ## The cards
 
-### Energy Lens balance
+### Electricity Lens balance
 
 The card finds the categories by itself. The button in its header switches
 between two views:
@@ -254,7 +252,7 @@ shown at the bottom; selecting them opens the integration page, where they are
 changed. The card follows light and dark themes, works on phones and desktops,
 and can be used with keyboard and screen reader.
 
-### Energy Lens history
+### Electricity Lens history
 
 A figure per hour, day, month, or year as bars, in the look of the energy
 dashboard, set up in the card editor. Without options it shows what each
@@ -275,7 +273,7 @@ year. Without one it shows the savings per year since counting began, other
 figures for this month. In YAML:
 
 ```yaml
-type: custom:energy-lens-history-card
+type: custom:electricity-lens-history-card
 area: household
 figure: energy
 stack: source
@@ -284,7 +282,7 @@ lines:
   - statistic: sensor.outside_temperature
 ```
 
-### Energy Lens key figures
+### Electricity Lens key figures
 
 Tiles with one figure each for a period, set up in the card editor without
 YAML. The period is *Follow the date selection* (this month without an
@@ -296,7 +294,7 @@ Each tile has one of three sources:
 
 | Source | Shows |
 |---|---|
-| Energy data | A figure of an area, computed by Energy Lens, with a line below that explains it |
+| Energy data | A figure of an area, computed by Electricity Lens, with a line below that explains it |
 | Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
 | Entity | Any entity's current state |
 
@@ -316,7 +314,7 @@ dividing two such sums, for example costs by consumption; every cost and
 share per hour comes from the integration. In YAML:
 
 ```yaml
-type: custom:energy-lens-figures-card
+type: custom:electricity-lens-figures-card
 title: Household
 period: energy_date
 tiles:
@@ -331,7 +329,7 @@ tiles:
     name: Price now
 ```
 
-### Energy Lens breakdown
+### Electricity Lens breakdown
 
 Shares of a whole for a period, as a ring or as bars, set up in the card
 editor. The ring is drawn like the pie of Home Assistant's devices graph:
@@ -347,7 +345,7 @@ that hides a share with a tap.
   heat for heating and hot water from the heat pump's own sensors.
 
 ```yaml
-type: custom:energy-lens-breakdown-card
+type: custom:electricity-lens-breakdown-card
 area: household
 by: consumer
 figure: cost
@@ -357,28 +355,27 @@ color_by_source: true
 
 ## The dashboard
 
-Energy Lens brings a finished energy dashboard. Add it under
+Electricity Lens brings a finished electricity dashboard. Add it under
 **Settings › Dashboards › Add dashboard**, under *Community dashboards*:
-**Energy Lens**. Or in YAML:
+**Electricity Lens**. Or in YAML:
 
 ```yaml
 strategy:
-  type: custom:energy-lens
+  type: custom:electricity-lens
 ```
 
 It has no settings. It asks the integration what the household has and shows
 only the views that fit. Each view answers one question, and each card has
-one home; only the overview repeats headline figures, always for today. The
+one home; only the first view repeats headline figures, always for today. The
 other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Overview | How is today going? | Energy distribution; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure |
-| Electricity | Where does my electricity come from, and when was it cheap? | Consumption by source with the feed-in below the line and the price; solar production and forecast; electricity mix, self-sufficiency, self-consumption, feed-in, forecast for tomorrow |
-| Costs | What does my electricity cost, and who uses it? | Costs by consumer with the average price; consumers ranked and split by source; the electricity bill with the standing charge; average price; share of cheap grid power |
-| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source with the price; seasonal COP, heat price, its electricity mix, its saving |
-| Charging | What does driving cost, and where does the charging power come from? | Charging by source with the price; distance with the costs per 100 km; costs per 100 km, distance, the charging mix, the saving |
-| Balance | Does it pay off, and when? | The balance card; savings by category over all years; per category the saving, paid back, and saving per year |
+| Now | How is today going? | Electricity distribution; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure; solar forecast for today and tomorrow |
+| Household | Where does my electricity come from, and where does it go? | Electricity balance; solar production and forecast; individual devices; electricity distribution, electricity mix, self-sufficiency, and self-consumption |
+| Costs | What does my electricity cost, what did I save, and does it pay off? | Costs by consumer with the average price; consumers ranked and split by source; savings by category; the balance card; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source, costs, and saving; seasonal COP, heat price, average price, saving, its electricity mix, and its meters |
+| Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |
 
 ### Colors
 
@@ -400,7 +397,7 @@ builds on with the same cards.
 
 ## How the data updates
 
-Energy Lens reads the recorder's hourly long-term statistics of the meters
+Electricity Lens reads the recorder's hourly long-term statistics of the meters
 in the energy dashboard. It checks for newly compiled hours every 15 minutes,
 and at once when the energy dashboard changes. Each hour is valued with the
 prices of that hour. When Home Assistant was off, the recorder reports the
@@ -433,7 +430,7 @@ actions:
 - The yearly average is a plain average since counting began; the first and
   last partial seasons can make it a little high or low.
 - The energy dashboard and the recorder statistics have no public Python
-  interface. Energy Lens keeps all access to them in one module and raises a
+  interface. Electricity Lens keeps all access to them in one module and raises a
   repair issue instead of showing wrong numbers if a Home Assistant update
   changes them.
 
@@ -456,13 +453,13 @@ actions:
 ## Removal
 
 1. Remove the cards from your dashboards.
-2. Go to **Settings › Devices & services › Energy Lens**, open the menu
+2. Go to **Settings › Devices & services › Electricity Lens**, open the menu
    (⋮) and choose **Delete**. To remove one category only, use **Delete** in
    that category's menu.
-3. Uninstall Energy Lens in the Marketplace or HACS and restart Home
+3. Uninstall Electricity Lens in the Marketplace or HACS and restart Home
    Assistant.
 
-Deleting Energy Lens removes all statistics it wrote; deleting a category
+Deleting Electricity Lens removes all statistics it wrote; deleting a category
 removes that category's saving statistic.
 
 ## Development

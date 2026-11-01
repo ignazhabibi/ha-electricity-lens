@@ -3,8 +3,8 @@
 
 import { LitElement, html, type TemplateResult } from "lit";
 
-import { PERIODS, figureLabel } from "./energy-payback-figures-card";
-import type { HistoryCardConfig, HistoryLine } from "./energy-payback-history-card";
+import { PERIODS, figureLabel } from "./electricity-lens-figures-card";
+import type { HistoryCardConfig, HistoryLine } from "./electricity-lens-history-card";
 import { barFiguresOf, lineFiguresOf, stacksOf, type BarFigure } from "./history-figures";
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
@@ -16,7 +16,7 @@ const select = (options: Array<{ value: string; label: string }>) => ({
   select: { mode: "dropdown", options },
 });
 
-export class EnergyPaybackHistoryCardEditor extends LitElement {
+export class ElectricityLensHistoryCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

@@ -9,7 +9,7 @@ import {
   PERIODS,
   figureLabel,
   type FiguresCardConfig,
-} from "./energy-payback-figures-card";
+} from "./electricity-lens-figures-card";
 import {
   STATISTIC_VALUES,
   figuresOf,
@@ -28,7 +28,7 @@ const select = (options: Array<{ value: string; label: string }>) => ({
   select: { mode: "dropdown", options },
 });
 
-export class EnergyPaybackFiguresCardEditor extends LitElement {
+export class ElectricityLensFiguresCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

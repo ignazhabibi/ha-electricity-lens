@@ -1,4 +1,4 @@
-// Breakdown card of the Energy Lens integration: shares of a whole for a
+// Breakdown card of the Electricity Lens integration: shares of a whole for a
 // period, as a ring or as bars. Split by source (solar power and grid power
 // by price level) or by consumer (top-level devices and Other), in energy or
 // costs; or the shares of any statistics, shown as they are.
@@ -8,8 +8,8 @@ import { keyed } from "lit/directives/keyed.js";
 
 import { chartReady, shareChart, shares } from "./chart";
 import { CSS_COLORS, palette } from "./colors";
+import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
 import { followEnergyDate } from "./energy-date";
-import { PERIODS, type PeriodOption } from "./energy-payback-figures-card";
 import { formatter, type Format } from "./format";
 import { fixedRange, rangeLabel, type Range } from "./history";
 import { barSeries, type BarSeries } from "./history-figures";
@@ -55,7 +55,7 @@ interface Part {
   energy?: number;
 }
 
-export class EnergyPaybackBreakdownCard extends LitElement {
+export class ElectricityLensBreakdownCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -83,7 +83,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   }
 
   static getConfigElement(): HTMLElement {
-    return document.createElement("energy-lens-breakdown-card-editor");
+    return document.createElement("electricity-lens-breakdown-card-editor");
   }
 
   setConfig(config: BreakdownCardConfig): void {

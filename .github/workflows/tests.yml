@@ -17,7 +17,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
-      - run: uv run python scripts/translations.py && git diff --exit-code custom_components/energy_payback/translations
+      - run: uv run python scripts/translations.py && git diff --exit-code custom_components/electricity_lens/translations
       - run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=95
 
   card:
@@ -34,4 +34,4 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       # The built card is committed, because the Marketplace installs files as published.
-      - run: git diff --exit-code ../custom_components/energy_payback/frontend
+      - run: git diff --exit-code ../custom_components/electricity_lens/frontend

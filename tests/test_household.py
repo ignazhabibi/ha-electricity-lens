@@ -15,8 +15,8 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.energy_payback.coordinator import _standing_charge
-from custom_components.energy_payback.models import HouseholdState
+from custom_components.electricity_lens.coordinator import _standing_charge
+from custom_components.electricity_lens.models import HouseholdState
 
 from .conftest import (
     FEED_IN_PRICE,
@@ -41,7 +41,7 @@ OTHER = CONSUMPTION - sum(DEVICES.values())
 
 
 async def _total(hass: HomeAssistant, key: str, start: datetime) -> float | None:
-    statistic_id = f"energy_payback:{key}"
+    statistic_id = f"electricity_lens:{key}"
     rows = await get_instance(hass).async_add_executor_job(
         statistics_during_period,
         hass,
@@ -93,20 +93,20 @@ async def test_household_statistics(hass: HomeAssistant, data_start: datetime) -
         lambda: get_metadata(
             hass,
             statistic_ids={
-                "energy_payback:household_energy",
-                "energy_payback:device_sensor_washer_cost",
-                "energy_payback:grid_cost",
+                "electricity_lens:household_energy",
+                "electricity_lens:device_sensor_washer_cost",
+                "electricity_lens:grid_cost",
             },
         )
     )
     names = {key: meta["name"] for key, (_, meta) in metadata.items()}
     assert names == {
-        "energy_payback:household_energy": "Household consumption",
-        "energy_payback:device_sensor_washer_cost": "Washer costs",
-        "energy_payback:grid_cost": "Grid costs",
+        "electricity_lens:household_energy": "Household consumption",
+        "electricity_lens:device_sensor_washer_cost": "Washer costs",
+        "electricity_lens:grid_cost": "Grid costs",
     }
-    assert metadata["energy_payback:household_energy"][1]["unit_class"] == "energy"
-    assert metadata["energy_payback:grid_cost"][1]["unit_of_measurement"] == "EUR"
+    assert metadata["electricity_lens:household_energy"][1]["unit_class"] == "energy"
+    assert metadata["electricity_lens:grid_cost"][1]["unit_of_measurement"] == "EUR"
 
 
 @pytest.mark.usefixtures("energy")

@@ -1,4 +1,4 @@
-// The color system of all Energy Lens cards, in one place. It builds on
+// The color system of all Electricity Lens cards, in one place. It builds on
 // Home Assistant's energy colors, so themes that change them change the
 // cards too, and gives every thing one color wherever it appears:
 // - Grid power is one family; its price level is the lightness (cheap is

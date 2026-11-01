@@ -93,7 +93,7 @@ STORAGE_VERSION = 1
 # alternative's costs per category.
 STATISTICS_VERSION = 3
 
-type EnergyPaybackConfigEntry = ConfigEntry[EnergyPaybackCoordinator]
+type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
 
 def _hours(start: float, end: float) -> list[float]:
@@ -161,16 +161,16 @@ def coordinator_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str
     return Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
 
 
-class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
+class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
     """Compute each category's saving from the energy dashboard's statistics.
 
     Every update continues where the last one stopped, so hours missed while
     Home Assistant was off are caught up. The first update computes the past.
     """
 
-    config_entry: EnergyPaybackConfigEntry
+    config_entry: ElectricityLensConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: EnergyPaybackConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ElectricityLensConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,

@@ -50,7 +50,7 @@ export interface CategoryFigures {
   heatEstimated: boolean;
 }
 
-/** One area of `energy_payback/figures`: where each of its figures is kept. */
+/** One area of `electricity_lens/figures`: where each of its figures is kept. */
 export interface FigureArea {
   id: string;
   kind: "household" | "grid" | "solar" | "category" | "device" | "other";

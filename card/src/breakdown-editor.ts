@@ -3,7 +3,7 @@
 
 import { LitElement, html, type TemplateResult } from "lit";
 
-import { PERIODS, type BreakdownCardConfig } from "./energy-payback-breakdown-card";
+import { PERIODS, type BreakdownCardConfig } from "./electricity-lens-breakdown-card";
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
 import type { FigureArea, FiguresInfo, HomeAssistant } from "./types";
@@ -17,7 +17,7 @@ const select = (options: Array<{ value: string; label: string }>) => ({
 const splittable = (area: FigureArea): boolean =>
   area.kind === "household" || !!area.statistics.solar?.length;
 
-export class EnergyPaybackBreakdownCardEditor extends LitElement {
+export class ElectricityLensBreakdownCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

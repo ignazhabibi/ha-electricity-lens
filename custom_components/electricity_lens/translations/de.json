@@ -2,28 +2,28 @@
   "config": {
     "step": {
       "user": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_devices": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_solar": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_household_only": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nOhne Solar und einzelne Geräte im [Energie-Dashboard](/config/energy) wird nur der Haushalt berechnet."
       },
       "household": {
@@ -205,12 +205,12 @@
       "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
     },
     "abort": {
-      "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Energy Lens hinzufügen.",
-      "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Lens gibt.",
-      "single_instance_allowed": "Energy Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu."
+      "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
+      "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
+      "single_instance_allowed": "Electricity Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu."
     },
     "create_entry": {
-      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Energy Lens« findest du im Dashboard unter »Karte hinzufügen«."
+      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«."
     }
   },
   "options": {
@@ -305,7 +305,7 @@
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
       },
       "abort": {
-        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Lens gibt.",
+        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
@@ -523,7 +523,7 @@
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
       },
       "abort": {
-        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Lens gibt.",
+        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
@@ -632,7 +632,7 @@
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
       },
       "abort": {
-        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Lens gibt.",
+        "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
@@ -643,7 +643,7 @@
   },
   "device": {
     "total": {
-      "name": "Energy Lens"
+      "name": "Electricity Lens"
     },
     "pv": {
       "name": "PV-Anlage"
@@ -708,20 +708,20 @@
   },
   "issues": {
     "energy_interface": {
-      "title": "Energy Lens kann das Energie-Dashboard nicht lesen",
-      "description": "Diese Home-Assistant-Version speichert das Energie-Dashboard oder seine Statistiken so, wie Energy Lens es nicht versteht. Die Ersparnisse sind nicht verfügbar, bis Energy Lens aktualisiert ist."
+      "title": "Electricity Lens kann das Energie-Dashboard nicht lesen",
+      "description": "Diese Home-Assistant-Version speichert das Energie-Dashboard oder seine Statistiken so, wie Electricity Lens es nicht versteht. Die Ersparnisse sind nicht verfügbar, bis Electricity Lens aktualisiert ist."
     },
     "no_grid_price": {
-      "title": "Energy Lens fehlt der Strompreis",
+      "title": "Electricity Lens fehlt der Strompreis",
       "description": "Im Energie-Dashboard gibt es keinen Netzbezug mit Strompreis mehr. Die Ersparnisse behalten ihre letzten Werte, bis er im [Energie-Dashboard](/config/energy) wieder eingerichtet ist."
     },
     "missing_meter": {
       "title": "{category}: Zähler fehlt im Energie-Dashboard",
-      "description": "Im Energie-Dashboard fehlt: {meters}. {category} behält die letzten Werte, bis das behoben ist. Trag den Zähler im [Energie-Dashboard](/config/energy) wieder ein, oder wähle mit »Neu konfigurieren« auf der Integrationsseite von Energy Lens andere Zähler."
+      "description": "Im Energie-Dashboard fehlt: {meters}. {category} behält die letzten Werte, bis das behoben ist. Trag den Zähler im [Energie-Dashboard](/config/energy) wieder ein, oder wähle mit »Neu konfigurieren« auf der Integrationsseite von Electricity Lens andere Zähler."
     },
     "missing_price_entity": {
       "title": "{category}: Preis-Sensor fehlt",
-      "description": "Den Preis-Sensor {entity} gibt es nicht mehr. Bis er ersetzt ist, gilt sein letzter Wert. Wähle auf der Integrationsseite von Energy Lens unter »Neu konfigurieren › Werte ab jetzt« einen anderen oder keinen."
+      "description": "Den Preis-Sensor {entity} gibt es nicht mehr. Bis er ersetzt ist, gilt sein letzter Wert. Wähle auf der Integrationsseite von Electricity Lens unter »Neu konfigurieren › Werte ab jetzt« einen anderen oder keinen."
     }
   },
   "selector": {

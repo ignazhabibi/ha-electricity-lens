@@ -23,7 +23,7 @@ from .calculation import (
     effective_meters,
 )
 from .const import CATEGORY_PV, DOMAIN
-from .coordinator import CATEGORY_FIGURES, EnergyPaybackCoordinator
+from .coordinator import CATEGORY_FIGURES, ElectricityLensCoordinator
 from .sources import (
     EnergyInterfaceError,
     async_get_energy_setup,
@@ -48,9 +48,9 @@ async def ws_figures(
     """Send the areas, their names, and the statistics of each figure."""
     entries = hass.config_entries.async_loaded_entries(DOMAIN)
     if not entries:
-        connection.send_error(msg["id"], "not_loaded", "Energy Lens is not loaded")
+        connection.send_error(msg["id"], "not_loaded", "Electricity Lens is not loaded")
         return
-    coordinator: EnergyPaybackCoordinator = entries[0].runtime_data
+    coordinator: ElectricityLensCoordinator = entries[0].runtime_data
     try:
         figures = await async_figures(hass, coordinator)
     except EnergyInterfaceError as err:
@@ -60,7 +60,7 @@ async def ws_figures(
 
 
 async def async_figures(
-    hass: HomeAssistant, coordinator: EnergyPaybackCoordinator
+    hass: HomeAssistant, coordinator: ElectricityLensCoordinator
 ) -> dict[str, Any]:
     """Return the areas with the statistics of each of their figures.
 

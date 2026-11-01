@@ -1,12 +1,12 @@
 {
-  "name": "energy-payback-card",
-  "version": "0.11.2",
+  "name": "electricity-lens-card",
+  "version": "0.12.0",
   "private": true,
-  "description": "Dashboard card of the Energy Lens integration for Home Assistant.",
+  "description": "Dashboard cards and strategy of the Electricity Lens integration for Home Assistant.",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --minify --format=esm --target=es2021 --outfile=../custom_components/energy_payback/frontend/energy-lens.js",
+    "build": "esbuild src/index.ts --bundle --minify --format=esm --target=es2021 --outfile=../custom_components/electricity_lens/frontend/electricity-lens.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

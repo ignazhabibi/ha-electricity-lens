@@ -1,4 +1,4 @@
-"""The Energy Lens integration."""
+"""The Electricity Lens integration."""
 
 from __future__ import annotations
 
@@ -42,8 +42,8 @@ from .const import (
     VALUE_SCOP,
 )
 from .coordinator import (
-    EnergyPaybackConfigEntry,
-    EnergyPaybackCoordinator,
+    ElectricityLensConfigEntry,
+    ElectricityLensCoordinator,
     coordinator_store,
     next_full_hour,
 )
@@ -87,9 +87,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> bool:
-    """Set up Energy Lens from a config entry."""
+    """Set up Electricity Lens from a config entry."""
     try:
         await async_get_energy_setup(hass)
     except EnergyInterfaceError as err:
@@ -99,10 +99,7 @@ async def async_setup_entry(
             translation_placeholders={"error": str(err)},
         ) from err
 
-    if entry.title == "Energy Payback":
-        # The product was renamed; the entry follows.
-        hass.config_entries.async_update_entry(entry, title="Energy Lens")
-    coordinator = EnergyPaybackCoordinator(hass, entry)
+    coordinator = ElectricityLensCoordinator(hass, entry)
     await coordinator.async_load()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -122,7 +119,7 @@ async def async_setup_entry(
 
 
 async def _async_update_listener(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> None:
     """Reload when a category was added, changed, or removed."""
     hass.config_entries.async_schedule_reload(entry.entry_id)
@@ -176,7 +173,7 @@ def _migrated_data(
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> bool:
     """Migrate an entry from an older version."""
     if entry.version > 1:
@@ -202,14 +199,14 @@ async def async_migrate_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> None:
     """Remove the statistics the integration wrote, and its progress."""
     async_remove_statistics(hass, await async_statistic_ids(hass))

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Energy Payback Onboarding</title>
+<title>Electricity Lens Onboarding</title>
 <style>
 /* Draft of the setup dialogs, approximated with Home Assistant's default
    theme. Not pixel-exact; the texts are the point. */
@@ -94,7 +94,7 @@ a{color:var(--primary-ink)}
 </head>
 <body>
 <main>
-<h1>Energy Payback: Einrichtung (Entwurf MVP)</h1>
+<h1>Electricity Lens: Einrichtung (Entwurf MVP)</h1>
 <p class="lead">Alle Schritte und Texte der Einrichtung und der späteren Änderungen. Beispielhaushalt: Energie-Dashboard mit Netz, Einspeisung, zwei Solarquellen und Batterie; sieben einzelne Geräte; eingerichtet wird am 31.10.2026. Die Dialoge sind an Home Assistant angelehnt, nicht pixelgenau.</p>
 
 <div class="boxes">
@@ -127,7 +127,7 @@ a{color:var(--primary-ink)}
 </div>
 
 <h2>1 · Erste Einrichtung</h2>
-<p class="lead">Einstellungen › Geräte &amp; Dienste › Integration hinzufügen › Energy Payback. Nur die ausgewählten Auswertungen erscheinen.</p>
+<p class="lead">Einstellungen › Geräte &amp; Dienste › Integration hinzufügen › Electricity Lens. Nur die ausgewählten Auswertungen erscheinen.</p>
 <div class="path"><span>Übersicht</span><i>›</i><span>PV-Anlage</span><i>›</i><span>Wärmepumpe</span><i>›</i><span>Wärmepumpe: Durchschnittswerte</span><i>›</i><span>E-Auto</span><i>›</i><span>E-Auto: Durchschnittswerte</span><i>›</i><span>Fertig</span></div>
 
 <div class="grid">
@@ -136,7 +136,7 @@ a{color:var(--primary-ink)}
 <div class="fig">
   <div class="step">Schritt 1 · Übersicht</div>
   <div class="dlg" role="img" aria-label="Dialog Übersicht">
-    <div class="dlg-h"><h3>Energy Payback</h3><span class="ico">✕</span></div>
+    <div class="dlg-h"><h3>Electricity Lens</h3><span class="ico">✕</span></div>
     <div class="dlg-b">
       <div class="desc">
         <p>Zeigt, was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.</p>
@@ -327,7 +327,7 @@ a{color:var(--primary-ink)}
   <div class="dlg" role="img" aria-label="Dialog Erfolg">
     <div class="dlg-h"><h3>Erfolg</h3><span class="ico">✕</span></div>
     <div class="dlg-b">
-      <div class="desc"><p>Die Vergangenheit wird jetzt nachgerechnet, das dauert meist unter einer Minute. Die Karte »Energy Payback« findest du im Dashboard unter »Karte hinzufügen«.</p></div>
+      <div class="desc"><p>Die Vergangenheit wird jetzt nachgerechnet, das dauert meist unter einer Minute. Die Karten von »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«.</p></div>
     </div>
     <div class="dlg-f"><button class="btn fill">Fertig</button></div>
   </div>
@@ -453,8 +453,8 @@ a{color:var(--primary-ink)}
 <div class="tw">
 <table>
   <tr><th>Wann</th><th>Text</th></tr>
-  <tr><td>Schon eingerichtet</td><td>Energy Payback ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu.</td></tr>
-  <tr><td>Kein Netzbezug mit Preis</td><td>Richte zuerst im Energie-Dashboard den Netzbezug mit Strompreis ein. Danach kannst du Energy Payback hinzufügen.</td></tr>
+  <tr><td>Schon eingerichtet</td><td>Electricity Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu.</td></tr>
+  <tr><td>Kein Netzbezug mit Preis</td><td>Richte zuerst im Energie-Dashboard den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.</td></tr>
   <tr><td>Nichts auswertbar</td><td>Im Energie-Dashboard fehlen Solar und einzelne Geräte. Füge dort mindestens eins hinzu.</td></tr>
   <tr><td>Auswertung schon vorhanden</td><td>Die Wärmepumpe ist schon eingerichtet. Ändern kannst du sie über »Neu konfigurieren«.</td></tr>
   <tr><td>Energie-Dashboard nicht lesbar</td><td>Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt.</td></tr>

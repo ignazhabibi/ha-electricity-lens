@@ -4,9 +4,9 @@ import { css } from "lit";
 
 export const cardStyles = css`
   :host {
-    --energy-payback-pv-color: var(--energy-solar-color, #ff9800);
-    --energy-payback-heat-pump-color: var(--energy-gas-color, #8e021b);
-    --energy-payback-wallbox-color: var(--energy-non-fossil-color, #0f9d58);
+    --electricity-lens-pv-color: var(--energy-solar-color, #ff9800);
+    --electricity-lens-heat-pump-color: var(--energy-gas-color, #8e021b);
+    --electricity-lens-wallbox-color: var(--energy-non-fossil-color, #0f9d58);
   }
   ha-card {
     height: 100%;

@@ -22,12 +22,12 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.energy_payback import coordinator as coordinator_module
-from custom_components.energy_payback.calculation import HOUR
-from custom_components.energy_payback.const import DOMAIN
-from custom_components.energy_payback.coordinator import EnergyPaybackCoordinator
-from custom_components.energy_payback.models import CategoryConfig, CategoryState
-from custom_components.energy_payback.sources import EnergyInterfaceError
+from custom_components.electricity_lens import coordinator as coordinator_module
+from custom_components.electricity_lens.calculation import HOUR
+from custom_components.electricity_lens.const import DOMAIN
+from custom_components.electricity_lens.coordinator import ElectricityLensCoordinator
+from custom_components.electricity_lens.models import CategoryConfig, CategoryState
+from custom_components.electricity_lens.sources import EnergyInterfaceError
 
 from .conftest import (
     GRID_PRICE,
@@ -110,9 +110,9 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert _state(hass, "sensor.pv_plant_saving_per_year").state == "unknown"
 
     total = COUNTED * (PV_PER_HOUR + HEAT_PUMP_PER_HOUR + WALLBOX_PER_HOUR)
-    assert float(_state(hass, "sensor.energy_lens_balance").state) == pytest.approx(
-        total - 19000
-    )
+    assert float(
+        _state(hass, "sensor.electricity_lens_balance").state
+    ) == pytest.approx(total - 19000)
 
 
 @pytest.mark.usefixtures("energy")
@@ -148,12 +148,12 @@ async def test_history_is_written(
 ) -> None:
     """The computed past becomes a statistic of the integration's own."""
     await setup_entry(hass, config_entry)
-    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
+    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
     assert sums[1] == pytest.approx(PV_PER_HOUR)
 
     pv = _state(hass, "sensor.pv_plant_saving")
-    assert pv.attributes["statistic_id"] == "energy_payback:pv_saving"
+    assert pv.attributes["statistic_id"] == "electricity_lens:pv_saving"
     assert "state_class" not in pv.attributes
     # The sensor keeps no statistics of its own.
     assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
@@ -166,21 +166,21 @@ async def test_heat_distance_and_alternative_costs(
     """Heat pump and car keep heat, distance, and what the alternative cost."""
     await setup_entry(hass, config_entry)
     heat = HP_KWH * 4.0
-    assert (await _sums(hass, "energy_payback:heat_pump_heat", data_start))[
+    assert (await _sums(hass, "electricity_lens:heat_pump_heat", data_start))[
         -1
     ] == pytest.approx(COUNTED * heat)
-    assert (await _sums(hass, "energy_payback:heat_pump_alternative_cost", data_start))[
-        -1
-    ] == pytest.approx(COUNTED * heat / 0.92 * 0.10)
+    assert (
+        await _sums(hass, "electricity_lens:heat_pump_alternative_cost", data_start)
+    )[-1] == pytest.approx(COUNTED * heat / 0.92 * 0.10)
     distance = 1.0 / 20 * 100
-    assert (await _sums(hass, "energy_payback:wallbox_distance", data_start))[
+    assert (await _sums(hass, "electricity_lens:wallbox_distance", data_start))[
         -1
     ] == pytest.approx(COUNTED * distance)
-    assert (await _sums(hass, "energy_payback:wallbox_alternative_cost", data_start))[
+    assert (await _sums(hass, "electricity_lens:wallbox_alternative_cost", data_start))[
         -1
     ] == pytest.approx(COUNTED * distance * 7 / 100 * 1.80)
     # The PV plant keeps only its saving.
-    assert await _sums(hass, "energy_payback:pv_heat", data_start) == []
+    assert await _sums(hass, "electricity_lens:pv_heat", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -203,7 +203,7 @@ async def test_new_hours_continue_the_history(
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
 
-    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
+    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx((COUNTED + 2) * PV_PER_HOUR)
     assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
         (COUNTED + 2) * PV_PER_HOUR
@@ -229,7 +229,7 @@ async def test_statistics_move_from_the_sensors(
     assert await _sums(hass, "sensor.pv_plant_saving", data_start)
 
     with patch(
-        "custom_components.energy_payback.coordinator.async_hourly_changes",
+        "custom_components.electricity_lens.coordinator.async_hourly_changes",
         wraps=coordinator_module.async_hourly_changes,
     ) as changes:
         await hass.config_entries.async_reload(config_entry.entry_id)
@@ -237,7 +237,7 @@ async def test_statistics_move_from_the_sensors(
         await async_wait_recording_done(hass)
     changes.assert_called()
     assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
-    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
+    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
 
 
@@ -247,19 +247,19 @@ async def test_removed_category_loses_its_statistics(
 ) -> None:
     """Removing a category removes its saving statistic; removing all, all."""
     await setup_entry(hass, config_entry)
-    assert await _sums(hass, "energy_payback:wallbox_saving", data_start)
+    assert await _sums(hass, "electricity_lens:wallbox_saving", data_start)
     hass.config_entries.async_remove_subentry(
         config_entry, _subentry(config_entry, "wallbox").subentry_id
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
-    assert await _sums(hass, "energy_payback:wallbox_saving", data_start) == []
-    assert await _sums(hass, "energy_payback:pv_saving", data_start)
+    assert await _sums(hass, "electricity_lens:wallbox_saving", data_start) == []
+    assert await _sums(hass, "electricity_lens:pv_saving", data_start)
 
     await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
-    assert await _sums(hass, "energy_payback:pv_saving", data_start) == []
+    assert await _sums(hass, "electricity_lens:pv_saving", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -269,7 +269,7 @@ async def test_progress_survives_restart(
     """A reload continues from the stored progress instead of computing again."""
     await setup_entry(hass, config_entry)
     with patch(
-        "custom_components.energy_payback.coordinator.async_hourly_changes"
+        "custom_components.electricity_lens.coordinator.async_hourly_changes"
     ) as changes:
         await hass.config_entries.async_reload(config_entry.entry_id)
         await hass.async_block_till_done(wait_background_tasks=True)
@@ -330,7 +330,7 @@ async def test_recompute_keeps_values(
     before = float(_state(hass, "sensor.heat_pump_saving").state)
     fingerprint = config_entry.runtime_data.states[subentry.subentry_id].fingerprint
     with patch(
-        "custom_components.energy_payback.coordinator.async_hourly_changes",
+        "custom_components.electricity_lens.coordinator.async_hourly_changes",
         wraps=coordinator_module.async_hourly_changes,
     ) as changes:
         await _update(hass, config_entry, "heat_pump", recompute=1.0)
@@ -399,7 +399,7 @@ def test_heat_gap_uses_measured_cop() -> None:
     )
     state = CategoryState()
     changes = {"sensor.heat": {0.0: 4.0}}
-    heat = EnergyPaybackCoordinator._heat
+    heat = ElectricityLensCoordinator._heat
     assert heat(config, state, changes, 1.0, 0.0) == 4.0
     assert state.heat_start == 0.0
     assert heat(config, state, changes, 2.0, HOUR) == pytest.approx(8.0)
@@ -503,7 +503,7 @@ async def test_energy_interface_broken(
     """A changed energy interface fails loudly instead of computing wrong numbers."""
     await setup_entry(hass, config_entry)
     with patch(
-        "custom_components.energy_payback.coordinator.async_get_energy_setup",
+        "custom_components.electricity_lens.coordinator.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         await config_entry.runtime_data.async_refresh()
@@ -519,7 +519,7 @@ async def test_setup_fails_when_energy_interface_broken(
 
     config_entry.add_to_hass(hass)
     with patch(
-        "custom_components.energy_payback.async_get_energy_setup",
+        "custom_components.electricity_lens.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
@@ -542,7 +542,8 @@ async def test_card_is_served(
     await setup_entry(hass, config_entry)
     modules = hass.data["frontend_extra_module_url"]
     assert any(
-        url.startswith("/energy_lens_static/energy-lens.js?v=") for url in modules.urls
+        url.startswith("/electricity_lens_static/electricity-lens.js?v=")
+        for url in modules.urls
     )
 
 

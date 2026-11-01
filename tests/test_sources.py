@@ -13,7 +13,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.energy_payback.sources import (
+from custom_components.electricity_lens.sources import (
     EnergyInterfaceError,
     EnergySetup,
     GridSource,

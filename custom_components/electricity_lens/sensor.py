@@ -1,4 +1,4 @@
-"""Sensors for Energy Lens."""
+"""Sensors for Electricity Lens."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import EnergyPaybackConfigEntry, EnergyPaybackCoordinator
-from .entity import EnergyPaybackEntity
+from .coordinator import ElectricityLensConfigEntry, ElectricityLensCoordinator
+from .entity import ElectricityLensEntity
 from .models import CategoryResult
 from .sources import saving_statistic_id
 
@@ -73,7 +73,7 @@ BALANCE_SENSOR = SensorEntityDescription(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: EnergyPaybackConfigEntry,
+    entry: ElectricityLensConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the overall balance and the sensors of each category."""
@@ -91,10 +91,10 @@ async def async_setup_entry(
         )
 
 
-class BalanceSensor(EnergyPaybackEntity, SensorEntity):
+class BalanceSensor(ElectricityLensEntity, SensorEntity):
     """All savings minus all investments."""
 
-    def __init__(self, coordinator: EnergyPaybackCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, BALANCE_SENSOR, entry_id, "total")
         self._attr_native_unit_of_measurement = coordinator.hass.config.currency
@@ -105,7 +105,7 @@ class BalanceSensor(EnergyPaybackEntity, SensorEntity):
         return self.coordinator.data.balance
 
 
-class CategorySensor(EnergyPaybackEntity, SensorEntity):
+class CategorySensor(ElectricityLensEntity, SensorEntity):
     """A figure of one category."""
 
     entity_description: CategorySensorDescription
@@ -127,7 +127,7 @@ class CategorySensor(EnergyPaybackEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator: EnergyPaybackCoordinator,
+        coordinator: ElectricityLensCoordinator,
         description: CategorySensorDescription,
         subentry_id: str,
         category: str,

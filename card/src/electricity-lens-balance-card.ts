@@ -1,4 +1,4 @@
-// Dashboard card of the Energy Lens integration. It needs no options: it
+// Dashboard card of the Electricity Lens integration. It needs no options: it
 // finds the integration's sensors by itself and renders from the states the
 // frontend already has, so it appears without loading delay.
 
@@ -17,7 +17,7 @@ import { cardStyles } from "./styles";
 import type { CategoryFigures, HomeAssistant } from "./types";
 
 type View = "total" | "yearly";
-const VIEW_STORAGE_KEY = "energy-payback-card-view";
+const VIEW_STORAGE_KEY = "electricity-lens-balance-card-view";
 
 const readView = (): View => {
   try {
@@ -29,7 +29,7 @@ const readView = (): View => {
   }
 };
 
-export class EnergyPaybackCard extends LitElement {
+export class ElectricityLensBalanceCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     _view: { state: true },
@@ -356,13 +356,13 @@ export class EnergyPaybackCard extends LitElement {
         border-bottom: none;
       }
       .pv {
-        --color: var(--energy-payback-pv-color);
+        --color: var(--electricity-lens-pv-color);
       }
       .heat_pump {
-        --color: var(--energy-payback-heat-pump-color);
+        --color: var(--electricity-lens-heat-pump-color);
       }
       .wallbox {
-        --color: var(--energy-payback-wallbox-color);
+        --color: var(--electricity-lens-wallbox-color);
       }
       .swatch {
         flex: none;

@@ -1,4 +1,4 @@
-"""Fixtures for Energy Lens tests."""
+"""Fixtures for Electricity Lens tests."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.energy_payback.const import (
+from custom_components.electricity_lens.const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_PV,
     CATEGORY_WALLBOX,
@@ -203,7 +203,7 @@ def make_entry(
     """Return a config entry with these categories and household options."""
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Energy Lens",
+        title="Electricity Lens",
         data={},
         options=options or {},
         version=version,

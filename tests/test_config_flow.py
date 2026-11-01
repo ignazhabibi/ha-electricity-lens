@@ -16,8 +16,8 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.energy_payback.const import DOMAIN
-from custom_components.energy_payback.sources import EnergyInterfaceError
+from custom_components.electricity_lens.const import DOMAIN
+from custom_components.electricity_lens.sources import EnergyInterfaceError
 
 from .conftest import (
     HEAT_PUMP_DATA,
@@ -137,7 +137,9 @@ async def test_full_setup(hass: HomeAssistant) -> None:
         result["flow_id"], WALLBOX_METERS
     )
     assert result["step_id"] == "wallbox_values"
-    with patch("custom_components.energy_payback.async_setup_entry", return_value=True):
+    with patch(
+        "custom_components.electricity_lens.async_setup_entry", return_value=True
+    ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], WALLBOX_VALUES
         )
@@ -191,7 +193,9 @@ async def test_setup_validation(hass: HomeAssistant) -> None:
         "scop": "scop_range",
         "tariff": "value_required",
     }
-    with patch("custom_components.energy_payback.async_setup_entry", return_value=True):
+    with patch(
+        "custom_components.electricity_lens.async_setup_entry", return_value=True
+    ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"oil_price": 1.1, "scop": 3.5}
         )
@@ -236,7 +240,9 @@ async def test_household_only(hass: HomeAssistant) -> None:
         result["flow_id"], {"cheap_until": 0.3, "expensive_from": 0.3}
     )
     assert result["errors"] == {"expensive_from": "levels_order"}
-    with patch("custom_components.energy_payback.async_setup_entry", return_value=True):
+    with patch(
+        "custom_components.electricity_lens.async_setup_entry", return_value=True
+    ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"cheap_until": 0.2, "expensive_from": 0.35}
         )
@@ -299,7 +305,9 @@ async def test_pv_without_feed_in(hass: HomeAssistant) -> None:
     await set_energy_prefs(hass, {"energy_sources": [grid, PREFS["energy_sources"][1]]})
     result = await _start(hass, ["pv"])
     assert result["step_id"] == "pv_no_export"
-    with patch("custom_components.energy_payback.async_setup_entry", return_value=True):
+    with patch(
+        "custom_components.electricity_lens.async_setup_entry", return_value=True
+    ):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -307,7 +315,7 @@ async def test_pv_without_feed_in(hass: HomeAssistant) -> None:
 async def test_setup_aborts_on_interface_error(hass: HomeAssistant) -> None:
     """A changed energy interface ends setup."""
     with patch(
-        "custom_components.energy_payback.config_flow.async_get_energy_setup",
+        "custom_components.electricity_lens.config_flow.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         result = await hass.config_entries.flow.async_init(
@@ -405,7 +413,7 @@ async def test_add_category_interface_error(hass: HomeAssistant) -> None:
     entry = make_entry(("pv", {}))
     await setup_entry(hass, entry)
     with patch(
-        "custom_components.energy_payback.config_flow.async_get_energy_setup",
+        "custom_components.electricity_lens.config_flow.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         result = await hass.config_entries.subentries.async_init(
@@ -568,7 +576,7 @@ async def test_reconfigure_interface_error(hass: HomeAssistant) -> None:
     await setup_entry(hass, entry)
     subentry = next(iter(entry.subentries.values()))
     with patch(
-        "custom_components.energy_payback.config_flow.async_get_energy_setup",
+        "custom_components.electricity_lens.config_flow.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         result = await hass.config_entries.subentries.async_init(

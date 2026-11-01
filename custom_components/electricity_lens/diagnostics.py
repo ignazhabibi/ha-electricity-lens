@@ -1,4 +1,4 @@
-"""Diagnostics for Energy Lens."""
+"""Diagnostics for Electricity Lens."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
-from .coordinator import EnergyPaybackConfigEntry
+from .coordinator import ElectricityLensConfigEntry
 from .sources import EnergyInterfaceError, async_get_energy_setup
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: EnergyPaybackConfigEntry
+    hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> dict[str, Any]:
     """Return what was configured, what the energy dashboard provides, and the progress.
 

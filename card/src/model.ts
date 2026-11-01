@@ -2,7 +2,7 @@
 
 import type { Category, CategoryFigures, HomeAssistant } from "./types";
 
-export const DOMAIN = "energy_payback";
+export const DOMAIN = "electricity_lens";
 const ORDER: Category[] = ["pv", "heat_pump", "wallbox"];
 const MONTH_MS = (365.25 / 12) * 24 * 3600 * 1000;
 

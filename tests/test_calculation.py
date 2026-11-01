@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.energy_payback.calculation import (
+from custom_components.electricity_lens.calculation import (
     DAY,
     HOUR,
     YEAR,

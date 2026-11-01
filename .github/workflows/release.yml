@@ -11,5 +11,5 @@ jobs:
       - uses: actions/checkout@v5
       - name: Check that the manifest version matches the tag
         run: |
-          version=$(jq -r .version custom_components/energy_payback/manifest.json)
+          version=$(jq -r .version custom_components/electricity_lens/manifest.json)
           test "v$version" = "${{ github.event.release.tag_name }}" || test "$version" = "${{ github.event.release.tag_name }}"

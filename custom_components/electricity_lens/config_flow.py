@@ -1,4 +1,4 @@
-"""Config flow for Energy Lens.
+"""Config flow for Electricity Lens.
 
 The config entry stands for the whole household, which is always computed;
 its standing charge and price levels are the entry's options. Each category
@@ -361,7 +361,7 @@ async def async_data_since(hass: HomeAssistant, stats: list[str]) -> float:
     return first if first is not None else next_full_hour()
 
 
-class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
+class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up the household: an overview, then the chosen categories."""
 
     VERSION = 1
@@ -454,7 +454,7 @@ class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _async_next_category(self) -> ConfigFlowResult:
         if not self._pending:
             return self.async_create_entry(
-                title="Energy Lens",
+                title="Electricity Lens",
                 data={},
                 options=self._options,
                 subentries=self._subentries,

@@ -1,4 +1,4 @@
-// Key figure card of the Energy Lens integration: tiles with one figure
+// Key figure card of the Electricity Lens integration: tiles with one figure
 // each for a period, such as the household's costs, a device's solar share,
 // or any statistic or entity of Home Assistant shown as it is. It follows the
 // energy date selection on the same dashboard, or shows a fixed period.
@@ -123,7 +123,7 @@ function forecastSums(
   return sums;
 }
 
-export class EnergyPaybackFiguresCard extends LitElement {
+export class ElectricityLensFiguresCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -153,7 +153,7 @@ export class EnergyPaybackFiguresCard extends LitElement {
   }
 
   static getConfigElement(): HTMLElement {
-    return document.createElement("energy-lens-figures-card-editor");
+    return document.createElement("electricity-lens-figures-card-editor");
   }
 
   setConfig(config: FiguresCardConfig): void {

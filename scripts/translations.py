@@ -1,4 +1,4 @@
-"""Write custom_components/energy_payback/translations/*.json.
+"""Write custom_components/electricity_lens/translations/*.json.
 
 Custom integrations ship finished translation files; Home Assistant's
 strings.json references are not resolved for them. Many forms share fields and
@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-OUT = Path(__file__).parent.parent / "custom_components/energy_payback/translations"
+OUT = Path(__file__).parent.parent / "custom_components/electricity_lens/translations"
 
 TEXTS: dict[str, dict[str, Any]] = {
     "en": {
@@ -29,7 +29,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "wallbox": "Add electric car",
         },
         "overview": {
-            "title": "Energy Lens",
+            "title": "Electricity Lens",
             "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
             "no_devices": "Heat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
             "no_solar": "The PV plant needs solar production in the [energy dashboard](/config/energy).",
@@ -199,9 +199,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "scop_range": "Enter a seasonal COP between 1 and 10.",
         },
         "aborts": {
-            "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Energy Lens.",
-            "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Lens.",
-            "single_instance_allowed": "Energy Lens is already set up. Add more on its integration page.",
+            "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
+            "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
+            "single_instance_allowed": "Electricity Lens is already set up. Add more on its integration page.",
             "already_configured": "This is already set up. You can change it with Reconfigure.",
             "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
             "values_from": "The new values apply from {time}.",
@@ -210,8 +210,8 @@ TEXTS: dict[str, dict[str, Any]] = {
             "household_saved": "Saved. The standing charge applies from {time}.",
             "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         },
-        "create_entry": 'The past is now being computed; with several years of data this can take a few minutes. You find the card "Energy Lens" under "Add card" when editing a dashboard.',
-        "devices": {"total": "Energy Lens"},
+        "create_entry": 'The past is now being computed; with several years of data this can take a few minutes. You find the card "Electricity Lens" under "Add card" when editing a dashboard.',
+        "devices": {"total": "Electricity Lens"},
         "entities": {
             "saving": "Saving",
             "payback": "Paid back",
@@ -233,20 +233,20 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "issues": {
             "energy_interface": (
-                "Energy Lens cannot read the energy dashboard",
-                "This version of Home Assistant stores the energy dashboard or its statistics in a way Energy Lens does not understand. The savings are unavailable until Energy Lens is updated.",
+                "Electricity Lens cannot read the energy dashboard",
+                "This version of Home Assistant stores the energy dashboard or its statistics in a way Electricity Lens does not understand. The savings are unavailable until Electricity Lens is updated.",
             ),
             "no_grid_price": (
-                "Energy Lens is missing the electricity price",
+                "Electricity Lens is missing the electricity price",
                 "The energy dashboard has no grid import with an electricity price anymore. The savings keep their last values until it is set up again in the [energy dashboard](/config/energy).",
             ),
             "missing_meter": (
                 "{category}: meter missing in the energy dashboard",
-                "The energy dashboard no longer has: {meters}. {category} keeps its last figures until this is fixed. Add the meter back in the [energy dashboard](/config/energy), or choose other meters with Reconfigure on the integration page of Energy Lens.",
+                "The energy dashboard no longer has: {meters}. {category} keeps its last figures until this is fixed. Add the meter back in the [energy dashboard](/config/energy), or choose other meters with Reconfigure on the integration page of Electricity Lens.",
             ),
             "missing_price_entity": (
                 "{category}: price sensor missing",
-                "The price sensor {entity} no longer exists. Until it is replaced, its last value counts. Choose another one, or none, under Reconfigure › Values from now on on the integration page of Energy Lens.",
+                "The price sensor {entity} no longer exists. Until it is replaced, its last value counts. Choose another one, or none, under Reconfigure › Values from now on on the integration page of Electricity Lens.",
             ),
         },
     },
@@ -262,7 +262,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "wallbox": "E-Auto hinzufügen",
         },
         "overview": {
-            "title": "Energy Lens",
+            "title": "Electricity Lens",
             "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
             "no_devices": "Für Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
             "no_solar": "Für die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
@@ -432,9 +432,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
         },
         "aborts": {
-            "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Energy Lens hinzufügen.",
-            "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Energy Lens gibt.",
-            "single_instance_allowed": "Energy Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu.",
+            "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
+            "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
+            "single_instance_allowed": "Electricity Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu.",
             "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
             "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
             "values_from": "Die neuen Werte gelten ab {time} Uhr.",
@@ -443,8 +443,8 @@ TEXTS: dict[str, dict[str, Any]] = {
             "household_saved": "Gespeichert. Der Grundpreis gilt ab {time} Uhr.",
             "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         },
-        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Energy Lens« findest du im Dashboard unter »Karte hinzufügen«.",
-        "devices": {"total": "Energy Lens"},
+        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«.",
+        "devices": {"total": "Electricity Lens"},
         "entities": {
             "saving": "Ersparnis",
             "payback": "Amortisiert",
@@ -466,20 +466,20 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "issues": {
             "energy_interface": (
-                "Energy Lens kann das Energie-Dashboard nicht lesen",
-                "Diese Home-Assistant-Version speichert das Energie-Dashboard oder seine Statistiken so, wie Energy Lens es nicht versteht. Die Ersparnisse sind nicht verfügbar, bis Energy Lens aktualisiert ist.",
+                "Electricity Lens kann das Energie-Dashboard nicht lesen",
+                "Diese Home-Assistant-Version speichert das Energie-Dashboard oder seine Statistiken so, wie Electricity Lens es nicht versteht. Die Ersparnisse sind nicht verfügbar, bis Electricity Lens aktualisiert ist.",
             ),
             "no_grid_price": (
-                "Energy Lens fehlt der Strompreis",
+                "Electricity Lens fehlt der Strompreis",
                 "Im Energie-Dashboard gibt es keinen Netzbezug mit Strompreis mehr. Die Ersparnisse behalten ihre letzten Werte, bis er im [Energie-Dashboard](/config/energy) wieder eingerichtet ist.",
             ),
             "missing_meter": (
                 "{category}: Zähler fehlt im Energie-Dashboard",
-                "Im Energie-Dashboard fehlt: {meters}. {category} behält die letzten Werte, bis das behoben ist. Trag den Zähler im [Energie-Dashboard](/config/energy) wieder ein, oder wähle mit »Neu konfigurieren« auf der Integrationsseite von Energy Lens andere Zähler.",
+                "Im Energie-Dashboard fehlt: {meters}. {category} behält die letzten Werte, bis das behoben ist. Trag den Zähler im [Energie-Dashboard](/config/energy) wieder ein, oder wähle mit »Neu konfigurieren« auf der Integrationsseite von Electricity Lens andere Zähler.",
             ),
             "missing_price_entity": (
                 "{category}: Preis-Sensor fehlt",
-                "Den Preis-Sensor {entity} gibt es nicht mehr. Bis er ersetzt ist, gilt sein letzter Wert. Wähle auf der Integrationsseite von Energy Lens unter »Neu konfigurieren › Werte ab jetzt« einen anderen oder keinen.",
+                "Den Preis-Sensor {entity} gibt es nicht mehr. Bis er ersetzt ist, gilt sein letzter Wert. Wähle auf der Integrationsseite von Electricity Lens unter »Neu konfigurieren › Werte ab jetzt« einen anderen oder keinen.",
             ),
         },
     },

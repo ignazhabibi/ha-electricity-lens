@@ -2,28 +2,28 @@
   "config": {
     "step": {
       "user": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_devices": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_solar": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs solar production in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_household_only": {
-        "title": "Energy Lens",
+        "title": "Electricity Lens",
         "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
       },
       "household": {
@@ -205,12 +205,12 @@
       "scop_range": "Enter a seasonal COP between 1 and 10."
     },
     "abort": {
-      "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Energy Lens.",
-      "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Lens.",
-      "single_instance_allowed": "Energy Lens is already set up. Add more on its integration page."
+      "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
+      "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
+      "single_instance_allowed": "Electricity Lens is already set up. Add more on its integration page."
     },
     "create_entry": {
-      "default": "The past is now being computed; with several years of data this can take a few minutes. You find the card \"Energy Lens\" under \"Add card\" when editing a dashboard."
+      "default": "The past is now being computed; with several years of data this can take a few minutes. You find the card \"Electricity Lens\" under \"Add card\" when editing a dashboard."
     }
   },
   "options": {
@@ -305,7 +305,7 @@
         "scop_range": "Enter a seasonal COP between 1 and 10."
       },
       "abort": {
-        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Lens.",
+        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
         "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
@@ -523,7 +523,7 @@
         "scop_range": "Enter a seasonal COP between 1 and 10."
       },
       "abort": {
-        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Lens.",
+        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
         "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
@@ -632,7 +632,7 @@
         "scop_range": "Enter a seasonal COP between 1 and 10."
       },
       "abort": {
-        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Energy Lens.",
+        "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
         "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
@@ -643,7 +643,7 @@
   },
   "device": {
     "total": {
-      "name": "Energy Lens"
+      "name": "Electricity Lens"
     },
     "pv": {
       "name": "PV plant"
@@ -708,20 +708,20 @@
   },
   "issues": {
     "energy_interface": {
-      "title": "Energy Lens cannot read the energy dashboard",
-      "description": "This version of Home Assistant stores the energy dashboard or its statistics in a way Energy Lens does not understand. The savings are unavailable until Energy Lens is updated."
+      "title": "Electricity Lens cannot read the energy dashboard",
+      "description": "This version of Home Assistant stores the energy dashboard or its statistics in a way Electricity Lens does not understand. The savings are unavailable until Electricity Lens is updated."
     },
     "no_grid_price": {
-      "title": "Energy Lens is missing the electricity price",
+      "title": "Electricity Lens is missing the electricity price",
       "description": "The energy dashboard has no grid import with an electricity price anymore. The savings keep their last values until it is set up again in the [energy dashboard](/config/energy)."
     },
     "missing_meter": {
       "title": "{category}: meter missing in the energy dashboard",
-      "description": "The energy dashboard no longer has: {meters}. {category} keeps its last figures until this is fixed. Add the meter back in the [energy dashboard](/config/energy), or choose other meters with Reconfigure on the integration page of Energy Lens."
+      "description": "The energy dashboard no longer has: {meters}. {category} keeps its last figures until this is fixed. Add the meter back in the [energy dashboard](/config/energy), or choose other meters with Reconfigure on the integration page of Electricity Lens."
     },
     "missing_price_entity": {
       "title": "{category}: price sensor missing",
-      "description": "The price sensor {entity} no longer exists. Until it is replaced, its last value counts. Choose another one, or none, under Reconfigure › Values from now on on the integration page of Energy Lens."
+      "description": "The price sensor {entity} no longer exists. Until it is replaced, its last value counts. Choose another one, or none, under Reconfigure › Values from now on on the integration page of Electricity Lens."
     }
   },
   "selector": {

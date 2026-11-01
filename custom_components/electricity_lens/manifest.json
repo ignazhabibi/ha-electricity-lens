@@ -1,14 +1,14 @@
 {
-  "domain": "energy_payback",
-  "name": "Energy Lens",
+  "domain": "electricity_lens",
+  "name": "Electricity Lens",
   "codeowners": ["@ignazhabibi"],
   "config_flow": true,
   "dependencies": ["energy", "frontend", "http", "recorder", "websocket_api"],
-  "documentation": "https://github.com/ignazhabibi/ha-energy-payback",
+  "documentation": "https://github.com/ignazhabibi/ha-electricity-lens",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/ignazhabibi/ha-energy-payback/issues",
+  "issue_tracker": "https://github.com/ignazhabibi/ha-electricity-lens/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.11.2"
+  "version": "0.12.0"
 }

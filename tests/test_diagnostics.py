@@ -8,10 +8,10 @@ from homeassistant.core import HomeAssistant
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.energy_payback.diagnostics import (
+from custom_components.electricity_lens.diagnostics import (
     async_get_config_entry_diagnostics,
 )
-from custom_components.energy_payback.sources import EnergyInterfaceError
+from custom_components.electricity_lens.sources import EnergyInterfaceError
 
 from .conftest import setup_entry
 
@@ -31,7 +31,7 @@ async def test_diagnostics(hass: HomeAssistant, config_entry: MockConfigEntry) -
     assert diagnostics["household"]["state"]["totals"]["household_energy"] > 0
 
     with patch(
-        "custom_components.energy_payback.diagnostics.async_get_energy_setup",
+        "custom_components.electricity_lens.diagnostics.async_get_energy_setup",
         side_effect=EnergyInterfaceError("moved"),
     ):
         diagnostics = await async_get_config_entry_diagnostics(hass, config_entry)

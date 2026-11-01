@@ -2,7 +2,7 @@
 
 const REREGISTER_EVERY_MS = 100;
 const REREGISTER_FOR_MS = 60_000;
-const DOCUMENTATION_URL = "https://github.com/ignazhabibi/ha-energy-payback";
+const DOCUMENTATION_URL = "https://github.com/ignazhabibi/ha-electricity-lens";
 
 export interface CardEntry {
   tag: string;
@@ -11,8 +11,6 @@ export interface CardEntry {
   description: string;
   /** The card's editor, if it has its own. */
   editor?: { tag: string; element: CustomElementConstructor };
-  /** Earlier tags of the card, so existing dashboards keep working. */
-  aliases?: string[];
 }
 
 const define = (tag: string, card: CustomElementConstructor): void => {
@@ -35,10 +33,9 @@ export interface StrategyEntry {
 
 export function registerCards(cards: CardEntry[], strategies: StrategyEntry[] = []): void {
   const defineAll = () => {
-    cards.forEach(({ tag, card, editor, aliases }) => {
+    cards.forEach(({ tag, card, editor }) => {
       define(tag, card);
       if (editor) define(editor.tag, editor.element);
-      aliases?.forEach((alias) => define(alias, class extends card {}));
     });
     strategies.forEach(({ type, element }) =>
       define(`ll-strategy-dashboard-${type}`, element)

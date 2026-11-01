@@ -1,4 +1,4 @@
-"""Base entity for Energy Lens."""
+"""Base entity for Electricity Lens."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import EnergyPaybackCoordinator
+from .coordinator import ElectricityLensCoordinator
 
 
-class EnergyPaybackEntity(CoordinatorEntity[EnergyPaybackCoordinator]):
+class ElectricityLensEntity(CoordinatorEntity[ElectricityLensCoordinator]):
     """An entity on the overall device or on a category's device.
 
     Each category is a device of its own, named after the category, so it can
@@ -21,7 +21,7 @@ class EnergyPaybackEntity(CoordinatorEntity[EnergyPaybackCoordinator]):
 
     def __init__(
         self,
-        coordinator: EnergyPaybackCoordinator,
+        coordinator: ElectricityLensCoordinator,
         description: EntityDescription,
         device_id: str,
         device_translation_key: str,
