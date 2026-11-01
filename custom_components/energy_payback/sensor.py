@@ -19,6 +19,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .coordinator import EnergyPaybackConfigEntry, EnergyPaybackCoordinator
 from .entity import EnergyPaybackEntity
 from .models import CategoryResult
+from .sources import saving_statistic_id
 
 # Sensors only read the coordinator's data.
 PARALLEL_UPDATES = 0
@@ -37,7 +38,8 @@ CATEGORY_SENSORS: tuple[CategorySensorDescription, ...] = (
         key="saving",
         translation_key="saving",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=SensorStateClass.TOTAL,
+        # No state class: the saving's history is a statistic of the
+        # integration's own, computed hour by hour and again after corrections.
         suggested_display_precision=2,
         value_fn=lambda result: result.saving,
         unit_fn=lambda currency: currency,
@@ -119,6 +121,7 @@ class CategorySensor(EnergyPaybackEntity, SensorEntity):
             "price",
             "heating",
             "heat_estimated",
+            "statistic_id",
         }
     )
 
@@ -155,6 +158,7 @@ class CategorySensor(EnergyPaybackEntity, SensorEntity):
             return None
         attributes: dict[str, Any] = {
             "category": self._category,
+            "statistic_id": saving_statistic_id(self._category),
             "calculating": result.calculating,
             "counting_since": (
                 result.counting_since.isoformat() if result.counting_since else None

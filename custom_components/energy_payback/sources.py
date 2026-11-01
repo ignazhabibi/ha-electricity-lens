@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.db_schema import StatisticsShortTerm
 from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.components.recorder.models import (
     StatisticData,
@@ -22,7 +21,7 @@ from homeassistant.components.recorder.models import (
     StatisticMetaData,
 )
 from homeassistant.components.recorder.statistics import (
-    async_import_statistics,
+    async_add_external_statistics,
     get_last_statistics,
     get_metadata,
     statistics_during_period,
@@ -30,9 +29,10 @@ from homeassistant.components.recorder.statistics import (
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
+
 ENERGY_DOMAIN = "energy"
 HOUR = 3600.0
-SHORT_TERM_PERIOD = 300.0
 # Statistics before this date are not looked for.
 _EARLIEST = datetime(2000, 1, 1, tzinfo=dt_util.UTC)
 
@@ -421,51 +421,49 @@ async def async_last_value(hass: HomeAssistant, entity_id: str) -> float | None:
     return None
 
 
-def async_replace_history(
-    hass: HomeAssistant,
-    entity_id: str,
-    currency: str,
-    rows: Iterable[tuple[float, float]],
-) -> None:
-    """Replace the long-term statistics of a saving sensor with computed values.
+def saving_statistic_id(category: str) -> str:
+    """Return the id of the statistic that holds a category's saving."""
+    return f"{DOMAIN}:{category}_saving"
 
-    rows holds (hour start, cumulative saving at the end of that hour). The
-    recorder then continues from the last row with the sensor's own states.
-    All jobs run in the recorder's queue, in this order.
+
+def async_write_statistics(
+    hass: HomeAssistant,
+    statistic_id: str,
+    name: str,
+    unit: str,
+    rows: Iterable[tuple[float, float]],
+    *,
+    replace: bool,
+) -> None:
+    """Write a time series the integration owns to the long-term statistics.
+
+    rows holds (hour start, cumulative value at the end of that hour). With
+    replace, after computing the past, the series is cleared first; otherwise
+    the rows are added to it. Only the integration writes these statistics,
+    so the recorder never continues them on its own. All jobs run in the
+    recorder's queue, in this order.
     """
-    recorder = get_instance(hass)
-    recorder.async_clear_statistics([entity_id])
-    metadata = StatisticMetaData(
-        mean_type=StatisticMeanType.NONE,
-        has_sum=True,
-        name=None,
-        source="recorder",
-        statistic_id=entity_id,
-        unit_class=None,
-        unit_of_measurement=currency,
-    )
+    if replace:
+        get_instance(hass).async_clear_statistics([statistic_id])
     statistics = [
         StatisticData(start=dt_util.utc_from_timestamp(start), state=value, sum=value)
         for start, value in rows
     ]
     if not statistics:
         return
-    async_import_statistics(hass, metadata, statistics)
-    # The recorder continues the sum from the latest five-minute statistics,
-    # which the clearing removed; without them it would start again at zero.
-    # The last computed value becomes the latest five-minute row as well.
-    last = statistics[-1]
-    latest_period = (
-        dt_util.utcnow().timestamp() // SHORT_TERM_PERIOD - 1
-    ) * SHORT_TERM_PERIOD
-    recorder.async_import_statistics(
-        metadata,
-        [
-            StatisticData(
-                start=dt_util.utc_from_timestamp(latest_period),
-                state=last["state"],
-                sum=last["sum"],
-            )
-        ],
-        StatisticsShortTerm,
+    metadata = StatisticMetaData(
+        mean_type=StatisticMeanType.NONE,
+        has_sum=True,
+        name=name,
+        source=DOMAIN,
+        statistic_id=statistic_id,
+        unit_class=None,
+        unit_of_measurement=unit,
     )
+    async_add_external_statistics(hass, metadata, statistics)
+
+
+def async_remove_statistics(hass: HomeAssistant, statistic_ids: Iterable[str]) -> None:
+    """Remove statistics, for example of a removed category."""
+    if ids := list(statistic_ids):
+        get_instance(hass).async_clear_statistics(ids)

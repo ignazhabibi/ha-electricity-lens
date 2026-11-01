@@ -37,7 +37,10 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
     if (!ORDER.includes(category)) continue;
     figures.push({
       category,
-      savingEntity: entry.entity_id,
+      savingStatistic:
+        typeof attributes.statistic_id === "string"
+          ? attributes.statistic_id
+          : `${DOMAIN}:${category}_saving`,
       calculating: attributes.calculating === true,
       saving: number(state.state),
       investment: number(attributes.investment),

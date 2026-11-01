@@ -58,7 +58,7 @@
       entities[id("payback")] = { entity_id: id("payback"), device_id: device, platform: "energy_payback", translation_key: "payback" };
       entities[id("per_year")] = { entity_id: id("per_year"), device_id: device, platform: "energy_payback", translation_key: "saving_per_year" };
       states[id("saving")] = { entity_id: id("saving"), state: c.calculating ? "unknown" : String(c.saving), attributes: {
-        category: c.category, calculating: !!c.calculating, investment: c.investment ?? null,
+        category: c.category, statistic_id: `energy_payback:${c.category}_saving`, calculating: !!c.calculating, investment: c.investment ?? null,
         counting_since: c.since ? new Date(c.since).toISOString() : null,
         yearly_from: c.since ? new Date(new Date(c.since).getTime() + 365.25 * day).toISOString() : null,
         price: c.price ?? null, heating: c.heating ?? null, heat_estimated: c.estimated ?? false } };
@@ -75,7 +75,7 @@
   async function statistics(message) {
     const result = {};
     for (const id of message.statistic_ids) {
-      const category = id.replace(/^sensor\./, "").replace(/_saving$/, "");
+      const category = id.replace(/^energy_payback:/, "").replace(/_saving$/, "");
       const rows = [];
       const from = new Date(message.start_time), to = new Date(message.end_time);
       for (let d = new Date(from.getFullYear(), from.getMonth(), 1); d < to && d.getTime() < now; d.setMonth(d.getMonth() + 1))

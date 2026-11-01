@@ -27,6 +27,7 @@ from .calculation import (
     wallbox_saving,
 )
 from .const import (
+    CATEGORIES,
     CATEGORY_HEAT_PUMP,
     CATEGORY_PV,
     DOMAIN,
@@ -51,8 +52,10 @@ from .sources import (
     async_get_energy_setup,
     async_hourly_changes,
     async_hourly_values,
-    async_replace_history,
+    async_remove_statistics,
+    async_write_statistics,
     cost_stat,
+    saving_statistic_id,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,6 +64,9 @@ UPDATE_INTERVAL = timedelta(minutes=15)
 # The past is computed in chunks to keep each recorder query small.
 CHUNK = 30 * 24 * HOUR
 STORAGE_VERSION = 1
+# Version 2 keeps the savings in statistics of the integration's own instead
+# of the saving sensors' statistics.
+STATISTICS_VERSION = 2
 
 type EnergyPaybackConfigEntry = ConfigEntry[EnergyPaybackCoordinator]
 
@@ -136,6 +142,10 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         """Restore progress and record changed current values."""
         stored = await self._store.async_load() or {}
         stored_categories: dict[str, Any] = stored.get("categories", {})
+        moving_statistics = (
+            bool(stored_categories)
+            and stored.get("statistics_version", 1) < STATISTICS_VERSION
+        )
         valid_from = next_full_hour()
         for subentry_id, subentry in self.config_entry.subentries.items():
             config = CategoryConfig.from_data(subentry.subentry_type, subentry.data)
@@ -144,7 +154,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 # Gas prices are per kWh, oil prices per litre: start over.
                 state.timelines = {}
                 state.heating = config.heating
-            if state.fingerprint != config.fingerprint:
+            if state.fingerprint != config.fingerprint or moving_statistics:
                 state.reset(config.fingerprint)
             for key in config.values:
                 state.timeline(key).set(config.current.get(key), valid_from)
@@ -152,16 +162,40 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
                 state.timeline(VALUE_PRICE_ENTITY).set(config.price_entity, valid_from)
             self.configs[subentry_id] = config
             self.states[subentry_id] = state
+        configured = {config.category for config in self.configs.values()}
+        stale = [
+            saving_statistic_id(category)
+            for category in CATEGORIES
+            if category not in configured
+        ]
+        if moving_statistics:
+            # The past is computed again into the new statistics; the saving
+            # sensors' own statistics would only confuse.
+            stale += self._saving_entities()
+        async_remove_statistics(self.hass, stale)
         await self._async_save()
         self.data = self._results()
+
+    def _saving_entities(self) -> list[str]:
+        registry = er.async_get(self.hass)
+        return [
+            entity_id
+            for subentry_id in self.config_entry.subentries
+            if (
+                entity_id := registry.async_get_entity_id(
+                    Platform.SENSOR, DOMAIN, f"{subentry_id}_saving"
+                )
+            )
+        ]
 
     async def _async_save(self) -> None:
         await self._store.async_save(
             {
+                "statistics_version": STATISTICS_VERSION,
                 "categories": {
                     subentry_id: state.as_dict()
                     for subentry_id, state in self.states.items()
-                }
+                },
             }
         )
 
@@ -288,7 +322,7 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
             state.next_hour = start = chunk_end
         if computing_past:
             state.next_hour = max(start, counting_since)
-            self._async_write_history(subentry_id, history)
+        self._async_write_history(subentry_id, config, history, replace=computing_past)
 
     async def _async_compute(
         self,
@@ -480,16 +514,27 @@ class EnergyPaybackCoordinator(DataUpdateCoordinator[PaybackData]):
         ]
 
     def _async_write_history(
-        self, subentry_id: str, history: list[tuple[float, float]]
+        self,
+        subentry_id: str,
+        config: CategoryConfig,
+        history: list[tuple[float, float]],
+        *,
+        replace: bool,
     ) -> None:
-        """Give the saving sensor the computed past as long-term statistics."""
+        """Write the computed hours to the category's saving statistic."""
         registry = er.async_get(self.hass)
         entity_id = registry.async_get_entity_id(
             Platform.SENSOR, DOMAIN, f"{subentry_id}_saving"
         )
-        if entity_id is None:
-            return
-        async_replace_history(self.hass, entity_id, self.hass.config.currency, history)
+        sensor = self.hass.states.get(entity_id) if entity_id else None
+        async_write_statistics(
+            self.hass,
+            saving_statistic_id(config.category),
+            sensor.name if sensor else self.config_entry.subentries[subentry_id].title,
+            self.hass.config.currency,
+            history,
+            replace=replace,
+        )
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState

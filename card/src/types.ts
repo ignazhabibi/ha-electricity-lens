@@ -34,7 +34,8 @@ export type Category = "pv" | "heat_pump" | "wallbox";
 
 export interface CategoryFigures {
   category: Category;
-  savingEntity: string;
+  /** The statistic that holds the saving per hour, kept by the integration. */
+  savingStatistic: string;
   calculating: boolean;
   saving: number | null;
   investment: number | null;

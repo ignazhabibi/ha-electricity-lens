@@ -123,10 +123,12 @@ def import_hourly(
     statistic_id: str,
     start: datetime,
     increments: Sequence[float],
+    *,
     unit: str = "kWh",
+    start_sum: float = 0.0,
 ) -> None:
     """Import a sum statistic with these hourly increments."""
-    total = 0.0
+    total = start_sum
     rows = []
     for index, increment in enumerate(increments):
         total += increment

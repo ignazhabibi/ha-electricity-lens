@@ -1,6 +1,6 @@
 // History card of the Energy Payback integration: what each category saved
-// per hour, day, month, or year, from the long-term statistics of its saving
-// sensor, which include the computed past. It follows the energy date
+// per hour, day, month, or year, from the statistic the integration keeps for
+// each category's saving, which includes the computed past. It follows the energy date
 // selection card on the same dashboard, and without one shows a bar per
 // year. Like the balance card it needs no options.
 
@@ -151,7 +151,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
     const range =
       this._selected ?? yearsOf(categories.map((c) => c.countingSince));
     const period = this._selected ? periodOf(range) : "year";
-    const ids = categories.map((category) => category.savingEntity);
+    const ids = categories.map((category) => category.savingStatistic);
     return {
       key: JSON.stringify([ids, range.start, range.end, period]),
       range,
@@ -171,7 +171,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
         type: "recorder/statistics_during_period",
         start_time: new Date(request.range.start).toISOString(),
         end_time: new Date(request.range.end + 1).toISOString(),
-        statistic_ids: request.categories.map((c) => c.savingEntity),
+        statistic_ids: request.categories.map((c) => c.savingStatistic),
         period: statisticsPeriod(request.period),
         types: ["change"],
       });
@@ -187,7 +187,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
       slots,
       values: request.categories.map((category) => ({
         category: category.category,
-        values: valuesPerSlot(result[category.savingEntity], slots, request.period),
+        values: valuesPerSlot(result[category.savingStatistic], slots, request.period),
       })),
       failed,
     };
@@ -279,8 +279,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
     const t = this._localize;
     if (!this.hass) return html``;
     const categories = readCategories(this.hass);
-    const title =
-      this._selected === null ? t("history_title_years") : t("history_title");
+    const title = t("history_title");
     if (!categories.length) {
       return html`<ha-card>
         <div class="header"><h2 class="title">${title}</h2></div>

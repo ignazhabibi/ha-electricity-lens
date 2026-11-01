@@ -128,41 +128,114 @@ async def test_devices(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert entity.config_subentry_id in config_entry.subentries
 
 
-@pytest.mark.usefixtures("energy")
-async def test_history_is_written(
-    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
-) -> None:
-    """The computed past becomes the saving sensor's long-term statistics."""
-    await setup_entry(hass, config_entry)
+async def _sums(hass: HomeAssistant, statistic_id: str, start: datetime) -> list[float]:
     rows = await get_instance(hass).async_add_executor_job(
         statistics_during_period,
         hass,
-        data_start,
+        start,
         None,
-        {"sensor.pv_plant_saving"},
+        {statistic_id},
         "hour",
         None,
         {"sum"},
     )
-    sums = [row["sum"] for row in rows["sensor.pv_plant_saving"]]
+    return [row["sum"] for row in rows.get(statistic_id, [])]
+
+
+@pytest.mark.usefixtures("energy")
+async def test_history_is_written(
+    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
+) -> None:
+    """The computed past becomes a statistic of the integration's own."""
+    await setup_entry(hass, config_entry)
+    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
     assert sums[1] == pytest.approx(PV_PER_HOUR)
 
-    # The recorder continues from the latest five-minute row, so it holds the
-    # computed total too instead of starting again at zero.
-    short_term = await get_instance(hass).async_add_executor_job(
-        statistics_during_period,
-        hass,
-        data_start,
-        None,
-        {"sensor.pv_plant_saving"},
-        "5minute",
-        None,
-        {"state", "sum"},
+    pv = _state(hass, "sensor.pv_plant_saving")
+    assert pv.attributes["statistic_id"] == "energy_payback:pv_saving"
+    assert "state_class" not in pv.attributes
+    # The sensor keeps no statistics of its own.
+    assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
+
+
+@pytest.mark.usefixtures("energy")
+async def test_new_hours_continue_the_history(
+    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
+) -> None:
+    """Each update adds the hours it computed to the statistic."""
+    await setup_entry(hass, config_entry)
+    more = data_start + timedelta(hours=HOURS)
+    for statistic_id, per_hour in {
+        "sensor.grid_import": 1.0,
+        "sensor.grid_export": 0.5,
+        "sensor.solar": 2.0,
+    }.items():
+        import_hourly(
+            hass, statistic_id, more, [0.0, per_hour], start_sum=HOURS * per_hour
+        )
+    await async_wait_recording_done(hass)
+    await config_entry.runtime_data.async_refresh()
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_wait_recording_done(hass)
+
+    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
+    assert sums[-1] == pytest.approx((COUNTED + 2) * PV_PER_HOUR)
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+        (COUNTED + 2) * PV_PER_HOUR
     )
-    latest = short_term["sensor.pv_plant_saving"][-1]
-    assert latest["sum"] == pytest.approx(COUNTED * PV_PER_HOUR)
-    assert latest["state"] == pytest.approx(COUNTED * PV_PER_HOUR)
+
+
+@pytest.mark.usefixtures("energy")
+async def test_statistics_move_from_the_sensors(
+    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
+) -> None:
+    """An installation from before keeps nothing in the saving sensors' statistics.
+
+    Its progress is computed again into the integration's own statistics.
+    """
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    stored = await coordinator._store.async_load()
+    assert stored is not None
+    del stored["statistics_version"]
+    await coordinator._store.async_save(stored)
+    import_hourly(hass, "sensor.pv_plant_saving", data_start, [0.0, 1.0], unit="EUR")
+    await async_wait_recording_done(hass)
+    assert await _sums(hass, "sensor.pv_plant_saving", data_start)
+
+    with patch(
+        "custom_components.energy_payback.coordinator.async_hourly_changes",
+        wraps=coordinator_module.async_hourly_changes,
+    ) as changes:
+        await hass.config_entries.async_reload(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+    changes.assert_called()
+    assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
+    sums = await _sums(hass, "energy_payback:pv_saving", data_start)
+    assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
+
+
+@pytest.mark.usefixtures("energy")
+async def test_removed_category_loses_its_statistics(
+    hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
+) -> None:
+    """Removing a category removes its saving statistic; removing all, all."""
+    await setup_entry(hass, config_entry)
+    assert await _sums(hass, "energy_payback:wallbox_saving", data_start)
+    hass.config_entries.async_remove_subentry(
+        config_entry, _subentry(config_entry, "wallbox").subentry_id
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_wait_recording_done(hass)
+    assert await _sums(hass, "energy_payback:wallbox_saving", data_start) == []
+    assert await _sums(hass, "energy_payback:pv_saving", data_start)
+
+    await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_wait_recording_done(hass)
+    assert await _sums(hass, "energy_payback:pv_saving", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")

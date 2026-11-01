@@ -162,7 +162,7 @@ overall balance.
 
 | Entity | Description |
 |---|---|
-| Saving | Total saving since counting began, in your currency. It has long-term statistics, including the computed past. Its attributes show since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
+| Saving | Total saving since counting began, in your currency. Its history is the statistic *energy_payback:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. |
@@ -187,8 +187,8 @@ and can be used with keyboard and screen reader.
 
 What each category saved per hour, day, month, or year, as stacked bars in
 the look of the energy dashboard. A month in which a category cost more than
-it saved shows below the line. The card reads the long-term statistics of the
-saving sensors, which include the computed past.
+it saved shows below the line. The card reads the statistics Energy Payback
+keeps for the savings, which include the computed past.
 
 With an *Energy date selection* card on the same dashboard, it follows the
 selected period: hours for a day, days for a week or month, months for a year.
@@ -259,8 +259,8 @@ actions:
 3. Uninstall Energy Payback in the Marketplace or HACS and restart Home
    Assistant.
 
-The long-term statistics of the saving sensors stay in the recorder until you
-remove them under **Developer tools › Statistics**.
+Deleting Energy Payback or a category also removes the statistics it wrote
+for the savings.
 
 ## Development
 
