@@ -106,7 +106,7 @@
         statistics_unit_of_measurement: id === "sensor.aussentemperatur" ? "°C" : "kWh",
         unit_class: id === "sensor.aussentemperatur" ? "temperature" : "energy" }));
     }
-    if (message.types?.includes("mean")) {
+    if (message.types?.includes("mean") || message.units) {
       const result = {};
       for (const id of message.statistic_ids) {
         result[id] = id === "sensor.aussentemperatur"
@@ -169,6 +169,24 @@
     ["m · Kennzahlen: wird berechnet, Bereich fehlt", hass(household, { calculating: true }), { title: "Haushalt", period: "this_month", tiles: [
       { area: "household", figure: "cost" }, { area: "device_sensor_weg", figure: "cost", name: "Trockner" } ] }],
   ];
+  const info = figuresInfo();
+  info.areas.push({ id: "other", kind: "other", name: "Sonstiges", statistics: { energy: ["energy_payback:other_energy"], ...levels("other") } });
+  Object.assign(october, { "energy_payback:other_energy": 1095.0, "energy_payback:other_solar": 279.5, "energy_payback:other_cost": 254.0, "energy_payback:other_cheap": 219.0,
+    "sensor.heat_heating": 1187.7, "sensor.heat_dhw": 448.8 });
+  const breakdownCases = [
+    ["n · Aufteilung: Strommix", { area: "household", by: "source", display: "ring", period: "last_month" }],
+    ["o · Aufteilung: Kosten nach Verbraucher", { area: "household", by: "consumer", figure: "cost", display: "bars", color_by_source: true, period: "last_month" }],
+    ["p · Aufteilung: Statistiken", { title: "Wärme nach Zweck", statistics: [{ statistic: "sensor.heat_heating", name: "Heizung" }, { statistic: "sensor.heat_dhw", name: "Warmwasser" }], period: "last_month" }],
+  ];
+  for (const [label, config] of breakdownCases) {
+    const wrap = document.createElement("section");
+    wrap.innerHTML = `<p class="label">${label}</p>`;
+    const card = document.createElement("energy-payback-breakdown-card");
+    card.setConfig({ type: "custom:energy-payback-breakdown-card", ...config });
+    card.hass = { ...hass(household), callWS: (m) => m.type === "energy_payback/figures" ? Promise.resolve(info) : ws(m) };
+    wrap.append(card);
+    grid.append(wrap);
+  }
   for (const [label, mock, config] of figureCases) {
     const wrap = document.createElement("section");
     wrap.innerHTML = `<p class="label">${label}</p>`;

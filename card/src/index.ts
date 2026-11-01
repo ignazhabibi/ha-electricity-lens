@@ -1,5 +1,7 @@
 // Bundle entry: registers the cards of the Energy Payback integration.
 
+import { EnergyPaybackBreakdownCardEditor } from "./breakdown-editor";
+import { EnergyPaybackBreakdownCard } from "./energy-payback-breakdown-card";
 import { EnergyPaybackCard } from "./energy-payback-card";
 import { EnergyPaybackFiguresCard } from "./energy-payback-figures-card";
 import { EnergyPaybackHistoryCard } from "./energy-payback-history-card";
@@ -35,6 +37,17 @@ registerCards([
     editor: {
       tag: "energy-payback-figures-card-editor",
       element: EnergyPaybackFiguresCardEditor,
+    },
+  },
+  {
+    tag: "energy-payback-breakdown-card",
+    card: EnergyPaybackBreakdownCard,
+    name: "Energy Payback breakdown",
+    description:
+      "Shares for a period as a ring or bars: the electricity mix, consumption or costs by consumer, or any statistics.",
+    editor: {
+      tag: "energy-payback-breakdown-card-editor",
+      element: EnergyPaybackBreakdownCardEditor,
     },
   },
 ]);

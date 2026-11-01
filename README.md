@@ -131,9 +131,9 @@ Home Assistant 2026.10 or newer is required.
    **Energy Payback**.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
-6. Add the cards **Energy Payback**, **Energy Payback history**, and
-   **Energy Payback key figures** to a dashboard from the card picker. The
-   first two have no options. There is no
+6. Add the cards **Energy Payback**, **Energy Payback history**,
+   **Energy Payback key figures**, and **Energy Payback breakdown** to a
+   dashboard from the card picker. The first has no options. There is no
    dashboard resource to add: the integration serves the cards itself and
    updates them with the integration.
 
@@ -322,6 +322,28 @@ tiles:
     secondary: range
   - entity: sensor.electricity_price
     name: Price now
+```
+
+### Energy Payback breakdown
+
+Shares of a whole for a period, as a ring or as bars, set up in the card
+editor:
+
+- **By source**: solar power and grid power by price level, for the
+  household, a device, or Other. The chip says the solar share.
+- **By consumer**: the household's consumption or costs by top-level device
+  and Other, each with its consumption and average price. Bars can be
+  colored by the sources of each consumer.
+- **Statistics**: the shares of any statistics as they are, for example the
+  heat for heating and hot water from the heat pump's own sensors.
+
+```yaml
+type: custom:energy-payback-breakdown-card
+area: household
+by: consumer
+figure: cost
+display: bars
+color_by_source: true
 ```
 
 ## How the data updates
