@@ -1,7 +1,9 @@
-"""Constants for the Energy Payback integration."""
+"""Constants for the Energy Lens integration."""
 
 from typing import Final
 
+# The domain keeps the product's first name, Energy Payback, so existing
+# installations, their entities, and their statistics stay as they are.
 DOMAIN: Final = "energy_payback"
 
 # Categories. Each one is a config subentry type and appears at most once.
@@ -51,8 +53,8 @@ BOILER_EFFICIENCY: Final = 0.92
 OIL_KWH_PER_LITRE: Final = 10.0
 
 # The card is served by the integration itself, so one install brings both.
-FRONTEND_URL: Final = "/energy_payback_static"
-CARD_FILENAME: Final = "energy-payback-card.js"
+FRONTEND_URL: Final = "/energy_lens_static"
+CARD_FILENAME: Final = "energy-lens.js"
 
 SIGNAL_ENERGY_PREFS_UPDATED: Final = f"{DOMAIN}_energy_prefs_updated"
 

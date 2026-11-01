@@ -1,4 +1,4 @@
-// Bundle entry: registers the cards of the Energy Payback integration.
+// Bundle entry: registers the cards of the Energy Lens integration.
 
 import { EnergyPaybackBreakdownCardEditor } from "./breakdown-editor";
 import { EnergyPaybackBreakdownCard } from "./energy-payback-breakdown-card";
@@ -12,50 +12,54 @@ import { EnergyPaybackDashboardStrategy } from "./strategy";
 
 registerCards([
   {
-    tag: "energy-payback-card",
+    tag: "energy-lens-balance-card",
     card: EnergyPaybackCard,
-    name: "Energy Payback",
+    name: "Energy Lens balance",
+    aliases: ["energy-payback-card"],
     description:
       "What your PV plant, heat pump, and electric car have saved, and when they pay off.",
   },
   {
-    tag: "energy-payback-history-card",
+    tag: "energy-lens-history-card",
     card: EnergyPaybackHistoryCard,
-    name: "Energy Payback history",
+    name: "Energy Lens history",
+    aliases: ["energy-payback-history-card"],
     description:
       "Savings, consumption, or costs per period as bars, stacked by source or consumer, with lines. Follows the energy date selection.",
     editor: {
-      tag: "energy-payback-history-card-editor",
+      tag: "energy-lens-history-card-editor",
       element: EnergyPaybackHistoryCardEditor,
     },
   },
   {
-    tag: "energy-payback-figures-card",
+    tag: "energy-lens-figures-card",
     card: EnergyPaybackFiguresCard,
-    name: "Energy Payback key figures",
+    name: "Energy Lens key figures",
+    aliases: ["energy-payback-figures-card"],
     description:
       "Tiles with key figures for a period: costs, solar share, cheap grid power, savings, or any statistic or entity.",
     editor: {
-      tag: "energy-payback-figures-card-editor",
+      tag: "energy-lens-figures-card-editor",
       element: EnergyPaybackFiguresCardEditor,
     },
   },
   {
-    tag: "energy-payback-breakdown-card",
+    tag: "energy-lens-breakdown-card",
     card: EnergyPaybackBreakdownCard,
-    name: "Energy Payback breakdown",
+    name: "Energy Lens breakdown",
+    aliases: ["energy-payback-breakdown-card"],
     description:
       "Shares for a period as a ring or bars: the electricity mix, consumption or costs by consumer, or any statistics.",
     editor: {
-      tag: "energy-payback-breakdown-card-editor",
+      tag: "energy-lens-breakdown-card-editor",
       element: EnergyPaybackBreakdownCardEditor,
     },
   },
 ], [
   {
-    type: "energy-payback",
+    type: "energy-lens",
     element: EnergyPaybackDashboardStrategy,
-    name: "Energy Payback",
+    name: "Energy Lens",
     description:
       "A finished energy dashboard with costs, electricity mix, solar, heat pump, car, and the balance.",
   },

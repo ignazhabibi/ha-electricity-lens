@@ -1,4 +1,4 @@
-# Energy Payback
+# Energy Lens
 
 A Home Assistant integration with its own dashboard cards. It computes what
 your household and each of its devices consumed and cost, how much of it was
@@ -7,7 +7,7 @@ electric car have saved compared with what they replaced, and whether and when
 they pay off.
 
 Home Assistant's energy dashboard shows what you consumed, produced, and paid.
-Energy Payback answers the questions that come next:
+Energy Lens answers the questions that come next:
 
 - What did each device cost me, including the solar power it used?
 - How much of my grid power did I buy in cheap hours?
@@ -20,6 +20,10 @@ takes from the energy dashboard; it asks only for what Home Assistant cannot
 know, such as what the heat pump cost extra or what gas cost on average.
 
 ![The card](docs/card.png)
+
+Energy Lens was called Energy Payback until version 0.9. Its integration
+domain (`energy_payback`), its statistic ids, and the old card types stay, so
+existing installations and dashboards keep working.
 
 ## Use cases
 
@@ -36,7 +40,7 @@ know, such as what the heat pump cost extra or what gas cost on average.
 ### The household
 
 The household is always computed, from the energy dashboard alone. For every
-hour Energy Payback derives:
+hour Energy Lens derives:
 
 - **Consumption** of the household (grid import − feed-in + solar production +
   battery discharge − battery charge), of each individual device, and of
@@ -77,7 +81,7 @@ replaced.
   energy dashboard charged for it, so dynamic tariffs are handled hour by
   hour. With several tariffs, such as day and night, the average of the hour
   counts. Heat pump and electric car can have an own tariff instead.
-- **Measurements are facts.** Energy Payback never filters or corrects
+- **Measurements are facts.** Energy Lens never filters or corrects
   readings. If a meter recorded a wrong value, fix it in Home Assistant's
   statistics tools, which also fixes the energy dashboard, then choose
   *Recompute* (see below).
@@ -97,7 +101,7 @@ Each category counts from the first hour Home Assistant has data for it.
 
 ## Supported setups
 
-Energy Payback works with any energy dashboard that has:
+Energy Lens works with any energy dashboard that has:
 
 - a grid import with an electricity price (a fixed price, a price entity, or a
   cost statistic), and
@@ -123,16 +127,16 @@ Home Assistant 2026.10 or newer is required.
 1. Set up the [energy dashboard](https://my.home-assistant.io/redirect/config_energy/)
    with grid import and electricity price, your solar production, and the
    meters of heat pump and wallbox under *Individual devices*.
-2. Install Energy Payback from the Marketplace (Settings › Marketplace) or HACS
+2. Install Energy Lens from the Marketplace (Settings › Marketplace) or HACS
    as a custom repository: `https://github.com/ignazhabibi/ha-energy-payback`,
    type *Integration*.
 3. Restart Home Assistant.
 4. Go to **Settings › Devices & services › Add integration** and choose
-   **Energy Payback**.
+   **Energy Lens**.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
-6. Add the cards **Energy Payback**, **Energy Payback history**,
-   **Energy Payback key figures**, and **Energy Payback breakdown** to a
+6. Add the cards **Energy Lens balance**, **Energy Lens history**,
+   **Energy Lens key figures**, and **Energy Lens breakdown** to a
    dashboard from the card picker. The first has no options. There is no
    dashboard resource to add: the integration serves the cards itself and
    updates them with the integration.
@@ -216,7 +220,7 @@ overall balance.
 
 ## Statistics
 
-Energy Payback keeps a long-term statistic of its own for every figure Home
+Energy Lens keeps a long-term statistic of its own for every figure Home
 Assistant has no statistic for, including the computed past; it copies none. They appear in Home Assistant's statistics pickers, for
 example in the *Statistics graph* card, under their names such as
 "Household consumption" or "Washer costs".
@@ -236,7 +240,7 @@ change are not stored; statistics cards carry the sum over them.
 
 ## The cards
 
-### Energy Payback
+### Energy Lens balance
 
 The card finds the categories by itself. The button in its header switches
 between two views:
@@ -250,7 +254,7 @@ shown at the bottom; selecting them opens the integration page, where they are
 changed. The card follows light and dark themes, works on phones and desktops,
 and can be used with keyboard and screen reader.
 
-### Energy Payback history
+### Energy Lens history
 
 A figure per hour, day, month, or year as bars, in the look of the energy
 dashboard, set up in the card editor. Without options it shows what each
@@ -271,7 +275,7 @@ year. Without one it shows the savings per year since counting began, other
 figures for this month. In YAML:
 
 ```yaml
-type: custom:energy-payback-history-card
+type: custom:energy-lens-history-card
 area: household
 figure: energy
 stack: source
@@ -280,7 +284,7 @@ lines:
   - statistic: sensor.outside_temperature
 ```
 
-### Energy Payback key figures
+### Energy Lens key figures
 
 Tiles with one figure each for a period, set up in the card editor without
 YAML. The period is *Follow the date selection* (this month without an
@@ -292,7 +296,7 @@ Each tile has one of three sources:
 
 | Source | Shows |
 |---|---|
-| Energy data | A figure of an area, computed by Energy Payback, with a line below that explains it |
+| Energy data | A figure of an area, computed by Energy Lens, with a line below that explains it |
 | Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
 | Entity | Any entity's current state |
 
@@ -312,7 +316,7 @@ dividing two such sums, for example costs by consumption; every cost and
 share per hour comes from the integration. In YAML:
 
 ```yaml
-type: custom:energy-payback-figures-card
+type: custom:energy-lens-figures-card
 title: Household
 period: energy_date
 tiles:
@@ -327,7 +331,7 @@ tiles:
     name: Price now
 ```
 
-### Energy Payback breakdown
+### Energy Lens breakdown
 
 Shares of a whole for a period, as a ring or as bars, set up in the card
 editor:
@@ -341,7 +345,7 @@ editor:
   heat for heating and hot water from the heat pump's own sensors.
 
 ```yaml
-type: custom:energy-payback-breakdown-card
+type: custom:energy-lens-breakdown-card
 area: household
 by: consumer
 figure: cost
@@ -351,13 +355,13 @@ color_by_source: true
 
 ## The dashboard
 
-Energy Payback brings a finished energy dashboard. Add it under
+Energy Lens brings a finished energy dashboard. Add it under
 **Settings › Dashboards › Add dashboard**, under *Community dashboards*:
-**Energy Payback**. Or in YAML:
+**Energy Lens**. Or in YAML:
 
 ```yaml
 strategy:
-  type: custom:energy-payback
+  type: custom:energy-lens
 ```
 
 It has no settings. It asks the integration what the household has and shows
@@ -377,7 +381,7 @@ builds on with the same cards.
 
 ## How the data updates
 
-Energy Payback reads the recorder's hourly long-term statistics of the meters
+Energy Lens reads the recorder's hourly long-term statistics of the meters
 in the energy dashboard. It checks for newly compiled hours every 15 minutes,
 and at once when the energy dashboard changes. Each hour is valued with the
 prices of that hour. When Home Assistant was off, the recorder reports the
@@ -410,7 +414,7 @@ actions:
 - The yearly average is a plain average since counting began; the first and
   last partial seasons can make it a little high or low.
 - The energy dashboard and the recorder statistics have no public Python
-  interface. Energy Payback keeps all access to them in one module and raises a
+  interface. Energy Lens keeps all access to them in one module and raises a
   repair issue instead of showing wrong numbers if a Home Assistant update
   changes them.
 
@@ -433,13 +437,13 @@ actions:
 ## Removal
 
 1. Remove the cards from your dashboards.
-2. Go to **Settings › Devices & services › Energy Payback**, open the menu
+2. Go to **Settings › Devices & services › Energy Lens**, open the menu
    (⋮) and choose **Delete**. To remove one category only, use **Delete** in
    that category's menu.
-3. Uninstall Energy Payback in the Marketplace or HACS and restart Home
+3. Uninstall Energy Lens in the Marketplace or HACS and restart Home
    Assistant.
 
-Deleting Energy Payback removes all statistics it wrote; deleting a category
+Deleting Energy Lens removes all statistics it wrote; deleting a category
 removes that category's saving statistic.
 
 ## Development

@@ -2,6 +2,14 @@
 
 import type { Unit } from "./figures";
 
+/** A formatted value split into its number and its unit, so the unit can be
+ * shown smaller, as Home Assistant's energy cards do. Values whose unit
+ * comes first, such as "€437", stay whole. */
+export function splitUnit(text: string): [string, string] {
+  const match = /^([-−+]?[\d.,\u00a0\u202f ]*\d)[\u00a0\u202f ](.+)$/.exec(text);
+  return match ? [match[1], match[2]] : [text, ""];
+}
+
 export interface Format {
   number(value: number, digits?: number): string;
   value(value: number, unit: Unit): string;

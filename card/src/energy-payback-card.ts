@@ -1,4 +1,4 @@
-// Dashboard card of the Energy Payback integration. It needs no options: it
+// Dashboard card of the Energy Lens integration. It needs no options: it
 // finds the integration's sensors by itself and renders from the states the
 // frontend already has, so it appears without loading delay.
 

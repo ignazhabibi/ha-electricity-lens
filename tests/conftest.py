@@ -1,4 +1,4 @@
-"""Fixtures for Energy Payback tests."""
+"""Fixtures for Energy Lens tests."""
 
 from __future__ import annotations
 
@@ -203,7 +203,7 @@ def make_entry(
     """Return a config entry with these categories and household options."""
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Energy Payback",
+        title="Energy Lens",
         data={},
         options=options or {},
         version=version,

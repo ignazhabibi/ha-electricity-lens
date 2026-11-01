@@ -1,4 +1,4 @@
-// Dashboard strategy of the Energy Payback integration: a finished energy
+// Dashboard strategy of the Energy Lens integration: a finished energy
 // dashboard from Home Assistant's energy cards and the integration's cards.
 // It has no settings: it asks the integration which areas, categories, and
 // price levels exist, and shows only the views that fit. Whoever wants more
@@ -12,177 +12,201 @@ type Card = Record<string, unknown>;
 type View = Record<string, unknown>;
 
 const card = (type: string, options: Card = {}): Card => ({
-  type: type.includes("energy-payback") ? `custom:${type}` : type,
+  type: type.startsWith("energy-lens") ? `custom:${type}` : type,
   ...options,
 });
 
 const full = { grid_options: { columns: "full" } };
+const half = { grid_options: { columns: 6 } };
+const wide = { grid_options: { columns: 12 } };
 
-const section = (cards: Card[], title?: string): Card => ({
-  type: "grid",
-  cards: title ? [{ type: "heading", heading: title }, ...cards] : cards,
-});
+/** One key figure as a small card in the sidebar, two in a row. */
+const stat = (area: string, figure: string, options: Card = {}): Card =>
+  card("energy-lens-figures-card", { tiles: [{ area, figure }], ...half, ...options });
 
-const view = (title: string, path: string, icon: string, sections: Card[]): View => ({
+/** A view as the energy dashboards before it: the main column with the date
+ * selection on top, and a sidebar with key figures and shares. Tabs show the
+ * name only. */
+const view = (
+  title: string,
+  path: string,
+  main: Card[],
+  sidebar: Card[],
+  dateSelection = true
+): View => ({
   title,
   path,
-  icon,
   type: "sections",
   max_columns: 3,
-  sections: [section([card("energy-date-selection", full)]), ...sections],
+  sections: [
+    {
+      type: "grid",
+      column_span: 2,
+      cards: [
+        ...(dateSelection ? [card("energy-date-selection", full)] : []),
+        ...main.map((item) => ({ ...full, ...item })),
+      ],
+    },
+  ],
+  sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
-
-const tiles = (area: string, figures: string[]) =>
-  figures.map((figure) => ({ area, figure }));
 
 /** The views for what the household has. */
 export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
   const has = (id: string): FigureArea | undefined =>
     info.areas.find((area) => area.id === id);
-  const levels = info.levels.cheap_until !== null || info.levels.expensive_from !== null;
+  const levels = info.levels.cheap_until !== null;
   const solar = has("solar");
   const heatPump = has("heat_pump");
   const car = has("wallbox");
-  const categories = [solar?.statistics.saving, heatPump, car].some(Boolean);
+  const pvSaving = !!solar?.statistics.saving;
+  const categories = pvSaving || !!heatPump || !!car;
+  const forecast = solar?.forecast
+    ? [stat("solar", "forecast_today"), stat("solar", "forecast_tomorrow")]
+    : [];
   const views: View[] = [];
 
   views.push(
-    view(t("strategy.overview"), "overview", "mdi:home-lightning-bolt", [
-      section([
-        card("energy-payback-figures-card", {
-          tiles: tiles("household", [
-            "cost",
-            "price",
-            "solar_share",
-            ...(levels ? ["cheap_share"] : ["energy"]),
-          ]),
-        }),
+    view(
+      t("strategy.overview"),
+      "overview",
+      [
         card("energy-distribution"),
-      ]),
-      section([
-        card("energy-payback-history-card", {
+        ...(categories ? [card("energy-lens-balance-card")] : []),
+      ],
+      [
+        stat("household", "cost", { period: "today" }),
+        stat("household", "solar_share", { period: "today" }),
+        ...(forecast.length
+          ? forecast
+          : [stat("household", "energy", { period: "today" }), stat("household", "price", { period: "today" })]),
+      ],
+      false
+    )
+  );
+
+  views.push(
+    view(
+      t("strategy.consumption"),
+      "consumption",
+      [
+        card("energy-usage-graph"),
+        ...(solar ? [card("energy-solar-graph")] : []),
+        card("energy-lens-history-card", {
           area: "household",
           figure: "energy",
           stack: "source",
           line: "price",
         }),
-        card("energy-payback-breakdown-card", { area: "household", by: "source" }),
-      ]),
-      ...(categories ? [section([card("energy-payback-card")])] : []),
-    ])
+        card("energy-devices-detail-graph"),
+      ],
+      [
+        card("energy-distribution", wide),
+        card("energy-lens-breakdown-card", { area: "household", by: "source", ...wide }),
+        card("energy-self-sufficiency-gauge", half),
+        ...(solar ? [card("energy-solar-consumed-gauge", half)] : []),
+        ...forecast,
+      ]
+    )
   );
 
   views.push(
-    view(t("strategy.electricity"), "electricity", "mdi:transmission-tower", [
-      section([
-        card("energy-payback-figures-card", {
-          tiles: [
-            ...tiles("grid", ["energy", "cost"]),
-            ...tiles("household", ["energy", "cost"]),
-          ],
+    view(
+      t("strategy.costs"),
+      "costs",
+      [
+        card("energy-lens-history-card", {
+          area: "household",
+          figure: "cost",
+          stack: "consumer",
+          line: "price",
         }),
-        card("energy-usage-graph"),
-      ]),
-      section([
-        card("energy-payback-breakdown-card", {
+        card("energy-lens-breakdown-card", {
           area: "household",
           by: "consumer",
           figure: "cost",
           display: "bars",
           color_by_source: true,
         }),
-        card("energy-payback-history-card", {
-          area: "household",
-          figure: "cost",
-          stack: "consumer",
-        }),
-      ]),
-      section([card("energy-devices-graph"), card("energy-sources-table")]),
-    ])
+        ...(categories ? [card("energy-lens-history-card")] : []),
+      ],
+      [
+        stat("household", "price"),
+        stat("grid", "cost"),
+        stat("household", "solar_share"),
+        stat("household", levels ? "cheap_share" : "cost"),
+      ]
+    )
   );
-
-  if (solar) {
-    views.push(
-      view(t("strategy.solar"), "solar", "mdi:solar-power-variant", [
-        section([
-          card("energy-payback-figures-card", {
-            tiles: tiles("solar", [
-              "energy",
-              "self_consumption",
-              ...(solar.statistics.saving ? ["saving"] : []),
-              ...(solar.forecast ? ["forecast_today", "forecast_tomorrow"] : []),
-            ]),
-          }),
-          card("energy-solar-graph"),
-        ]),
-        section([
-          card("energy-self-sufficiency-gauge"),
-          card("energy-solar-consumed-gauge"),
-          card("energy-grid-neutrality-gauge"),
-        ]),
-        ...(solar.statistics.saving
-          ? [section([card("energy-payback-history-card", { area: "solar", figure: "saving" })])]
-          : []),
-      ])
-    );
-  }
 
   if (heatPump) {
     views.push(
-      view(heatPump.name, "heating", "mdi:heat-pump", [
-        section([
-          card("energy-payback-figures-card", {
-            tiles: tiles("heat_pump", ["heat", "scop", "heat_price", "cost", "saving", "solar_share"]),
-          }),
-        ]),
-        section([
-          card("energy-payback-history-card", {
-            area: "heat_pump",
-            figure: "heat",
-            line: "scop",
-          }),
-          card("energy-payback-history-card", {
+      view(
+        t("strategy.heating"),
+        "heating",
+        [
+          card("energy-lens-history-card", { area: "heat_pump", figure: "heat", line: "scop" }),
+          card("energy-lens-history-card", {
             area: "heat_pump",
             figure: "energy",
             stack: "source",
             line: "price",
           }),
-        ]),
-      ])
+          card("energy-lens-history-card", { area: "heat_pump", figure: "saving" }),
+        ],
+        [
+          stat("heat_pump", "scop"),
+          stat("heat_pump", "heat_price"),
+          stat("heat_pump", "price"),
+          stat("heat_pump", "solar_share"),
+          stat("heat_pump", "saving", wide),
+        ]
+      )
     );
   }
 
   if (car) {
     views.push(
-      view(car.name, "charging", "mdi:car-electric", [
-        section([
-          card("energy-payback-figures-card", {
-            tiles: tiles("wallbox", ["distance", "cost_per_100km", "cost", "saving", "solar_share", "price"]),
-          }),
-        ]),
-        section([
-          card("energy-payback-history-card", {
+      view(
+        t("strategy.charging"),
+        "charging",
+        [
+          card("energy-lens-history-card", {
             area: "wallbox",
             figure: "energy",
             stack: "source",
             line: "price",
           }),
-          card("energy-payback-history-card", {
+          card("energy-lens-history-card", {
             area: "wallbox",
             figure: "distance",
             line: "cost_per_100km",
           }),
-        ]),
-      ])
+          card("energy-lens-history-card", { area: "wallbox", figure: "saving" }),
+        ],
+        [
+          stat("wallbox", "cost_per_100km"),
+          stat("wallbox", "price"),
+          stat("wallbox", "solar_share"),
+          stat("wallbox", "distance"),
+          stat("wallbox", "saving", wide),
+        ]
+      )
     );
   }
 
   if (categories) {
     views.push(
-      view(t("strategy.balance"), "balance", "mdi:scale-balance", [
-        section([card("energy-payback-card")]),
-        section([card("energy-payback-history-card")]),
-      ])
+      view(
+        t("strategy.balance"),
+        "balance",
+        [card("energy-lens-balance-card"), card("energy-lens-history-card")],
+        [
+          ...(pvSaving ? [stat("solar", "saving", wide)] : []),
+          ...(heatPump ? [stat("heat_pump", "saving", wide)] : []),
+          ...(car ? [stat("wallbox", "saving", wide)] : []),
+        ]
+      )
     );
   }
   return views;

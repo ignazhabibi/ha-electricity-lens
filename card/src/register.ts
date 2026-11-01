@@ -11,6 +11,8 @@ export interface CardEntry {
   description: string;
   /** The card's editor, if it has its own. */
   editor?: { tag: string; element: CustomElementConstructor };
+  /** Earlier tags of the card, so existing dashboards keep working. */
+  aliases?: string[];
 }
 
 const define = (tag: string, card: CustomElementConstructor): void => {
@@ -33,9 +35,10 @@ export interface StrategyEntry {
 
 export function registerCards(cards: CardEntry[], strategies: StrategyEntry[] = []): void {
   const defineAll = () => {
-    cards.forEach(({ tag, card, editor }) => {
+    cards.forEach(({ tag, card, editor, aliases }) => {
       define(tag, card);
       if (editor) define(editor.tag, editor.element);
+      aliases?.forEach((alias) => define(alias, class extends card {}));
     });
     strategies.forEach(({ type, element }) =>
       define(`ll-strategy-dashboard-${type}`, element)

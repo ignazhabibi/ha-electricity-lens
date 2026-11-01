@@ -1,4 +1,4 @@
-# Energy Payback: product concept
+# Energy Lens: product concept
 
 A Home Assistant package of three parts: an integration that computes the
 household's energy costs and savings, a set of flexible cards that show them,
@@ -16,8 +16,10 @@ spirit of evcc's energy page but entirely in Home Assistant's look.
 `onboarding-flow.html` shows the setup dialogs of the payback part with their
 texts. The card designs live on the canvas "Kartenset Entwürfe".
 
-The name "Energy Payback" covers only part of the target picture. A new name
-is open (section 13).
+The product was called "Energy Payback" until version 0.9; the name covered
+only part of the target picture. It is now "Energy Lens". The integration's
+domain, `energy_payback`, and its statistic ids keep the first name, so
+existing installations stay as they are.
 
 ## 1. The problem
 
@@ -440,11 +442,10 @@ Each step is a release that works on its own.
 5. **Breakdown card.**
 6. **Heat pump and car figures:** heat, the alternative's costs, seasonal COP, heat price, € per 100 km, the split saving (3.5).
 7. **Dashboard strategy.**
-8. **New name**, before the strategy is published.
+8. **New name:** Energy Lens, before the strategy is published. Done in 0.10.0.
 
 ## 13. Open
 
-- **Name.** Candidates: Energy Lens, Energy Studio, Energy Deck, Energy Pro.
 - **Views of the strategy.** Built as proposed: overview, electricity, solar, heating, charging, balance; open for changes after the first use.
 - `clean-install-mockup.html` shows the earlier journey and card states. `onboarding-flow.html` replaces its setup part; the household step is still to be added there.
 

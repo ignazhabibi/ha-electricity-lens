@@ -1,6 +1,6 @@
 {
   "domain": "energy_payback",
-  "name": "Energy Payback",
+  "name": "Energy Lens",
   "codeowners": ["@ignazhabibi"],
   "config_flow": true,
   "dependencies": ["energy", "frontend", "http", "recorder", "websocket_api"],

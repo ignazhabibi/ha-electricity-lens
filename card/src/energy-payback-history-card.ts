@@ -1,4 +1,4 @@
-// History card of the Energy Payback integration: a figure per hour, day,
+// History card of the Energy Lens integration: a figure per hour, day,
 // month, or year as bars, optionally stacked by source or consumer, with a
 // share or price as a line and further lines from any statistic. Without
 // options it shows what each category saved, from the statistics the
@@ -152,7 +152,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
   }
 
   static getConfigElement(): HTMLElement {
-    return document.createElement("energy-payback-history-card-editor");
+    return document.createElement("energy-lens-history-card-editor");
   }
 
   setConfig(config: HistoryCardConfig | undefined): void {

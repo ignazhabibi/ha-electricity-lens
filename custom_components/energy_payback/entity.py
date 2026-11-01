@@ -1,4 +1,4 @@
-"""Base entity for Energy Payback."""
+"""Base entity for Energy Lens."""
 
 from __future__ import annotations
 

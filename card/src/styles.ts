@@ -12,11 +12,12 @@ export const cardStyles = css`
     height: 100%;
     overflow: hidden;
   }
+  /* The header of Home Assistant's energy cards. */
   .header {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 8px 0 16px;
+    align-items: flex-start;
+    gap: var(--ha-space-2, 8px);
+    padding: var(--ha-space-3, 12px) var(--ha-space-4, 16px) 0;
   }
   .title {
     flex: 1;
@@ -28,12 +29,13 @@ export const cardStyles = css`
     letter-spacing: -0.012em;
     color: var(--ha-card-header-color, var(--primary-text-color));
   }
+  /* The total, as hui-energy-graph-chip. */
   .chip {
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-    padding: 4px 8px;
-    border-radius: 8px;
+    font-size: var(--ha-font-size-m, 14px);
+    font-weight: var(--ha-font-weight-medium, 500);
+    line-height: var(--ha-line-height-normal, 20px);
+    padding: var(--ha-space-1, 4px) var(--ha-space-2, 8px);
+    border-radius: var(--ha-border-radius-md, 8px);
     border: 1px solid var(--divider-color);
     white-space: nowrap;
     color: var(--primary-text-color);

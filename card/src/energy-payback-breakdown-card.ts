@@ -1,4 +1,4 @@
-// Breakdown card of the Energy Payback integration: shares of a whole for a
+// Breakdown card of the Energy Lens integration: shares of a whole for a
 // period, as a ring or as bars. Split by source (solar power and grid power
 // by price level) or by consumer (top-level devices and Other), in energy or
 // costs; or the shares of any statistics, shown as they are.
@@ -78,7 +78,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   }
 
   static getConfigElement(): HTMLElement {
-    return document.createElement("energy-payback-breakdown-card-editor");
+    return document.createElement("energy-lens-breakdown-card-editor");
   }
 
   setConfig(config: BreakdownCardConfig): void {
@@ -316,8 +316,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
           (part) => html`<div class="legend-row">
             <span class="dot" style="background: ${part.color}"></span>
             <span class="name">${part.name}</span>
-            <span class="amount">${this._value(part.value)}</span>
-            <span class="percent">${this._fmt.value(total > 0 ? (part.value / total) * 100 : 0, "percent")}</span>
+            <span class="amount">${this._fmt.value(total > 0 ? (part.value / total) * 100 : 0, "percent")} · ${this._value(part.value)}</span>
           </div>`
         )}
       </div>
@@ -418,16 +417,17 @@ export class EnergyPaybackBreakdownCard extends LitElement {
       .header {
         min-height: 32px;
       }
+      /* The ring with HA's chart legend centered below it. */
       .ring {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         align-items: center;
-        gap: 16px 24px;
-        padding: 12px 16px 16px;
+        gap: var(--ha-space-3, 12px);
+        padding: var(--ha-space-4, 16px);
       }
       .ring svg {
-        width: 160px;
-        height: 160px;
+        width: 180px;
+        height: 180px;
         flex: none;
       }
       .center {
@@ -439,18 +439,20 @@ export class EnergyPaybackBreakdownCard extends LitElement {
         fill: var(--secondary-text-color);
       }
       .legend {
-        flex: 1;
-        min-width: 180px;
         display: flex;
-        flex-direction: column;
-        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--ha-space-2, 8px) var(--ha-space-3, 12px);
+        font-size: var(--ha-font-size-s, 12px);
       }
       .legend-row {
-        display: grid;
-        grid-template-columns: auto 1fr auto auto;
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
-        font-size: 14px;
+        gap: var(--ha-space-1, 4px);
+        white-space: nowrap;
+      }
+      .legend-row .amount {
+        color: var(--secondary-text-color);
       }
       .dot {
         display: inline-block;

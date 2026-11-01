@@ -1,4 +1,4 @@
-"""The Energy Payback integration."""
+"""The Energy Lens integration."""
 
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(
     hass: HomeAssistant, entry: EnergyPaybackConfigEntry
 ) -> bool:
-    """Set up Energy Payback from a config entry."""
+    """Set up Energy Lens from a config entry."""
     try:
         await async_get_energy_setup(hass)
     except EnergyInterfaceError as err:
@@ -99,6 +99,9 @@ async def async_setup_entry(
             translation_placeholders={"error": str(err)},
         ) from err
 
+    if entry.title == "Energy Payback":
+        # The product was renamed; the entry follows.
+        hass.config_entries.async_update_entry(entry, title="Energy Lens")
     coordinator = EnergyPaybackCoordinator(hass, entry)
     await coordinator.async_load()
     entry.runtime_data = coordinator

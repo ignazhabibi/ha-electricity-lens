@@ -1,4 +1,4 @@
-"""Sensors for Energy Payback."""
+"""Sensors for Energy Lens."""
 
 from __future__ import annotations
 

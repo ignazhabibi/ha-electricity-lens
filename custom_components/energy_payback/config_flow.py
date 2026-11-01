@@ -1,4 +1,4 @@
-"""Config flow for Energy Payback.
+"""Config flow for Energy Lens.
 
 The config entry stands for the whole household, which is always computed;
 its standing charge and price levels are the entry's options. Each category
@@ -454,7 +454,7 @@ class EnergyPaybackConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _async_next_category(self) -> ConfigFlowResult:
         if not self._pending:
             return self.async_create_entry(
-                title="Energy Payback",
+                title="Energy Lens",
                 data={},
                 options=self._options,
                 subentries=self._subentries,

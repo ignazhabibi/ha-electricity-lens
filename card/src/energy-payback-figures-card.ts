@@ -1,4 +1,4 @@
-// Key figure card of the Energy Payback integration: tiles with one figure
+// Key figure card of the Energy Lens integration: tiles with one figure
 // each for a period, such as the household's costs, a device's solar share,
 // or any statistic or entity of Home Assistant shown as it is. It follows the
 // energy date selection on the same dashboard, or shows a fixed period.
@@ -13,7 +13,7 @@ import {
 } from "lit";
 
 import { followEnergyDate } from "./energy-date";
-import { formatter, type Format } from "./format";
+import { formatter, splitUnit, type Format } from "./format";
 import {
   figuresOf,
   isForecast,
@@ -153,7 +153,7 @@ export class EnergyPaybackFiguresCard extends LitElement {
   }
 
   static getConfigElement(): HTMLElement {
-    return document.createElement("energy-payback-figures-card-editor");
+    return document.createElement("energy-lens-figures-card-editor");
   }
 
   setConfig(config: FiguresCardConfig): void {
@@ -486,6 +486,12 @@ export class EnergyPaybackFiguresCard extends LitElement {
     return this._tile(label, value, t("value_current"));
   }
 
+  /** One figure alone, without a title, is a small stat card as in Home
+   * Assistant's energy dashboards: the name as its header. */
+  private get _single(): boolean {
+    return this._tiles.length === 1 && !this._config?.title;
+  }
+
   private _tile(
     label: string,
     value: string,
@@ -493,9 +499,17 @@ export class EnergyPaybackFiguresCard extends LitElement {
     bar?: number,
     color?: string
   ): TemplateResult {
+    const [number, unit] = splitUnit(value);
+    const shown = html`<div class="value">
+      <span class="number">${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
+    </div>`;
+    if (this._single) {
+      return html`<div class="header stat-header"><h2 class="title">${label}</h2></div>
+        <div class="stat">${shown}<div class="line">${line ?? ""}</div></div>`;
+    }
     return html`<div class="tile">
       <div class="label">${label}</div>
-      <div class="value">${value}</div>
+      ${shown}
       ${bar !== undefined
         ? html`<div class="track" role="presentation">
             <div
@@ -514,6 +528,9 @@ export class EnergyPaybackFiguresCard extends LitElement {
     const range = this._range();
     const columns = this._config.columns;
     const fixed = !!columns && columns >= 1 && columns <= 4;
+    if (this._single) {
+      return html`<ha-card lang=${this._language}>${this._renderTiles()}</ha-card>`;
+    }
     return html`<ha-card lang=${this._language}>
       <div class="header">
         <h2 class="title">${this._config.title ?? ""}</h2>
@@ -527,15 +544,19 @@ export class EnergyPaybackFiguresCard extends LitElement {
         class="tiles ${fixed ? "fixed" : ""}"
         style=${fixed ? `--columns: ${columns}` : ""}
       >
-        ${this._tiles.map((tile) => {
-          const source = sourceOf(tile);
-          if (source === "statistic") return this._statisticTile(tile);
-          if (source === "entity") return this._entityTile(tile);
-          return this._energyTile(tile);
-        })}
+        ${this._renderTiles()}
       </div>
       </div>
     </ha-card>`;
+  }
+
+  private _renderTiles(): TemplateResult[] {
+    return this._tiles.map((tile) => {
+      const source = sourceOf(tile);
+      if (source === "statistic") return this._statisticTile(tile);
+      if (source === "entity") return this._entityTile(tile);
+      return this._energyTile(tile);
+    });
   }
 
   static styles = [
@@ -582,14 +603,47 @@ export class EnergyPaybackFiguresCard extends LitElement {
         hyphens: auto;
       }
       .value {
-        font-size: 28px;
-        line-height: 1.15;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: var(--ha-space-1, 4px);
         color: var(--primary-text-color);
       }
+      .number {
+        font-size: var(--ha-font-size-3xl, 28px);
+        font-weight: var(--ha-font-weight-medium, 500);
+        line-height: 36px;
+        letter-spacing: -0.02em;
+      }
+      .unit {
+        font-size: var(--ha-font-size-m, 14px);
+        color: var(--secondary-text-color);
+      }
       @container (max-width: 150px) {
-        .value {
+        .number {
           font-size: 22px;
+          line-height: 28px;
         }
+      }
+      /* A single figure: the stat card of the energy dashboards. */
+      .stat-header .title {
+        font-size: var(--ha-font-size-l, 16px);
+        line-height: var(--ha-line-height-normal, 24px);
+        color: var(--secondary-text-color);
+      }
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ha-space-1, 4px);
+        min-height: 56px;
+        padding: var(--ha-space-2, 8px) var(--ha-space-4, 16px) var(--ha-space-4, 16px);
+      }
+      .stat .number {
+        white-space: nowrap;
+      }
+      .stat .line {
+        font-size: var(--ha-font-size-s, 12px);
+        line-height: 16px;
       }
       .line {
         font-size: 13px;

@@ -8,7 +8,7 @@ const en = {
   show_yearly: "Show yearly figures",
   show_total: "Show totals",
   not_set_up:
-    "Set up the Energy Payback integration to see what your PV plant, heat pump, and electric car have saved.",
+    "Set up the Energy Lens integration to see what your PV plant, heat pump, and electric car have saved.",
   calculating_all: "The past is being computed …",
   calculating: "Being computed …",
   saved_invested: "{saved} saved, {invested} invested",
@@ -117,7 +117,7 @@ const en = {
   "secondary.range": "Range of the period",
   editor_entity: "Entity",
   editor_name: "Name (optional)",
-  editor_not_loaded: "Energy data need the Energy Payback integration.",
+  editor_not_loaded: "Energy data need the Energy Lens integration.",
   "source.solar": "Solar power",
   "source.grid": "Grid power",
   "source.normal": "Normal grid power",
@@ -153,10 +153,12 @@ const en = {
   "figure_choice.cost": "Costs",
   "strategy.title": "Energy",
   "strategy.overview": "Overview",
-  "strategy.electricity": "Electricity",
-  "strategy.solar": "Solar",
+  "strategy.consumption": "Consumption",
+  "strategy.costs": "Costs",
+  "strategy.heating": "Heating",
+  "strategy.charging": "Charging",
   "strategy.balance": "Balance",
-  "strategy.not_loaded": "Set up the Energy Payback integration to see this dashboard.",
+  "strategy.not_loaded": "Set up the Energy Lens integration to see this dashboard.",
 };
 
 export type Key = keyof typeof en;
@@ -169,7 +171,7 @@ const de: Record<Key, string> = {
   show_yearly: "Jahreswerte zeigen",
   show_total: "Gesamtwerte zeigen",
   not_set_up:
-    "Richte die Integration Energy Payback ein, um zu sehen, was PV-Anlage, Wärmepumpe und E-Auto gespart haben.",
+    "Richte die Integration Energy Lens ein, um zu sehen, was PV-Anlage, Wärmepumpe und E-Auto gespart haben.",
   calculating_all: "Die Vergangenheit wird nachgerechnet …",
   calculating: "Wird berechnet …",
   saved_invested: "{saved} gespart, {invested} investiert",
@@ -278,7 +280,7 @@ const de: Record<Key, string> = {
   "secondary.range": "Spanne im Zeitraum",
   editor_entity: "Entität",
   editor_name: "Name (optional)",
-  editor_not_loaded: "Energiedaten brauchen die Integration Energy Payback.",
+  editor_not_loaded: "Energiedaten brauchen die Integration Energy Lens.",
   "source.solar": "Solarstrom",
   "source.grid": "Netzstrom",
   "source.normal": "Normaler Netzstrom",
@@ -314,10 +316,12 @@ const de: Record<Key, string> = {
   "figure_choice.cost": "Kosten",
   "strategy.title": "Energie",
   "strategy.overview": "Übersicht",
-  "strategy.electricity": "Strom",
-  "strategy.solar": "Solar",
+  "strategy.consumption": "Verbrauch",
+  "strategy.costs": "Kosten",
+  "strategy.heating": "Heizen",
+  "strategy.charging": "Laden",
   "strategy.balance": "Bilanz",
-  "strategy.not_loaded": "Richte die Integration Energy Payback ein, um dieses Dashboard zu sehen.",
+  "strategy.not_loaded": "Richte die Integration Energy Lens ein, um dieses Dashboard zu sehen.",
 };
 
 const languages: Record<string, Record<Key, string>> = { en, de };

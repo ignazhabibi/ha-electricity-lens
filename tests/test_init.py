@@ -110,7 +110,7 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert _state(hass, "sensor.pv_plant_saving_per_year").state == "unknown"
 
     total = COUNTED * (PV_PER_HOUR + HEAT_PUMP_PER_HOUR + WALLBOX_PER_HOUR)
-    assert float(_state(hass, "sensor.energy_payback_balance").state) == pytest.approx(
+    assert float(_state(hass, "sensor.energy_lens_balance").state) == pytest.approx(
         total - 19000
     )
 
@@ -542,8 +542,7 @@ async def test_card_is_served(
     await setup_entry(hass, config_entry)
     modules = hass.data["frontend_extra_module_url"]
     assert any(
-        url.startswith("/energy_payback_static/energy-payback-card.js?v=")
-        for url in modules.urls
+        url.startswith("/energy_lens_static/energy-lens.js?v=") for url in modules.urls
     )
 
 

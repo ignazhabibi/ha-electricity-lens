@@ -48,7 +48,7 @@ async def ws_figures(
     """Send the areas, their names, and the statistics of each figure."""
     entries = hass.config_entries.async_loaded_entries(DOMAIN)
     if not entries:
-        connection.send_error(msg["id"], "not_loaded", "Energy Payback is not loaded")
+        connection.send_error(msg["id"], "not_loaded", "Energy Lens is not loaded")
         return
     coordinator: EnergyPaybackCoordinator = entries[0].runtime_data
     try:
