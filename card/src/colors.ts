@@ -1,16 +1,16 @@
 // The color system of all Electricity Lens cards, in one place. It builds on
-// Home Assistant's energy colors, so themes that change them change the
-// cards too, and gives every thing one color wherever it appears:
+// Home Assistant's energy and graph colors, so themes that change them change
+// the cards too, and gives every thing one color wherever it appears:
 // - Grid power is one family; its price level is the lightness (cheap is
 //   light, expensive dark), so no other hue is needed for it.
-// - A device that belongs to a category wears the category's color: the
-//   heat pump's devices its red, the car's its green.
-// - Other devices take a fixed order of colors that no source or category
-//   uses; "Other" is always neutral grey.
+// - Individual devices take Home Assistant's graph colors (--graph-color-1,
+//   --color-1, ...) in the order they are configured in the energy dashboard,
+//   matching HA's own individual devices graph; "Other" is always neutral grey.
+// - Categories (PV, heat pump, car) keep their energy colors.
 // - Lines are quiet: ratios and prices in the secondary text color.
 // ECharts cannot read CSS variables, so the colors are resolved here.
 
-import type { FigureArea, FiguresInfo } from "./types";
+import type { FiguresInfo } from "./types";
 
 export interface Palette {
   solar: string;
@@ -19,7 +19,6 @@ export interface Palette {
   expensive: string;
   export: string;
   heat: string;
-  heatLight: string;
   car: string;
   other: string;
   line: string;
@@ -37,9 +36,20 @@ export const CSS_COLORS = {
   car: "var(--energy-non-fossil-color, #0f9d58)",
 } as const;
 
-const HOT_WATER = /warm\s*wasser|hot\s*water|dhw|eau chaude/i;
-
-const CONSUMERS = ["#76b7b2", "#b07aa1", "#9c755f", "#ff9da7", "#bab0ac", "#a3a948"];
+const GRAPH_FALLBACKS = [
+  "#4269d0",
+  "#f4bd4a",
+  "#ff725c",
+  "#6cc5b0",
+  "#a463f2",
+  "#ff8ab7",
+  "#9c6b4e",
+  "#97bbf5",
+  "#01ab63",
+  "#094bad",
+  "#c99000",
+  "#d84f3e",
+];
 
 type Rgb = [number, number, number];
 
@@ -69,65 +79,46 @@ export function mix(color: string, other: "white" | "black", weight: number): st
   return hex(rgb.map((v) => v * weight + target * (1 - weight)) as Rgb);
 }
 
-/** The palette, with the theme's energy colors as the element sees them. */
+/** The palette, with the theme's energy and graph colors as the element sees them. */
 export function palette(element: Element): Palette {
   const style = getComputedStyle(element);
   const read = (variable: string, fallback: string) =>
     style.getPropertyValue(variable).trim() || fallback;
   const grid = read("--energy-grid-consumption-color", "#488fc2");
-  const heat = read("--energy-gas-color", "#8e021b");
+  const consumers = Array.from({ length: 54 }, (_, index) => {
+    const n = index + 1;
+    return (
+      style.getPropertyValue(`--graph-color-${n}`).trim() ||
+      style.getPropertyValue(`--color-${n}`).trim() ||
+      GRAPH_FALLBACKS[index % GRAPH_FALLBACKS.length]
+    );
+  });
   return {
     solar: read("--energy-solar-color", "#ff9800"),
     grid,
     cheap: mix(grid, "white", 0.55),
     expensive: mix(grid, "black", 0.7),
     export: read("--energy-grid-return-color", "#8353d1"),
-    heat,
-    heatLight: mix(heat, "white", 0.6),
+    heat: read("--energy-gas-color", "#8e021b"),
     car: read("--energy-non-fossil-color", "#0f9d58"),
-    other: read("--disabled-color", "#bdbdbd"),
+    other:
+      style.getPropertyValue("--history-unknown-color").trim() ||
+      read("--disabled-color", "#bdbdbd"),
     line: read("--secondary-text-color", "#727272"),
-    consumers: CONSUMERS,
+    consumers,
   };
 }
 
-/** The category a device belongs to, and its place among the category's
- * meters, in the order they were set up. */
-function categoryOf(
-  info: FiguresInfo,
-  device: FigureArea
-): { id: string; index: number } | undefined {
-  const meter = device.statistics.energy?.[0];
-  for (const area of info.areas) {
-    const index = meter && area.kind === "category" ? (area.statistics.energy ?? []).indexOf(meter) : -1;
-    if (index >= 0) return { id: area.id, index };
-  }
-  return undefined;
-}
-
-/** The color of each consumer: category colors for their devices, a fixed
- * order for the others, grey for "Other". */
+/** The color of each consumer: HA's graph colors in device order, category
+ * colors for category areas, grey for "Other". */
 export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, string> {
   const result = new Map<string, string>();
-  const anyHotWater = info.areas.some(
-    (area) => area.kind === "device" && categoryOf(info, area)?.id === "heat_pump" && HOT_WATER.test(area.name)
-  );
   let next = 0;
   for (const area of info.areas) {
     if (area.kind === "other") {
       result.set(area.id, colors.other);
     } else if (area.kind === "device") {
-      const category = categoryOf(info, area);
-      if (category?.id === "heat_pump") {
-        // Heating takes the full color, hot water the light one: by its name
-        // where it says so, otherwise by the order the meters were set up.
-        const hotWater = HOT_WATER.test(area.name) || (!anyHotWater && category.index > 0);
-        result.set(area.id, hotWater ? colors.heatLight : colors.heat);
-      } else if (category?.id === "wallbox") {
-        result.set(area.id, colors.car);
-      } else {
-        result.set(area.id, colors.consumers[next++ % colors.consumers.length]);
-      }
+      result.set(area.id, colors.consumers[next++ % colors.consumers.length]);
     } else if (area.id === "heat_pump") {
       result.set(area.id, colors.heat);
     } else if (area.id === "wallbox") {

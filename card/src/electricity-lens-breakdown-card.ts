@@ -7,7 +7,7 @@ import { LitElement, css, html, nothing, type PropertyValues, type TemplateResul
 import { keyed } from "lit/directives/keyed.js";
 
 import { chartReady, shareChart, shares } from "./chart";
-import { CSS_COLORS, palette } from "./colors";
+import { CSS_COLORS, consumerColors, palette } from "./colors";
 import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
 import { followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
@@ -233,10 +233,10 @@ export class ElectricityLensBreakdownCard extends LitElement {
         this._hasChart = ok;
       });
     }
+    if (this._info === undefined) this._info = cachedInfo();
+    if (infoStale() && !this._infoLoading) void this._loadInfo();
     if (!this._byStatistics) {
-      if (this._info === undefined) this._info = cachedInfo();
-      if (infoStale() && !this._infoLoading) void this._loadInfo();
-      else if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
+      if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
         this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
       }
       if (!this._info || this._info.calculating) return;
@@ -259,14 +259,21 @@ export class ElectricityLensBreakdownCard extends LitElement {
   private _parts(): Part[] {
     const t = this._localize;
     if (this._byStatistics) {
-      // Shares of other statistics take the consumer colors, in their order.
-      const { consumers } = palette(this);
-      return (this._config.statistics ?? []).map((item, index) => ({
-        id: item.statistic,
-        name: item.name ?? this._sums?.names[item.statistic] ?? item.statistic,
-        color: consumers[index % consumers.length],
-        value: this._sum([item.statistic]),
-      }));
+      // A configured device keeps its device color; other statistics take the
+      // consumer colors in their order.
+      const colors = palette(this);
+      const known = this._info ? consumerColors(this._info, colors) : new Map<string, string>();
+      return (this._config.statistics ?? []).map((item, index) => {
+        const device = this._info?.areas.find(
+          (area) => area.kind === "device" && area.statistics.energy?.[0] === item.statistic
+        );
+        return {
+          id: item.statistic,
+          name: item.name ?? device?.name ?? this._sums?.names[item.statistic] ?? item.statistic,
+          color: (device && known.get(device.id)) ?? colors.consumers[index % colors.consumers.length],
+          value: this._sum([item.statistic]),
+        };
+      });
     }
     const parts = this._series().map((series) => {
       const value = this._sum(series.plus) - this._sum(series.minus);
