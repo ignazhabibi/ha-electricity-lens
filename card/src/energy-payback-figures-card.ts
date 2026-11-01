@@ -12,6 +12,7 @@ import {
   type TemplateResult,
 } from "lit";
 
+import { CSS_COLORS } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import { formatter, splitUnit, type Format } from "./format";
 import {
@@ -77,10 +78,10 @@ export function figureLabel(t: Localize, figure: Figure, area: FigureArea): stri
 const REFRESH_MS = 5 * 60 * 1000;
 
 const BAR_COLORS: Partial<Record<Figure, string>> = {
-  solar_share: "var(--energy-solar-color, #ff9800)",
-  self_consumption: "var(--energy-solar-color, #ff9800)",
-  cheap_share: "var(--success-color, #43a047)",
-  expensive_share: "var(--error-color, #db4437)",
+  solar_share: CSS_COLORS.solar,
+  self_consumption: CSS_COLORS.solar,
+  cheap_share: CSS_COLORS.cheap,
+  expensive_share: CSS_COLORS.expensive,
 };
 
 interface Loaded {
@@ -461,7 +462,11 @@ export class EnergyPaybackFiguresCard extends LitElement {
         });
       }
     }
-    return this._tile(label, this._loaded?.failed ? "–" : show(value), line);
+    return this._tile(
+      label,
+      this._loaded?.failed ? "–" : show(value),
+      tile.secondary === "none" ? undefined : line
+    );
   }
 
   private _entityTile(tile: Tile): TemplateResult {
@@ -474,12 +479,23 @@ export class EnergyPaybackFiguresCard extends LitElement {
       "";
     if (!state) return this._tile(label, "–", t("figures_unavailable"));
     const number = Number(state.state);
-    const unit = state.attributes.unit_of_measurement as string | undefined;
-    const value =
-      state.state !== "" && Number.isFinite(number)
-        ? `${this._number(number)}${unit ? ` ${unit}` : ""}`
-        : state.state;
-    return this._tile(label, value, t("value_current"));
+    const currency = this.hass?.config.currency ?? "";
+    // Units such as "EUR/a" show the currency's symbol, as amounts do.
+    const unit = (state.attributes.unit_of_measurement as string | undefined)?.replace(
+      currency,
+      currency ? this._fmt.currencySymbol() : ""
+    );
+    const numeric = state.state !== "" && Number.isFinite(number);
+    // An amount in the system's currency shows as money, as elsewhere.
+    const symbol = this._fmt.currencySymbol();
+    const value = !numeric
+      ? ["unknown", "unavailable", ""].includes(state.state)
+        ? "–"
+        : state.state
+      : unit && unit === symbol
+        ? this._format(number, "money")
+        : `${this._number(number)}${unit ? ` ${unit}` : ""}`;
+    return this._tile(label, value, tile.secondary === "none" ? undefined : t("value_current"));
   }
 
   /** One figure alone, without a title, is a small stat card as in Home
@@ -530,7 +546,9 @@ export class EnergyPaybackFiguresCard extends LitElement {
     return html`<ha-card lang=${this._language}>
       <div class="header">
         <h2 class="title">${this._config.title ?? ""}</h2>
-        ${range ? html`<span class="chip">${rangeLabel(range, this._language)}</span>` : nothing}
+        ${range && this._tiles.some((tile) => sourceOf(tile) !== "entity")
+          ? html`<span class="chip">${rangeLabel(range, this._language)}</span>`
+          : nothing}
       </div>
       ${this._loaded?.failed
         ? html`<p class="summary">${t("figures_failed")}</p>`

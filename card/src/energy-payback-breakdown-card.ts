@@ -5,6 +5,7 @@
 
 import { LitElement, css, html, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 
+import { CSS_COLORS, palette } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import { PERIODS, type PeriodOption } from "./energy-payback-figures-card";
 import { formatter, type Format } from "./format";
@@ -35,13 +36,7 @@ export interface BreakdownCardConfig {
 const REFRESH_MS = 5 * 60 * 1000;
 const RADIUS = 64;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const SOURCE_COLORS = {
-  solar: "#ff9800",
-  grid: "#488fc2",
-  cheap: "#43a047",
-  expensive: "#db4437",
-};
-const PALETTE = ["#8e021b", "#ef9a9a", "#44739e", "#984ea3", "#00a0a0", "#ff7f00", "#af8d00"];
+
 
 interface Part {
   id: string;
@@ -156,7 +151,10 @@ export class EnergyPaybackBreakdownCard extends LitElement {
     const info = this._info;
     const area = this._area();
     if (!info || !area) return [];
-    return barSeries(info, area, this._figure, this._by === "source" ? "source" : "consumer", SOURCE_COLORS);
+    // The ring shows what was consumed; the feed-in is no part of it.
+    return barSeries(info, area, this._figure, this._by === "source" ? "source" : "consumer", palette(this)).filter(
+      (series) => !series.negative
+    );
   }
 
   private _ids(): string[] {
@@ -233,10 +231,12 @@ export class EnergyPaybackBreakdownCard extends LitElement {
   private _parts(): Part[] {
     const t = this._localize;
     if (this._byStatistics) {
+      // Shares of other statistics take the consumer colors, in their order.
+      const { consumers } = palette(this);
       return (this._config.statistics ?? []).map((item, index) => ({
         id: item.statistic,
         name: item.name ?? this._sums?.names[item.statistic] ?? item.statistic,
-        color: PALETTE[index % PALETTE.length],
+        color: consumers[index % consumers.length],
         value: this._sum([item.statistic]),
       }));
     }
@@ -247,6 +247,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
         (series.name.key && hasText(series.name.key) ? t(series.name.key) : series.id);
       const part: Part = { id: series.id, name, color: series.color, value: series.floor ? Math.max(value, 0) : value };
       if (this._by === "consumer" && this._info) {
+        const colors = palette(this);
         const area = this._info.areas.find((item) => item.id === series.id);
         if (area) {
           const of = (key: string) => this._sum(area.statistics[key] ?? []);
@@ -256,10 +257,10 @@ export class EnergyPaybackBreakdownCard extends LitElement {
           const expensive = of("expensive");
           part.energy = energy;
           part.mix = [
-            { color: SOURCE_COLORS.solar, value: solar },
-            { color: SOURCE_COLORS.cheap, value: cheap },
-            { color: SOURCE_COLORS.grid, value: Math.max(energy - solar - cheap - expensive, 0) },
-            { color: SOURCE_COLORS.expensive, value: expensive },
+            { color: colors.solar, value: solar },
+            { color: colors.cheap, value: cheap },
+            { color: colors.grid, value: Math.max(energy - solar - cheap - expensive, 0) },
+            { color: colors.expensive, value: expensive },
           ];
         }
       }
@@ -356,7 +357,7 @@ export class EnergyPaybackBreakdownCard extends LitElement {
                   (key !== "expensive" || this._info?.levels.expensive_from != null)
               )
               .map(
-              (key) => html`<span><span class="dot" style="background: ${SOURCE_COLORS[key]}"></span>${t(
+              (key) => html`<span><span class="dot" style="background: ${CSS_COLORS[key]}"></span>${t(
                 key === "grid"
                   ? this._info?.levels.cheap_until != null || this._info?.levels.expensive_from != null
                     ? "source.normal"

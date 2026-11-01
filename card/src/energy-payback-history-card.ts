@@ -16,6 +16,7 @@ import {
 } from "lit";
 
 import { barChart, chartReady, type ChartLine, type ChartSeries } from "./chart";
+import { palette } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import {
   PERIODS,
@@ -68,7 +69,8 @@ export interface HistoryLine {
 export interface HistoryCardConfig {
   type: string;
   title?: string;
-  period?: PeriodOption;
+  /** "all" shows every year since counting began. */
+  period?: PeriodOption | "all";
   /** Without an area the card shows the savings of all categories. */
   area?: string;
   figure?: BarFigure;
@@ -80,19 +82,6 @@ export interface HistoryCardConfig {
 /** The integration computes new hours every 15 minutes. */
 const REFRESH_MS = 5 * 60 * 1000;
 const CHART_HEIGHT = "250px";
-
-const CATEGORY_COLORS: Record<Category, [string, string]> = {
-  pv: ["--energy-payback-pv-color", "#ff9800"],
-  heat_pump: ["--energy-payback-heat-pump-color", "#8e021b"],
-  wallbox: ["--energy-payback-wallbox-color", "#0f9d58"],
-};
-const SOURCE_COLORS = {
-  solar: ["--energy-solar-color", "#ff9800"],
-  grid: ["--energy-grid-consumption-color", "#488fc2"],
-  cheap: ["--success-color", "#43a047"],
-  expensive: ["--error-color", "#db4437"],
-} as const;
-const LINE_COLORS = ["#9c27b0", "#e91e63", "#009688", "#795548"];
 
 const UNITS: Record<BarFigure, Unit> = {
   energy: "energy",
@@ -209,13 +198,10 @@ export class EnergyPaybackHistoryCard extends LitElement {
     this._infoLoading = false;
   }
 
-  private _color([variable, fallback]: readonly [string, string]): string {
-    return getComputedStyle(this).getPropertyValue(variable).trim() || fallback;
-  }
-
   /** The period shown, and how long each bar is. */
   private _range(fallback: () => Range): { range: Range; period: Period } | undefined {
     const option = this._config.period ?? "energy_date";
+    if (option === "all") return { range: fallback(), period: "year" };
     if (option !== "energy_date") {
       const range = fixedRange(option);
       return { range, period: periodOf(range) };
@@ -233,11 +219,17 @@ export class EnergyPaybackHistoryCard extends LitElement {
     if (!categories.length || categories.some((c) => c.calculating)) return undefined;
     const shown = this._range(() => yearsOf(categories.map((c) => c.countingSince)));
     if (!shown) return undefined;
+    const colors = palette(this);
+    const categoryColors: Record<Category, string> = {
+      pv: colors.solar,
+      heat_pump: colors.heat,
+      wallbox: colors.car,
+    };
     const bars = categories.map((category) => ({
       series: {
         id: category.category,
         name: {},
-        color: this._color(CATEGORY_COLORS[category.category]),
+        color: categoryColors[category.category],
         plus: [category.savingStatistic],
         minus: [],
       },
@@ -258,13 +250,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
     const t = this._localize;
     const stacks = stacksOf(area, figure);
     const stack = config.stack && stacks.includes(config.stack) ? config.stack : stacks[0];
-    const colors = {
-      solar: this._color(SOURCE_COLORS.solar),
-      grid: this._color(SOURCE_COLORS.grid),
-      cheap: this._color(SOURCE_COLORS.cheap),
-      expensive: this._color(SOURCE_COLORS.expensive),
-    };
-    const bars = barSeries(info, area, figure, stack, colors).map((series) => ({
+    const bars = barSeries(info, area, figure, stack, palette(this)).map((series) => ({
       series,
       name:
         series.name.text ??
@@ -400,7 +386,8 @@ export class EnergyPaybackHistoryCard extends LitElement {
     return plus.map((value, i) => {
       if (value === null) return null;
       const result = value - (minus[i] ?? 0);
-      return series.floor ? Math.max(result, 0) : result;
+      const shown = series.floor ? Math.max(result, 0) : result;
+      return series.negative ? -shown : shown;
     });
   }
 
@@ -409,6 +396,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
     if (!loaded) return [];
     const { plan, slots } = loaded;
     const fmt = this._fmt;
+    const colors = palette(this);
     // Prices show in cents where the currency has them.
     const scale = this.hass?.config.currency === "EUR" ? 100 : 1;
     const lines: ChartLine[] = [];
@@ -425,7 +413,9 @@ export class EnergyPaybackHistoryCard extends LitElement {
       lines.push({
         id: `line_${figure}`,
         name,
-        color: LINE_COLORS[0],
+        color: colors.line,
+        dash: "dashed",
+        step: unit === "price" && plan.period === "hour",
         values: unit === "price" ? values.map((v) => (v === null ? null : v * scale)) : values,
         format: (value) => fmt.value(unit === "price" ? value / scale : value, unit),
       });
@@ -448,7 +438,9 @@ export class EnergyPaybackHistoryCard extends LitElement {
           metadata?.name ??
           (this.hass?.states[line.statistic]?.attributes.friendly_name as string | undefined) ??
           line.statistic,
-        color: LINE_COLORS[(index + 1) % LINE_COLORS.length],
+        // The first line of the card is grey; further ones take quiet colors.
+        color: index === 0 && !plan.lineFigure ? colors.line : colors.consumers[index % colors.consumers.length],
+        dash: "dotted",
         values,
         format: (value) => `${fmt.number(value)}${unit ? ` ${unit}` : ""}`,
       });
@@ -467,6 +459,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
       name,
       color: bar.color,
       values: this._barValues(bar),
+      inTotal: !bar.negative,
     }));
     const lines = this._lines();
     const lineUnits: Partial<Record<Unit, string>> = {
@@ -547,7 +540,7 @@ export class EnergyPaybackHistoryCard extends LitElement {
       : this._info?.calculating === true;
     const loaded = calculating ? undefined : this._loaded;
     const values = this._chart?.data
-      .filter((series) => series.type === "bar")
+      .filter((series) => series.type === "bar" && series.id !== "export")
       .flatMap((series) => series.data.map((point) => (point as { value?: number | null }).value ?? null)) ?? [];
     const sum = values.reduce<number>((total, value) => total + (value ?? 0), 0);
     const hasData = values.some((value) => value);

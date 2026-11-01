@@ -3,6 +3,7 @@
 // area's statistics and subtracts others, for example grid power at normal
 // prices: consumption minus solar, cheap, and expensive power.
 
+import { consumerColors, type Palette } from "./colors";
 import { figuresOf, type Figure } from "./figures";
 import type { FigureArea, FiguresInfo } from "./types";
 
@@ -71,20 +72,9 @@ export interface BarSeries {
   minus: string[];
   /** Whether the series cannot be below zero, as a difference of meters. */
   floor?: boolean;
+  /** Whether the series counts downwards, as the feed-in. */
+  negative?: boolean;
 }
-
-const CONSUMER_COLORS = [
-  "#44739e",
-  "#984ea3",
-  "#00a0a0",
-  "#ff7f00",
-  "#af8d00",
-  "#7f80cd",
-  "#86b300",
-  "#c42e60",
-  "#a65628",
-  "#f781bf",
-];
 
 /** The bar series of a figure of an area, stacked as asked. */
 export function barSeries(
@@ -92,9 +82,10 @@ export function barSeries(
   area: FigureArea,
   figure: BarFigure,
   stack: Stack,
-  colors: { solar: string; grid: string; cheap: string; expensive: string }
+  colors: Palette
 ): BarSeries[] {
   const of = (key: string) => area.statistics[key] ?? [];
+  const consumers = consumerColors(info, colors);
   if (stack === "source" && figure === "energy") {
     const series: BarSeries[] = [
       { id: "solar", name: { key: "source.solar" }, color: colors.solar, plus: of("solar"), minus: [] },
@@ -114,32 +105,33 @@ export function barSeries(
     if (of("expensive").length) {
       series.push({ id: "expensive", name: { key: "source.expensive" }, color: colors.expensive, plus: of("expensive"), minus: [] });
     }
+    // The household's feed-in shows below the line, as in HA's usage graph.
+    const exported = info.areas.find((item) => item.kind === "grid")?.statistics.export ?? [];
+    if (area.kind === "household" && exported.length) {
+      series.push({ id: "export", name: { key: "source.export" }, color: colors.export, plus: exported, minus: [], negative: true });
+    }
     return series;
   }
   if (stack === "consumer") {
-    const consumers = info.areas.filter(
-      (item) => (item.kind === "device" && item.top_level !== false) || item.kind === "other"
-    );
-    return consumers.map((item, index) => ({
-      id: item.id,
-      name: { text: item.name },
-      color: CONSUMER_COLORS[index % CONSUMER_COLORS.length],
-      plus: item.statistics[figure] ?? [],
-      minus: [],
-    }));
+    return info.areas
+      .filter((item) => (item.kind === "device" && item.top_level !== false) || item.kind === "other")
+      .map((item) => ({
+        id: item.id,
+        name: { text: item.name },
+        color: consumers.get(item.id) ?? colors.other,
+        plus: item.statistics[figure] ?? [],
+        minus: [],
+      }));
   }
-  return [
-    {
-      id: figure,
-      name: { text: area.name },
-      color:
-        figure === "saving" || figure === "export"
-          ? colors.solar
-          : figure === "heat"
-            ? "#8e021b"
-            : colors.grid,
-      plus: of(figure),
-      minus: [],
-    },
-  ];
+  const color =
+    figure === "heat"
+      ? colors.heat
+      : figure === "distance"
+        ? colors.car
+        : figure === "export"
+          ? colors.export
+          : area.kind === "solar"
+            ? colors.solar
+            : (consumers.get(area.id) ?? colors.grid);
+  return [{ id: figure, name: { text: area.name }, color, plus: of(figure), minus: [] }];
 }

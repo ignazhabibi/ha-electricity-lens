@@ -55,7 +55,9 @@ export class EnergyPaybackHistoryCardEditor extends LitElement {
       { name: "title", selector: { text: {} } },
       {
         name: "period",
-        selector: select(PERIODS.map((value) => ({ value, label: t(`period.${value}`) }))),
+        selector: select(
+          [...PERIODS, "all" as const].map((value) => ({ value, label: t(`period.${value}`) }))
+        ),
       },
       {
         name: "area",

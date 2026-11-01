@@ -365,16 +365,33 @@ strategy:
 ```
 
 It has no settings. It asks the integration what the household has and shows
-only the views that fit, each with the energy date selection on top:
+only the views that fit. Each view answers one question, and each card has
+one home; only the overview repeats headline figures, always for today. The
+other views follow the energy date selection.
 
-| View | Shows |
-|---|---|
-| Overview | Costs, average price, self-sufficiency, cheap grid power; the energy distribution; consumption by source with the price; the electricity mix; the balance |
-| Electricity | Grid and household figures; usage graph; costs by consumer; devices and sources tables |
-| Solar | Production, self-consumption, saving, forecast; solar graph and gauges; the PV plant's saving over time |
-| Heat pump | Heat, seasonal COP, heat price, costs, saving, solar share; heat with the COP; consumption by source with the price |
-| Electric car | Distance, costs per 100 km, costs, saving, solar share, price; charging by source; distance with the costs per 100 km |
-| Balance | The balance card and the savings over time |
+| View | Question | Shows |
+|---|---|---|
+| Overview | How is today going? | Energy distribution; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure |
+| Electricity | Where does my electricity come from, and when was it cheap? | Consumption by source with the feed-in below the line and the price; solar production and forecast; electricity mix, self-sufficiency, self-consumption, feed-in, forecast for tomorrow |
+| Costs | What does my electricity cost, and who uses it? | Costs by consumer with the average price; consumers ranked and split by source; the electricity bill with the standing charge; average price; share of cheap grid power |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source with the price; seasonal COP, heat price, its electricity mix, its saving |
+| Charging | What does driving cost, and where does the charging power come from? | Charging by source with the price; distance with the costs per 100 km; costs per 100 km, distance, the charging mix, the saving |
+| Balance | Does it pay off, and when? | The balance card; savings by category over all years; per category the saving, paid back, and saving per year |
+
+### Colors
+
+All cards share one color system built on Home Assistant's energy colors, so
+themes that change those change the cards too:
+
+- Solar power is the solar color. Grid power is one family: cheap is light,
+  normal is the grid color, expensive is dark. The feed-in is the return
+  color and shows below the line.
+- A device that belongs to a category wears its color everywhere: the heat
+  pump's devices red (the gas color), the car's green. Other devices take a
+  fixed order of quiet colors; "Other" is grey.
+- Bars are amounts. Prices and ratios are thin dashed grey lines on the right
+  axis; prices step, because an hour's price holds for the whole hour. Lines
+  of other statistics are dotted.
 
 Whoever wants more takes control of the dashboard (⋮ › *Take control*) and
 builds on with the same cards.

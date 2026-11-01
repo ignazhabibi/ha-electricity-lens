@@ -42,11 +42,17 @@ export interface ChartSeries {
   /** A real color: ECharts cannot read CSS variables. */
   color: string;
   values: Array<number | null>;
+  /** Whether the series counts towards the total; the feed-in does not. */
+  inTotal?: boolean;
 }
 
 export interface ChartLine extends ChartSeries {
   /** A value as shown in the tooltip, with its unit. */
   format: (value: number) => string;
+  /** Dashed for figures of the card, dotted for other statistics. */
+  dash?: "dashed" | "dotted";
+  /** A value that holds for its whole slot, such as an hour's price. */
+  step?: boolean;
 }
 
 export interface ChartInput {
@@ -129,14 +135,18 @@ export function barChart(input: ChartInput) {
       };
     }),
   }));
+  // Lines explain the bars and stay behind them: thin, dashed, no symbols.
   const lineData = lines.map((line) => ({
     id: line.id,
     type: "line",
     name: line.name,
     yAxisIndex: 1,
     color: line.color,
-    symbol: "circle",
-    symbolSize: 5,
+    symbol: "none",
+    showSymbol: false,
+    step: line.step ? "middle" : false,
+    lineStyle: { width: 1.5, type: line.dash ?? "dashed", color: line.color },
+    z: 1,
     connectNulls: true,
     data: line.values,
   }));
@@ -160,7 +170,12 @@ export function barChart(input: ChartInput) {
       (p) =>
         `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesName ?? "")?.(p.value ?? 0) ?? ""}`
     );
-    const sum = shown.reduce((total, p) => total + (p.value ?? 0), 0);
+    const excluded = new Set(
+      input.series.filter((series) => series.inTotal === false).map((series) => series.name)
+    );
+    const sum = shown
+      .filter((p) => !excluded.has(p.seriesName ?? ""))
+      .reduce((total, p) => total + (p.value ?? 0), 0);
     element.innerHTML =
       `<b>${escape(input.labels[list[0].dataIndex]?.tooltip ?? "")}</b>` +
       (rows.length ? `<br>${rows.join("<br>")}` : "") +

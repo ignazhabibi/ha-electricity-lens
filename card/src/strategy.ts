@@ -6,7 +6,7 @@
 
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
-import type { FigureArea, FiguresInfo, HomeAssistant } from "./types";
+import type { Category, FigureArea, FiguresInfo, HomeAssistant } from "./types";
 
 type Card = Record<string, unknown>;
 type View = Record<string, unknown>;
@@ -56,12 +56,44 @@ const view = (
   sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
 
-/** The views for what the household has. */
-export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
+/** The integration's sensors the dashboard shows as they are. */
+export interface Sensors {
+  balance?: string;
+  categories: Array<{ category: Category; saving?: string; payback?: string; perYear?: string }>;
+}
+
+/** Finds the balance and each category's sensors among the entities. */
+export function findSensors(hass: HomeAssistant): Sensors {
+  const entries = Object.values(hass.entities ?? {}).filter((entry) => entry.platform === DOMAIN);
+  const sibling = (device: string | null | undefined, key: string) =>
+    entries.find((entry) => entry.device_id === device && entry.translation_key === key)?.entity_id;
+  const order: Category[] = ["pv", "heat_pump", "wallbox"];
+  const categories = entries
+    .filter((entry) => entry.translation_key === "saving")
+    .map((entry) => ({
+      category: hass.states[entry.entity_id]?.attributes.category as Category,
+      saving: entry.entity_id,
+      payback: sibling(entry.device_id, "payback"),
+      perYear: sibling(entry.device_id, "saving_per_year"),
+    }))
+    .filter((item) => order.includes(item.category))
+    .sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+  return {
+    balance: entries.find((entry) => entry.translation_key === "balance")?.entity_id,
+    categories,
+  };
+}
+
+/** The views, one question each; every card has one home. Only the
+ * overview repeats headline figures, and only for today. */
+export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors = { categories: [] }): View[] {
+  type Key = Parameters<Localize>[0];
   /** A figure in the view of its own area, named without the area. */
   const own = (area: string, figure: string, options: Card = {}): Card =>
-    stat(area, figure, options, t(`figure.${figure}` as Parameters<Localize>[0]));
-  const titled = (type: string, key: Parameters<Localize>[0], options: Card = {}) =>
+    stat(area, figure, options, t(`figure.${figure}` as Key));
+  const named = (area: string, figure: string, key: Key, options: Card = {}): Card =>
+    stat(area, figure, options, t(key));
+  const titled = (type: string, key: Key, options: Card = {}) =>
     card(type, { title: t(key), ...options });
   const has = (id: string): FigureArea | undefined =>
     info.areas.find((area) => area.id === id);
@@ -69,27 +101,33 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
   const solar = has("solar");
   const heatPump = has("heat_pump");
   const car = has("wallbox");
-  const pvSaving = !!solar?.statistics.saving;
-  const categories = pvSaving || !!heatPump || !!car;
-  const forecast = solar?.forecast
-    ? [stat("solar", "forecast_today"), stat("solar", "forecast_tomorrow")]
-    : [];
+  const balance = sensors.balance && sensors.categories.length ? sensors.balance : undefined;
+  const today = { period: "today" };
+  const sourceHistory = (area: string, options: Card = {}) =>
+    card("energy-lens-history-card", { area, figure: "energy", stack: "source", line: "price", ...options });
+  const ring = (area: string) =>
+    card("energy-lens-breakdown-card", { area, by: "source", ...wide });
   const views: View[] = [];
 
   views.push(
     view(
       t("strategy.overview"),
       "overview",
+      [card("energy-distribution"), sourceHistory("household", today)],
       [
-        card("energy-distribution"),
-        ...(categories ? [card("energy-lens-balance-card")] : []),
-      ],
-      [
-        stat("household", "cost", { period: "today" }),
-        stat("household", "solar_share", { period: "today" }),
-        ...(forecast.length
-          ? forecast
-          : [stat("household", "energy", { period: "today" }), stat("household", "price", { period: "today" })]),
+        named("household", "cost", "strategy.cost_today", today),
+        named("household", "solar_share", "strategy.self_sufficiency_today", today),
+        solar
+          ? named("solar", "energy", "strategy.solar_today", today)
+          : named("household", "energy", "strategy.consumption_today", today),
+        ...(balance
+          ? [
+              card("energy-lens-figures-card", {
+                tiles: [{ entity: balance, name: t("strategy.balance"), secondary: "none" }],
+                ...half,
+              }),
+            ]
+          : []),
       ],
       false
     )
@@ -97,25 +135,15 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
 
   views.push(
     view(
-      t("strategy.consumption"),
-      "consumption",
+      t("strategy.electricity"),
+      "electricity",
+      [sourceHistory("household"), ...(solar ? [titled("energy-solar-graph", "strategy.solar_graph")] : [])],
       [
-        titled("energy-usage-graph", "strategy.usage_graph"),
-        ...(solar ? [titled("energy-solar-graph", "strategy.solar_graph")] : []),
-        card("energy-lens-history-card", {
-          area: "household",
-          figure: "energy",
-          stack: "source",
-          line: "price",
-        }),
-        titled("energy-devices-detail-graph", "strategy.devices_graph"),
-      ],
-      [
-        titled("energy-distribution", "strategy.distribution", wide),
-        card("energy-lens-breakdown-card", { area: "household", by: "source", ...wide }),
+        ring("household"),
         card("energy-self-sufficiency-gauge", half),
         ...(solar ? [card("energy-solar-consumed-gauge", half)] : []),
-        ...forecast,
+        ...(has("grid")?.statistics.export?.length ? [own("grid", "export")] : []),
+        ...(solar?.forecast ? [own("solar", "forecast_tomorrow")] : []),
       ]
     )
   );
@@ -124,27 +152,19 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
     view(
       t("strategy.costs"),
       "costs",
+      [card("energy-lens-history-card", { area: "household", figure: "cost", stack: "consumer", line: "price" })],
       [
-        card("energy-lens-history-card", {
-          area: "household",
-          figure: "cost",
-          stack: "consumer",
-          line: "price",
-        }),
         card("energy-lens-breakdown-card", {
           area: "household",
           by: "consumer",
           figure: "cost",
           display: "bars",
           color_by_source: true,
+          ...wide,
         }),
-        ...(categories ? [card("energy-lens-history-card")] : []),
-      ],
-      [
-        stat("household", "price"),
-        stat("grid", "cost"),
-        stat("household", "solar_share"),
-        stat("household", levels ? "cheap_share" : "cost"),
+        named("grid", "cost", "strategy.bill", wide),
+        own("household", "price"),
+        own("household", levels ? "cheap_share" : "solar_share"),
       ]
     )
   );
@@ -156,21 +176,9 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
         "heating",
         [
           card("energy-lens-history-card", { area: "heat_pump", figure: "heat", line: "scop" }),
-          card("energy-lens-history-card", {
-            area: "heat_pump",
-            figure: "energy",
-            stack: "source",
-            line: "price",
-          }),
-          card("energy-lens-history-card", { area: "heat_pump", figure: "saving" }),
+          sourceHistory("heat_pump"),
         ],
-        [
-          own("heat_pump", "scop"),
-          own("heat_pump", "heat_price"),
-          own("heat_pump", "price"),
-          own("heat_pump", "solar_share"),
-          own("heat_pump", "saving", wide),
-        ]
+        [own("heat_pump", "scop"), own("heat_pump", "heat_price"), ring("heat_pump"), own("heat_pump", "saving", wide)]
       )
     );
   }
@@ -181,41 +189,33 @@ export function dashboardViews(info: FiguresInfo, t: Localize): View[] {
         t("strategy.charging"),
         "charging",
         [
-          card("energy-lens-history-card", {
-            area: "wallbox",
-            figure: "energy",
-            stack: "source",
-            line: "price",
-          }),
-          card("energy-lens-history-card", {
-            area: "wallbox",
-            figure: "distance",
-            line: "cost_per_100km",
-          }),
-          card("energy-lens-history-card", { area: "wallbox", figure: "saving" }),
+          sourceHistory("wallbox"),
+          card("energy-lens-history-card", { area: "wallbox", figure: "distance", line: "cost_per_100km" }),
         ],
-        [
-          own("wallbox", "cost_per_100km"),
-          own("wallbox", "price"),
-          own("wallbox", "solar_share"),
-          own("wallbox", "distance"),
-          own("wallbox", "saving", wide),
-        ]
+        [own("wallbox", "cost_per_100km"), own("wallbox", "distance"), ring("wallbox"), own("wallbox", "saving", wide)]
       )
     );
   }
 
-  if (categories) {
+  if (sensors.categories.length) {
     views.push(
       view(
         t("strategy.balance"),
         "balance",
-        [card("energy-lens-balance-card"), card("energy-lens-history-card")],
-        [
-          ...(pvSaving ? [stat("solar", "saving", wide)] : []),
-          ...(heatPump ? [stat("heat_pump", "saving", wide)] : []),
-          ...(car ? [stat("wallbox", "saving", wide)] : []),
-        ]
+        [card("energy-lens-balance-card"), card("energy-lens-history-card", { period: "all" })],
+        sensors.categories.map((item) =>
+          card("energy-lens-figures-card", {
+            title: t(`category.${item.category}`),
+            columns: 3,
+            tiles: [
+              { entity: item.saving, name: t("figure.saving"), secondary: "none" },
+              { entity: item.payback, name: t("strategy.paid_back"), secondary: "none" },
+              { entity: item.perYear, name: t("strategy.per_year"), secondary: "none" },
+            ].filter((tile) => tile.entity),
+            ...wide,
+          })
+        ),
+        false
       )
     );
   }
@@ -245,6 +245,6 @@ export class EnergyPaybackDashboardStrategy extends HTMLElement {
         ],
       };
     }
-    return { title: t("strategy.title"), views: dashboardViews(info, t) };
+    return { title: t("strategy.title"), views: dashboardViews(info, t, findSensors(hass)) };
   }
 }

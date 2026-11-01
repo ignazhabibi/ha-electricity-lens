@@ -320,7 +320,8 @@ export interface Tile {
   figure?: Figure;
   statistic?: string;
   value?: StatisticValue;
-  secondary?: "range";
+  /** The line below: the range of a mean, or none. */
+  secondary?: "range" | "none";
   entity?: string;
   name?: string;
 }
