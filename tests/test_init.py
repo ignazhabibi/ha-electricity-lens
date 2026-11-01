@@ -150,7 +150,7 @@ async def test_history_is_written(
     await setup_entry(hass, config_entry)
     sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
-    assert sums[1] == pytest.approx(PV_PER_HOUR)
+    assert sums[0] == pytest.approx(PV_PER_HOUR)
 
     pv = _state(hass, "sensor.pv_plant_saving")
     assert pv.attributes["statistic_id"] == "electricity_lens:pv_saving"

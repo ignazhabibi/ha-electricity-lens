@@ -505,3 +505,8 @@ def async_remove_statistics(hass: HomeAssistant, statistic_ids: Iterable[str]) -
     """Remove statistics, for example of a removed category."""
     if ids := list(statistic_ids):
         get_instance(hass).async_clear_statistics(ids)
+
+
+async def async_wait_recorder(hass: HomeAssistant) -> None:
+    """Wait until the recorder has written the queued statistics."""
+    await get_instance(hass).async_block_till_done()

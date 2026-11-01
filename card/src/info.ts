@@ -18,7 +18,8 @@ export const cachedInfo = (): FiguresInfo | null | undefined => cache?.value;
 /** Whether the cached areas should be asked for again. */
 export function infoStale(): boolean {
   if (!cache) return true;
-  return Date.now() - cache.at > (cache.value ? KEEP_MS : RETRY_MS);
+  const keep = cache.value && !cache.value.calculating ? KEEP_MS : RETRY_MS;
+  return Date.now() - cache.at > keep;
 }
 
 export function loadInfo(hass: HomeAssistant): Promise<FiguresInfo | null> {

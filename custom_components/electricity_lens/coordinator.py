@@ -74,6 +74,7 @@ from .sources import (
     async_hourly_values,
     async_remove_statistics,
     async_statistic_ids,
+    async_wait_recorder,
     async_write_statistics,
     category_statistic_id,
     cost_stat,
@@ -289,6 +290,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
         await self._async_save()
+        await async_wait_recorder(self.hass)
         return self._results()
 
     def _issue(
@@ -398,9 +400,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
     ) -> dict[str, list[tuple[float, float]]]:
         """Add the saving of the hours from start to end to state.
 
-        Return per figure the cumulative value at the end of each hour: the
-        saving for every hour; heat, distance, and the alternative's costs for
-        the hours in which they changed.
+        Return per figure the cumulative value at the end of each hour in which
+        it changed. Hours without change are left out; the recorder carries the
+        sum over them.
         """
         hours = _hours(start, end)
         meters = self._key_stats(config, setup)
@@ -452,7 +454,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 if source.export_stat is not None
             }
             for index, hour in enumerate(hours):
-                state.saving += pv_saving(
+                if saving := pv_saving(
                     solar=sum(change(stat, hour) for stat in setup.solar),
                     export=sum(change(stat, hour) for stat in export_prices),
                     battery_out=sum(
@@ -466,8 +468,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                         change(stat, hour) * (rates[index] or 0.0)
                         for stat, rates in export_prices.items()
                     ),
-                )
-                history.append((hour, state.saving))
+                ):
+                    state.saving += saving
+                    history.append((hour, state.saving))
             return figures
 
         def value(key: str, hour: float) -> float | None:
@@ -478,9 +481,10 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             tariff = value(VALUE_TARIFF, hour)
             electricity_price = tariff if tariff is not None else prices[index] or 0.0
             fuel_price = self._fuel_price(config, state, entity_values, hour)
+            saving = 0.0
             if config.category == CATEGORY_HEAT_PUMP:
                 heat = self._heat(config, state, changes, electricity, hour)
-                state.saving += heat_pump_saving(
+                saving = heat_pump_saving(
                     electricity=electricity,
                     heat=heat,
                     heating=config.heating,
@@ -496,7 +500,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             elif (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
                 combustion := value(VALUE_COMBUSTION_CONSUMPTION, hour)
             ) is not None:
-                state.saving += wallbox_saving(
+                saving = wallbox_saving(
                     electricity=electricity,
                     ev_consumption=ev,
                     combustion_consumption=combustion,
@@ -510,7 +514,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     hour,
                     fuel_cost(distance, combustion, fuel_price),
                 )
-            history.append((hour, state.saving))
+            if saving:
+                state.saving += saving
+                history.append((hour, state.saving))
         return figures
 
     def _fuel_price(
@@ -629,9 +635,10 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 "levels": list(self.household.levels),
                 "recompute": self.household.recompute,
                 "tariffs": sorted(
-                    [sorted(config.meters), config.before.get(VALUE_TARIFF) or 0.0]
+                    [sorted(config.meters), tariff]
                     for config in self.configs.values()
                     if config.category != CATEGORY_PV
+                    and (tariff := config.before.get(VALUE_TARIFF)) is not None
                 ),
             }
         )
@@ -672,8 +679,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             if state.data_start is None:
                 return
         counting_since = _ceil_hour(state.data_start)
-        start = state.next_hour
-        if start is None:
+        computing_past = state.next_hour is None
+        start = state.next_hour if state.next_hour is not None else counting_since
+        history: dict[str, list[tuple[float, float]]] = {}
+        while start < end:
+            chunk_end = min(start + CHUNK, end)
+            rows = await self._async_compute_household(setup, state, start, chunk_end)
+            for key, series in rows.items():
+                history.setdefault(key, []).extend(series)
+            start = chunk_end
+        if computing_past:
             # Computing the past replaces what an earlier computation wrote,
             # including devices no longer in the energy dashboard.
             async_remove_statistics(
@@ -684,22 +699,17 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     if statistic_category(statistic_id) is None
                 ],
             )
-            start = counting_since
         names = await self._async_household_names(setup)
         currency = self.hass.config.currency
-        while start < end:
-            chunk_end = min(start + CHUNK, end)
-            rows = await self._async_compute_household(setup, state, start, chunk_end)
-            for key, series in rows.items():
-                async_write_statistics(
-                    self.hass,
-                    household_statistic_id(key),
-                    names.get(key, key),
-                    currency if key.endswith("_cost") else "kWh",
-                    series,
-                    replace=False,
-                )
-            start = chunk_end
+        for key, series in history.items():
+            async_write_statistics(
+                self.hass,
+                household_statistic_id(key),
+                names.get(key, key),
+                currency if key.endswith("_cost") else "kWh",
+                series,
+                replace=False,
+            )
         state.next_hour = max(start, counting_since)
 
     async def async_texts(self) -> Callable[[str], str]:
