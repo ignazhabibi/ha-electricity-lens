@@ -152,7 +152,12 @@ export class ElectricityLensBreakdownCard extends LitElement {
 
   private get _by(): "source" | "consumer" {
     const area = this._area();
-    if (this._config.by === "consumer" && area?.kind === "household") return "consumer";
+    if (
+      this._config.by === "consumer" &&
+      (area?.kind === "household" || (area?.kind === "category" && (area.statistics.energy?.length ?? 0) > 1))
+    ) {
+      return "consumer";
+    }
     return area?.statistics.solar?.length ? "source" : "consumer";
   }
 
@@ -215,7 +220,12 @@ export class ElectricityLensBreakdownCard extends LitElement {
           : Promise.resolve([]),
       ]);
       result.values = values;
-      result.names = Object.fromEntries(metadata.map((m) => [m.statistic_id, m.name ?? m.statistic_id]));
+      result.names = Object.fromEntries(
+        metadata.map((m) => [
+          m.statistic_id,
+          m.name || (this.hass?.states[m.statistic_id]?.attributes.friendly_name as string | undefined) || m.statistic_id,
+        ])
+      );
     } catch {
       result.failed = true;
     }
@@ -391,9 +401,9 @@ export class ElectricityLensBreakdownCard extends LitElement {
         const width = max > 0 ? Math.max((part.value / max) * 100, 0) : 0;
         const mixTotal = part.mix?.reduce((sum, item) => sum + item.value, 0) ?? 0;
         let line = "";
-        if (part.energy !== undefined) {
+        if (this._figure === "cost" && part.energy !== undefined) {
           line = this._fmt.value(part.energy, "energy");
-          if (this._figure === "cost" && part.energy > 0) {
+          if (part.energy > 0) {
             line += ` · ${t("line_average_price", { price: this._fmt.value(part.value / part.energy, "price") })}`;
           }
         }

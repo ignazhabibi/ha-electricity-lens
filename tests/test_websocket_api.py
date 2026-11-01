@@ -22,7 +22,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     """Each area lists where its figures are kept."""
     entry = make_entry(
         ("pv", PV_DATA),
-        ("heat_pump", HEAT_PUMP_DATA),
+        ("heat_pump", {**HEAT_PUMP_DATA, "heat_meters": ["sensor.heat"]}),
         options={"cheap_until": 0.25},
     )
     await setup_entry(hass, entry)
@@ -64,6 +64,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "saving": ["electricity_lens:heat_pump_saving"],
         "heat": ["electricity_lens:heat_pump_heat"],
         "alternative_cost": ["electricity_lens:heat_pump_alternative_cost"],
+        "heat_meters": ["sensor.heat"],
     }
     washer = areas["device_sensor_washer"]
     assert washer["name"] == "Washer"

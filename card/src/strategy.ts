@@ -208,8 +208,20 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           ...((heatPump.statistics.energy?.length ?? 0) > 1
             ? [
                 card("electricity-lens-breakdown-card", {
-                  title: t("breakdown_energy_by_consumer"),
-                  statistics: (heatPump.statistics.energy ?? []).map((statistic) => ({ statistic })),
+                  area: "heat_pump",
+                  by: "consumer",
+                  figure: "energy",
+                  display: "bars",
+                  color_by_source: true,
+                  ...wide,
+                }),
+              ]
+            : []),
+          ...((heatPump.statistics.heat_meters?.length ?? 0) > 1
+            ? [
+                card("electricity-lens-breakdown-card", {
+                  title: t("figure.heat"),
+                  statistics: (heatPump.statistics.heat_meters ?? []).map((statistic) => ({ statistic })),
                   display: "bars",
                   ...wide,
                 }),

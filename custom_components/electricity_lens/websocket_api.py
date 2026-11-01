@@ -153,6 +153,11 @@ async def async_figures(
                     figure: [category_statistic_id(category, figure)]
                     for figure in CATEGORY_FIGURES[category]
                 },
+                **(
+                    {"heat_meters": list(config.heat_meters)}
+                    if config.heat_meters
+                    else {}
+                ),
             )
         )
     # Only top-level devices add up to the household, beside "Other".

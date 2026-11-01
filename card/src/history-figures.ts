@@ -56,7 +56,10 @@ export const lineFiguresOf = (area: FigureArea): LineFigure[] =>
 export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {
   const stacks: Stack[] = [];
   if (figure === "energy" && area.statistics.solar?.length) stacks.push("source");
-  if (area.kind === "household" && (figure === "energy" || figure === "cost")) {
+  if (
+    (area.kind === "household" || (area.kind === "category" && (area.statistics.energy?.length ?? 0) > 1)) &&
+    (figure === "energy" || figure === "cost")
+  ) {
     stacks.push("consumer");
   }
   stacks.push("none");
@@ -113,8 +116,30 @@ export function barSeries(
     return series;
   }
   if (stack === "consumer") {
+    if (area.kind === "category") {
+      const meters = new Set(area.statistics.energy ?? []);
+      return info.areas
+        .filter((item) => item.kind === "device" && item.statistics.energy?.some((stat) => meters.has(stat)))
+        .map((item) => ({
+          id: item.id,
+          name: { text: item.name },
+          color: consumers.get(item.id) ?? colors.other,
+          plus: item.statistics[figure] ?? [],
+          minus: [],
+        }));
+    }
+    const covered = new Set(
+      info.areas.filter((item) => item.kind === "category").flatMap((item) => item.statistics.energy ?? [])
+    );
     return info.areas
-      .filter((item) => (item.kind === "device" && item.top_level !== false) || item.kind === "other")
+      .filter(
+        (item) =>
+          (item.kind === "category" && (item.statistics.energy?.length ?? 0) > 0) ||
+          (item.kind === "device" &&
+            item.top_level !== false &&
+            !item.statistics.energy?.some((stat) => covered.has(stat))) ||
+          item.kind === "other"
+      )
       .map((item) => ({
         id: item.id,
         name: { text: item.name },
