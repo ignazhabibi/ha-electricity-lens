@@ -81,7 +81,9 @@ export interface HistoryCardConfig {
 
 /** The integration computes new hours every 15 minutes. */
 const REFRESH_MS = 5 * 60 * 1000;
-const CHART_HEIGHT = "250px";
+/** HA's chart sizes itself like the energy graphs (half its width, 200 px at
+ * least); this only keeps the space while it loads. */
+const CHART_HEIGHT = "200px";
 
 const UNITS: Record<BarFigure, Unit> = {
   energy: "energy",
@@ -599,7 +601,6 @@ export class ElectricityLensHistoryCard extends LitElement {
             .hass=${this.hass}
             .data=${this._chart.data}
             .options=${this._chart.options}
-            .height=${CHART_HEIGHT}
           ></ha-chart-base>`
         : nothing}
       ${loaded && !hasData

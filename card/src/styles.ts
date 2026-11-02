@@ -5,7 +5,7 @@ import { css } from "lit";
 export const cardStyles = css`
   :host {
     --electricity-lens-pv-color: var(--energy-solar-color, #ff9800);
-    --electricity-lens-heat-pump-color: var(--energy-gas-color, #8e021b);
+    --electricity-lens-heat-pump-color: var(--graph-color-30, var(--color-30, #bf3947));
     --electricity-lens-wallbox-color: var(--energy-non-fossil-color, #0f9d58);
   }
   ha-card {

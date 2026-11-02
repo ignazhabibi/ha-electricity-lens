@@ -539,7 +539,7 @@ export class ElectricityLensFiguresCard extends LitElement {
         ? html`<div class="track" role="presentation">
             <div
               class="fill"
-              style="width: ${Math.min(Math.max(bar, 0), 100)}%; background: ${color ?? "var(--primary-color)"}"
+              style="width: ${Math.min(Math.max(bar, 0), 100)}%; --c: ${color ?? "var(--primary-color)"}"
             ></div>
           </div>`
         : nothing}
@@ -686,6 +686,9 @@ export class ElectricityLensFiguresCard extends LitElement {
       .fill {
         height: 100%;
         border-radius: 3px;
+        /* HA's energy look: the color at half strength, framed by the full color. */
+        background: color-mix(in srgb, var(--c) 50%, transparent);
+        box-shadow: inset 0 0 0 1px var(--c);
       }
     `,
   ];

@@ -5,6 +5,8 @@
 import { mdiCalendarMonthOutline, mdiSigma } from "@mdi/js";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
+import { consumerColors, palette } from "./colors";
+import { cachedInfo, infoStale, loadInfo } from "./info";
 import { localizer, type Localize } from "./localize";
 import {
   DOMAIN,
@@ -14,7 +16,7 @@ import {
   yearsToPayback,
 } from "./model";
 import { cardStyles } from "./styles";
-import type { CategoryFigures, HomeAssistant } from "./types";
+import type { CategoryFigures, FiguresInfo, HomeAssistant } from "./types";
 
 type View = "total" | "yearly";
 const VIEW_STORAGE_KEY = "electricity-lens-balance-card-view";
@@ -33,10 +35,13 @@ export class ElectricityLensBalanceCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     _view: { state: true },
+    _info: { state: true },
   };
 
   hass?: HomeAssistant;
   private _view: View = readView();
+  private _info?: FiguresInfo | null;
+  private _infoLoading = false;
 
   static getStubConfig(): Record<string, never> {
     return {};
@@ -122,6 +127,19 @@ export class ElectricityLensBalanceCard extends LitElement {
     window.dispatchEvent(new CustomEvent("location-changed"));
   }
 
+  protected willUpdate(): void {
+    // The areas only give the categories the colors of the other cards.
+    if (!this.hass) return;
+    if (this._info === undefined) this._info = cachedInfo();
+    if (infoStale() && !this._infoLoading) {
+      this._infoLoading = true;
+      void loadInfo(this.hass).then((info) => {
+        this._info = info;
+        this._infoLoading = false;
+      });
+    }
+  }
+
   protected render(): TemplateResult {
     const t = this._localize;
     if (!this.hass) return html``;
@@ -134,6 +152,7 @@ export class ElectricityLensBalanceCard extends LitElement {
     }
     const sums = totals(categories);
     const yearly = this._view === "yearly";
+    const known = this._info ? consumerColors(this._info, palette(this)) : undefined;
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${t("title")}</h2>
@@ -152,7 +171,7 @@ export class ElectricityLensBalanceCard extends LitElement {
       </div>
       <p class="summary">${this._summary(sums, categories, yearly)}</p>
       <ul class="rows">
-        ${categories.map((category) => this._row(category, yearly))}
+        ${categories.map((category) => this._row(category, yearly, known?.get(category.category)))}
       </ul>
       ${this._footer(categories)}
     </ha-card>`;
@@ -197,7 +216,7 @@ export class ElectricityLensBalanceCard extends LitElement {
       : t("saved_only", { saved: this._money(sums.saved) });
   }
 
-  private _row(category: CategoryFigures, yearly: boolean): TemplateResult {
+  private _row(category: CategoryFigures, yearly: boolean, color?: string): TemplateResult {
     const t = this._localize;
     const name = t(`category.${category.category}`);
     let amount = "–";
@@ -207,7 +226,7 @@ export class ElectricityLensBalanceCard extends LitElement {
       else if (!yearly && category.saving !== null)
         amount = this._money(category.saving);
     }
-    return html`<li class="row ${category.category}">
+    return html`<li class="row ${category.category}" style=${color ? `--color: ${color}` : ""}>
       <span class="swatch" aria-hidden="true"></span>
       <div class="row-body">
         <div class="line">
@@ -417,7 +436,10 @@ export class ElectricityLensBalanceCard extends LitElement {
       .bar i {
         display: block;
         height: 100%;
-        background: var(--color);
+        /* HA's energy look, as the swatch: half strength, framed by the full color. */
+        background: color-mix(in srgb, var(--color) 50%, transparent);
+        box-shadow: inset 0 0 0 1px var(--color);
+        border-radius: 4px;
       }
       .meter span {
         flex: none;

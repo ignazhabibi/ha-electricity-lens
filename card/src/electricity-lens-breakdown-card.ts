@@ -416,9 +416,9 @@ export class ElectricityLensBreakdownCard extends LitElement {
           </div>
           ${line ? html`<div class="bar-line">${line}</div>` : nothing}
           <div class="track">
-            <div class="fill" style="width: ${width}%; ${split ? "" : `background: ${part.color}`}">
+            <div class="fill" style="width: ${width}%; ${split ? "" : `--c: ${part.color}`}">
               ${split && part.mix && mixTotal > 0
-                ? part.mix.map((item) => html`<span style="width: ${(item.value / mixTotal) * 100}%; background: ${item.color}"></span>`)
+                ? part.mix.map((item) => html`<span style="width: ${(item.value / mixTotal) * 100}%; --c: ${item.color}"></span>`)
                 : nothing}
             </div>
           </div>
@@ -433,7 +433,7 @@ export class ElectricityLensBreakdownCard extends LitElement {
                   (key !== "expensive" || this._info?.levels.expensive_from != null)
               )
               .map(
-              (key) => html`<span><span class="dot" style="background: ${CSS_COLORS[key]}"></span>${t(
+              (key) => html`<span><span class="dot" style="--c: ${CSS_COLORS[key]}"></span>${t(
                 key === "grid"
                   ? this._info?.levels.cheap_until != null || this._info?.levels.expensive_from != null
                     ? "source.normal"
@@ -597,6 +597,13 @@ export class ElectricityLensBreakdownCard extends LitElement {
       }
       .fill span {
         height: 100%;
+      }
+      /* HA's energy look: the color at half strength, framed by the full color. */
+      .fill,
+      .fill span,
+      .dot {
+        background: color-mix(in srgb, var(--c, transparent) 50%, transparent);
+        box-shadow: inset 0 0 0 1px var(--c, transparent);
       }
       .key {
         display: flex;
