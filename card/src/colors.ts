@@ -6,7 +6,8 @@
 // - Individual devices take Home Assistant's graph colors (--graph-color-1,
 //   --color-1, ...) in the order they are configured in the energy dashboard,
 //   matching HA's own individual devices graph; "Other" is always neutral grey.
-// - Categories (PV, heat pump, car) keep their energy colors.
+// - Categories (PV, heat pump, car) keep their energy colors; the heat pump
+//   has the fixed device color --color-30, the car its device's color.
 // - Lines are quiet: ratios and prices in the secondary text color.
 // ECharts cannot read CSS variables, so the colors are resolved here.
 
@@ -32,7 +33,7 @@ export const CSS_COLORS = {
   cheap: "color-mix(in srgb, var(--energy-grid-consumption-color, #488fc2) 55%, #fff)",
   expensive: "color-mix(in srgb, var(--energy-grid-consumption-color, #488fc2) 70%, #000)",
   export: "var(--energy-grid-return-color, #8353d1)",
-  heat: "var(--energy-gas-color, #8e021b)",
+  heat: "var(--graph-color-30, var(--color-30, #bf3947))",
   car: "var(--energy-non-fossil-color, #0f9d58)",
 } as const;
 
@@ -99,7 +100,9 @@ export function palette(element: Element): Palette {
     cheap: mix(grid, "white", 0.55),
     expensive: mix(grid, "black", 0.7),
     export: read("--energy-grid-return-color", "#8353d1"),
-    heat: read("--energy-gas-color", "#8e021b"),
+    // The heat pump keeps one fixed device color (--color-30), never gas.
+    heat:
+      style.getPropertyValue("--graph-color-30").trim() || read("--color-30", "#bf3947"),
     car: read("--energy-non-fossil-color", "#0f9d58"),
     other:
       style.getPropertyValue("--history-unknown-color").trim() ||
@@ -109,8 +112,9 @@ export function palette(element: Element): Palette {
   };
 }
 
-/** The color of each consumer: HA's graph colors in device order, category
- * areas take the color of their device, grey for "Other". */
+/** The color of each consumer: HA's graph colors in device order, the heat
+ * pump its fixed color, other categories the color of their device, grey for
+ * "Other". */
 export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, string> {
   const result = new Map<string, string>();
   const byStat = new Map<string, string>();
@@ -126,12 +130,14 @@ export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, 
     }
   }
   for (const area of info.areas) {
-    if (area.kind === "category") {
+    if (area.kind !== "category") continue;
+    if (area.id === "heat_pump") {
+      result.set(area.id, colors.heat);
+    } else {
       const stats = area.statistics.energy ?? [];
       const found = stats.map((stat) => byStat.get(stat)).filter(Boolean);
-      const deviceColor = found[found.length - 1];
-      const fallback = area.id === "heat_pump" ? colors.heat : area.id === "wallbox" ? colors.car : colors.grid;
-      result.set(area.id, deviceColor ?? fallback);
+      const fallback = area.id === "wallbox" ? colors.car : colors.grid;
+      result.set(area.id, found[found.length - 1] ?? fallback);
     }
   }
   return result;
