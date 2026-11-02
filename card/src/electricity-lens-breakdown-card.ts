@@ -275,7 +275,9 @@ export class ElectricityLensBreakdownCard extends LitElement {
       const known = this._info ? consumerColors(this._info, colors) : new Map<string, string>();
       return (this._config.statistics ?? []).map((item, index) => {
         const device = this._info?.areas.find(
-          (area) => area.kind === "device" && area.statistics.energy?.[0] === item.statistic
+          (area) =>
+            area.kind === "device" &&
+            (area.statistics.energy?.[0] === item.statistic || area.statistics.heat?.[0] === item.statistic)
         );
         return {
           id: item.statistic,

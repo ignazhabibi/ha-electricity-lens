@@ -16,7 +16,7 @@ import {
 } from "lit";
 
 import { barChart, chartReady, type ChartLine, type ChartSeries } from "./chart";
-import { palette } from "./colors";
+import { consumerColors, palette } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import {
   PERIODS,
@@ -228,10 +228,11 @@ export class ElectricityLensHistoryCard extends LitElement {
     const shown = this._range(() => yearsOf(categories.map((c) => c.countingSince)));
     if (!shown) return undefined;
     const colors = palette(this);
+    const known = this._info ? consumerColors(this._info, colors) : undefined;
     const categoryColors: Record<Category, string> = {
       pv: colors.solar,
-      heat_pump: colors.heat,
-      wallbox: colors.car,
+      heat_pump: known?.get("heat_pump") ?? colors.heat,
+      wallbox: known?.get("wallbox") ?? colors.car,
     };
     const bars = categories.map((category) => ({
       series: {
@@ -291,7 +292,7 @@ export class ElectricityLensHistoryCard extends LitElement {
     return {
       key: JSON.stringify([
         sorted,
-        bars.map((bar) => bar.series.id),
+        bars.map((bar) => [bar.series.id, bar.series.color]),
         lineFigure?.figure,
         lines,
         shown.range.start,
@@ -358,12 +359,16 @@ export class ElectricityLensHistoryCard extends LitElement {
         this._hasChart = ok;
       });
     }
-    if (!this._savings) {
-      if (this._info === undefined) this._info = cachedInfo();
-      if (infoStale() && !this._infoLoading) void this._loadInfo();
-      else if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
-        this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
-      }
+    if (this._info === undefined) this._info = cachedInfo();
+    if (infoStale() && !this._infoLoading) void this._loadInfo();
+    else if (
+      !this._savings &&
+      this.isConnected &&
+      this._info?.calculating &&
+      !this._retryTimer &&
+      !this._infoLoading
+    ) {
+      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
     }
     const plan = this._savings ? this._savingsPlan() : this._figurePlan();
     const stale = !this._loaded || Date.now() - this._loaded.at > REFRESH_MS;

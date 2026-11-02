@@ -155,14 +155,11 @@ export function barSeries(
       }));
   }
   const color =
-    figure === "heat"
-      ? colors.heat
-      : figure === "distance"
-        ? colors.car
-        : figure === "export"
-          ? colors.export
-          : area.kind === "solar"
-            ? colors.solar
-            : (consumers.get(area.id) ?? colors.grid);
+    figure === "export"
+      ? colors.export
+      : area.kind === "solar"
+        ? colors.solar
+        : (consumers.get(area.id) ??
+          (figure === "heat" ? colors.heat : figure === "distance" ? colors.car : colors.grid));
   return [{ id: figure, name: { text: area.name }, color, plus: of(figure), minus: [] }];
 }

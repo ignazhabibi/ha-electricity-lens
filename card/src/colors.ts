@@ -110,19 +110,28 @@ export function palette(element: Element): Palette {
 }
 
 /** The color of each consumer: HA's graph colors in device order, category
- * colors for category areas, grey for "Other". */
+ * areas take the color of their device, grey for "Other". */
 export function consumerColors(info: FiguresInfo, colors: Palette): Map<string, string> {
   const result = new Map<string, string>();
+  const byStat = new Map<string, string>();
   let next = 0;
   for (const area of info.areas) {
     if (area.kind === "other") {
       result.set(area.id, colors.other);
     } else if (area.kind === "device") {
-      result.set(area.id, colors.consumers[next++ % colors.consumers.length]);
-    } else if (area.id === "heat_pump") {
-      result.set(area.id, colors.heat);
-    } else if (area.id === "wallbox") {
-      result.set(area.id, colors.car);
+      const color = colors.consumers[next++ % colors.consumers.length];
+      result.set(area.id, color);
+      const stat = area.statistics.energy?.[0];
+      if (stat) byStat.set(stat, color);
+    }
+  }
+  for (const area of info.areas) {
+    if (area.kind === "category") {
+      const stats = area.statistics.energy ?? [];
+      const found = stats.map((stat) => byStat.get(stat)).filter(Boolean);
+      const deviceColor = found[found.length - 1];
+      const fallback = area.id === "heat_pump" ? colors.heat : area.id === "wallbox" ? colors.car : colors.grid;
+      result.set(area.id, deviceColor ?? fallback);
     }
   }
   return result;
