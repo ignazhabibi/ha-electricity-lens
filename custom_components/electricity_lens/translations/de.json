@@ -36,8 +36,8 @@
         },
         "data_description": {
           "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
-          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig",
-          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer"
+          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig, wenn es in den letzten 24 Stunden einen höheren Preis gab",
+          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer, wenn es in den letzten 24 Stunden einen niedrigeren Preis gab"
         }
       },
       "pv": {
@@ -232,8 +232,8 @@
         },
         "data_description": {
           "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
-          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig",
-          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer"
+          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig, wenn es in den letzten 24 Stunden einen höheren Preis gab",
+          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer, wenn es in den letzten 24 Stunden einen niedrigeren Preis gab"
         }
       },
       "recompute": {
@@ -747,9 +747,15 @@
         "energy": "Verbrauch",
         "solar": "Solarstrom",
         "cost": "Kosten",
+        "solar_cost": "Solarstrom-Kosten",
         "cheap": "günstiger Netzstrom",
+        "cheap_cost": "Kosten günstiger Netzstrom",
         "expensive": "teurer Netzstrom",
+        "expensive_cost": "Kosten teurer Netzstrom",
         "grid_cost": "Netzkosten",
+        "grid_import_cost": "Kosten Netzbezug",
+        "grid_feed_in": "Einspeisevergütung",
+        "grid_cheap_saving": "Ersparnis durch günstige Zeiten",
         "heat": "Wärme",
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten"

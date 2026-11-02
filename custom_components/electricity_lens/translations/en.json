@@ -36,8 +36,8 @@
         },
         "data_description": {
           "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
-          "cheap_until": "Grid power at this price or below counts as cheap",
-          "expensive_from": "Grid power at this price or above counts as expensive"
+          "cheap_until": "Grid power at this price or below counts as cheap, if a higher price occurred within the last 24 hours",
+          "expensive_from": "Grid power at this price or above counts as expensive, if a lower price occurred within the last 24 hours"
         }
       },
       "pv": {
@@ -232,8 +232,8 @@
         },
         "data_description": {
           "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
-          "cheap_until": "Grid power at this price or below counts as cheap",
-          "expensive_from": "Grid power at this price or above counts as expensive"
+          "cheap_until": "Grid power at this price or below counts as cheap, if a higher price occurred within the last 24 hours",
+          "expensive_from": "Grid power at this price or above counts as expensive, if a lower price occurred within the last 24 hours"
         }
       },
       "recompute": {
@@ -747,9 +747,15 @@
         "energy": "consumption",
         "solar": "solar power",
         "cost": "costs",
+        "solar_cost": "solar power costs",
         "cheap": "cheap grid power",
+        "cheap_cost": "cheap grid power costs",
         "expensive": "expensive grid power",
+        "expensive_cost": "expensive grid power costs",
         "grid_cost": "Grid costs",
+        "grid_import_cost": "Grid import costs",
+        "grid_feed_in": "Feed-in compensation",
+        "grid_cheap_saving": "Saving from cheap hours",
         "heat": "heat",
         "distance": "distance",
         "alternative_cost": "comparison costs"

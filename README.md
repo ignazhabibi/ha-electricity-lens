@@ -43,21 +43,35 @@ hour Electricity Lens derives:
   battery discharge − battery charge), of each individual device, and of
   "Other", what the household used beyond its devices. Of a device and its
   sub-devices (*Upstream device* in the energy dashboard), only the outer one
-  counts towards "Other".
+  counts towards "Other". All consumers add up to the household: a meter that
+  books several hours at once reports more than the household used in that
+  hour, and later hours of "Other" pay the surplus back. A meter that runs back
+  was reset or corrected, which counts as no energy.
 - **Mix**: how much of each consumption was solar power and, with price levels,
   cheap or expensive grid power. Solar power used in the house is shared among
   the consumers of that hour in proportion to their consumption. A home
-  battery counts as solar, as in the PV plant's saving.
-- **Costs** of each consumption: grid power at the hour's electricity price,
+  battery counts as solar, as in the PV plant's saving. A level needs a contrast:
+  grid power is cheap or expensive only if the last 24 hours also had a higher
+  or lower price, so a flat tariff has no levels.
+- **Costs** of each consumption: grid power at what a kWh cost in that hour,
   or at the own tariff of heat pump or electric car for their devices; solar
-  power at the feed-in compensation it did not earn, as evcc does.
-- **Grid costs**: imports at the hour's price, minus the feed-in compensation,
+  power at the feed-in compensation it did not earn, as evcc does. What a kWh
+  cost comes from the energy dashboard's costs, which price each kWh at its
+  moment, so a car charging in the cheap minutes of an hour pays less than the
+  hour's mean price. Where those costs do not fit the prices of the hour, for
+  example after a gap in the meter, the mean price counts.
+- **Grid costs**: imports at what they cost, minus the feed-in compensation,
   plus the standing charge if one is entered.
+- **Saving from cheap hours**: what cheap grid power cost less than the normal
+  price, the average price outside the cheap hours of the last 24 hours.
 
 Costs and savings answer different questions, so they value solar power
 differently: a device's costs count its solar power at the lost feed-in
 compensation; the savings below give the benefit of solar power to the PV
-plant.
+plant. In the balance a device's electricity counts at the grid price, solar
+power or not, so nothing counts twice. On the key figures and charts of a heat
+pump or car, the saving includes its solar power, with the balance's value below
+the key figure.
 
 ### Savings
 
@@ -154,8 +168,8 @@ calculating.
    | Field | Description |
    |---|---|
    | Standing charge per month | As on the electricity bill. Shared evenly over the hours of its month and added to the grid costs. The first value applies from the beginning. |
-   | Cheap up to | Grid power at this price per kWh or below counts as cheap. |
-   | Expensive from | Grid power at this price per kWh or above counts as expensive. Without levels there is only solar and grid power. |
+   | Cheap up to | Grid power at this price per kWh or below counts as cheap, if the last 24 hours also had a higher price. |
+   | Expensive from | Grid power at this price per kWh or above counts as expensive, if the last 24 hours also had a lower price. Without levels there is only solar and grid power. |
 3. **PV plant**: since when it counts, and the purchase cost (optional).
 4. **Heat pump**:
    | Field | Description |
@@ -226,9 +240,12 @@ example in the *Statistics graph* card, under their names such as
 | Statistic | Content |
 |---|---|
 | `electricity_lens:household_energy`, `…_solar`, `…_cheap`, `…_expensive`, `…_cost` | The household's consumption, its solar power, its cheap and expensive grid power (with price levels only), and its costs |
+| `electricity_lens:household_solar_cost`, `…_cheap_cost`, `…_expensive_cost` | What of the household's costs falls on its solar power and on its cheap and expensive grid power |
 | `electricity_lens:other_…` | The same for "Other" |
-| `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
+| `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost`, `…_solar_cost`, `…_cheap_cost`, `…_expensive_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
 | `electricity_lens:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
+| `electricity_lens:grid_import_cost`, `…grid_feed_in` | What the imports cost and what the feed-in earned |
+| `electricity_lens:grid_cheap_saving` | What cheap grid power saved against the normal price (with a cheap level only) |
 | `electricity_lens:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
 | `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost` | The heat pump's heat (measured or estimated) and what the former heating would have cost for it |
 | `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost` | The distance charged and what a combustion car would have paid for fuel |
@@ -303,7 +320,7 @@ Areas and their figures:
 | Area | Figures |
 |---|---|
 | Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
-| Grid | Grid import, feed-in, grid costs |
+| Grid | Grid import, feed-in, grid costs with their parts, average grid price, saving from cheap hours (with a cheap level) |
 | Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard) |
 | Heat pump | Consumption, costs, average price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power |
 | Electric car | Consumption, costs, average price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power |
@@ -340,7 +357,8 @@ that hides a share with a tap.
   household, a device, or Other.
 - **By consumer**: the household's consumption or costs by top-level device
   and Other, each with its consumption and average price. Bars can be
-  colored by the sources of each consumer.
+  colored by the sources of each consumer, in the bar's own unit: a bar of costs
+  splits by what each source cost. A consumer that would read as zero is left out.
 - **Statistics**: the shares of any statistics as they are, for example the
   heat for heating and hot water from the heat pump's own sensors.
 

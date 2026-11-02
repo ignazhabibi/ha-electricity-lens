@@ -56,28 +56,20 @@ const view = (
   sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
 
-/** The integration's sensors the dashboard shows as they are. */
+/** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   balance?: string;
-  categories: Array<{ category: Category; saving?: string; payback?: string; perYear?: string }>;
+  categories: Category[];
 }
 
-/** Finds the balance and each category's sensors among the entities. */
+/** Finds the balance and the categories among the entities. */
 export function findSensors(hass: HomeAssistant): Sensors {
   const entries = Object.values(hass.entities ?? {}).filter((entry) => entry.platform === DOMAIN);
-  const sibling = (device: string | null | undefined, key: string) =>
-    entries.find((entry) => entry.device_id === device && entry.translation_key === key)?.entity_id;
   const order: Category[] = ["pv", "heat_pump", "wallbox"];
   const categories = entries
     .filter((entry) => entry.translation_key === "saving")
-    .map((entry) => ({
-      category: hass.states[entry.entity_id]?.attributes.category as Category,
-      saving: entry.entity_id,
-      payback: sibling(entry.device_id, "payback"),
-      perYear: sibling(entry.device_id, "saving_per_year"),
-    }))
-    .filter((item) => order.includes(item.category))
-    .sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+    .map((entry) => hass.states[entry.entity_id]?.attributes.category as Category)
+    .filter((category) => order.includes(category));
   return {
     balance: entries.find((entry) => entry.translation_key === "balance")?.entity_id,
     categories,
@@ -105,8 +97,15 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const savings = Boolean(solar?.statistics.saving?.length || heatPump || car || sensors.categories.length);
   const balance = sensors.balance && sensors.categories.length ? sensors.balance : undefined;
   const today = { period: "today" };
+  // With a PV plant the price of a kWh includes its solar power; the name says so.
+  const priceLine = {
+    line: "price",
+    ...(solar ? { line_name: t("strategy.price_with_solar") } : {}),
+  };
+  const price = (area: string): Card =>
+    solar ? named(area, "price", "strategy.price_with_solar") : own(area, "price");
   const sourceHistory = (area: string, options: Card = {}) =>
-    card("electricity-lens-history-card", { area, figure: "energy", stack: "source", line: "price", ...options });
+    card("electricity-lens-history-card", { area, figure: "energy", stack: "source", ...priceLine, ...options });
   const ring = (area: string) =>
     card("electricity-lens-breakdown-card", { area, by: "source", ...wide });
   const views: View[] = [];
@@ -167,8 +166,13 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       t("strategy.costs"),
       "costs",
       [
-        card("electricity-lens-history-card", { area: "household", figure: "cost", stack: "consumer", line: "price" }),
-        card("electricity-lens-breakdown-card", {
+        titled("electricity-lens-history-card", "strategy.cost_history", {
+          area: "household",
+          figure: "cost",
+          stack: "consumer",
+          ...priceLine,
+        }),
+        titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
           area: "household",
           by: "consumer",
           figure: "cost",
@@ -179,20 +183,10 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ],
       [
         named("grid", "cost", "strategy.bill", wide),
-        own("household", "price"),
+        own("grid", "grid_price"),
+        price("household"),
         own("household", levels ? "cheap_share" : "solar_share"),
-        ...sensors.categories.map((item) =>
-          card("electricity-lens-figures-card", {
-            title: t(`category.${item.category}`),
-            columns: 3,
-            tiles: [
-              { entity: item.saving, name: t("figure.saving"), secondary: "none" },
-              { entity: item.payback, name: t("strategy.paid_back"), secondary: "none" },
-              { entity: item.perYear, name: t("strategy.per_year"), secondary: "none" },
-            ].filter((tile) => tile.entity),
-            ...wide,
-          })
-        ),
+        ...(levels ? [own("grid", "cheap_saving")] : []),
       ]
     )
   );
@@ -205,13 +199,13 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           card("electricity-lens-history-card", { area: "heat_pump", figure: "heat", stack: "consumer", line: "scop" }),
           sourceHistory("heat_pump"),
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "cost", stack: "consumer", line: "price" }),
+          card("electricity-lens-history-card", { area: "heat_pump", figure: "cost", stack: "consumer", ...priceLine }),
           card("electricity-lens-history-card", { area: "heat_pump", figure: "saving", stack: "consumer" }),
         ],
         [
           own("heat_pump", "scop"),
           own("heat_pump", "heat_price"),
-          own("heat_pump", "price"),
+          price("heat_pump"),
           own("heat_pump", "saving"),
           ring("heat_pump"),
           ...((heatPump.statistics.energy?.length ?? 0) > 1
@@ -249,13 +243,13 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           sourceHistory("wallbox"),
           card("electricity-lens-history-card", { area: "wallbox", figure: "distance", line: "cost_per_100km" }),
-          card("electricity-lens-history-card", { area: "wallbox", figure: "cost", line: "price" }),
+          card("electricity-lens-history-card", { area: "wallbox", figure: "cost", ...priceLine }),
           card("electricity-lens-history-card", { area: "wallbox", figure: "saving" }),
         ],
         [
           own("wallbox", "cost_per_100km"),
           own("wallbox", "distance"),
-          own("wallbox", "price"),
+          price("wallbox"),
           own("wallbox", "saving"),
           ring("wallbox"),
         ]

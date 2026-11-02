@@ -85,6 +85,16 @@ export interface BarSeries {
   negative?: boolean;
 }
 
+/** What a figure of an area adds up. A device's saving includes its solar
+ * power, at the lost feed-in compensation as in its costs, as the key figures
+ * show it; only the balance gives that benefit to the PV plant. */
+function sums(area: FigureArea, figure: BarFigure): { plus: string[]; minus: string[] } {
+  const { alternative_cost: alternative, cost } = area.statistics;
+  return figure === "saving" && alternative?.length && cost?.length
+    ? { plus: alternative, minus: cost }
+    : { plus: area.statistics[figure] ?? [], minus: [] };
+}
+
 /** The bar series of a figure of an area, stacked as asked. */
 export function barSeries(
   info: FiguresInfo,
@@ -130,8 +140,7 @@ export function barSeries(
           id: item.id,
           name: { text: item.name },
           color: consumers.get(item.id) ?? colors.other,
-          plus: item.statistics[figure] ?? [],
-          minus: [],
+          ...sums(item, figure),
         }));
     }
     const covered = new Set(
@@ -161,5 +170,5 @@ export function barSeries(
         ? colors.solar
         : (consumers.get(area.id) ??
           (figure === "heat" ? colors.heat : figure === "distance" ? colors.car : colors.grid));
-  return [{ id: figure, name: { text: area.name }, color, plus: of(figure), minus: [] }];
+  return [{ id: figure, name: { text: area.name }, color, ...sums(area, figure) }];
 }

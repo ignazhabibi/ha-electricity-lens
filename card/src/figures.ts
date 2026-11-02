@@ -8,10 +8,12 @@ import type { FigureArea } from "./types";
 export type Figure =
   | "energy"
   | "cost"
+  | "grid_price"
   | "price"
   | "solar_share"
   | "cheap_share"
   | "expensive_share"
+  | "cheap_saving"
   | "self_consumption"
   | "export"
   | "saving"
@@ -37,11 +39,13 @@ export type Unit =
 const NEEDS: Record<Figure, string[]> = {
   energy: ["energy"],
   cost: ["cost"],
+  grid_price: ["import_cost", "energy"],
   // A price per kWh consumed, so only where solar power is shared out.
   price: ["cost", "energy", "solar"],
   solar_share: ["solar", "energy"],
   cheap_share: ["cheap", "solar", "energy"],
   expensive_share: ["expensive", "solar", "energy"],
+  cheap_saving: ["cheap_saving"],
   self_consumption: ["self_used", "energy"],
   export: ["export"],
   saving: ["saving"],
@@ -58,7 +62,7 @@ const NEEDS: Record<Figure, string[]> = {
 /** Further statistics the line below uses, where the area has them. */
 const LINE_NEEDS: Partial<Record<Figure, string[]>> = {
   energy: ["solar", "export"],
-  cost: ["energy", "solar"],
+  cost: ["energy", "solar", "import_cost", "feed_in"],
   saving: ["alternative_cost", "cost"],
   heat: ["energy"],
   distance: ["energy"],
@@ -112,6 +116,7 @@ export function valueOf(
   const energy = sum("energy");
   const solar = sum("solar");
   const kwh = (value: number) => ({ value, unit: "energy" as const });
+  const money = (value: number) => ({ value, unit: "money" as const });
   const plain = (value: number) => ({ value, unit: "number" as const });
   switch (figure) {
     case "energy": {
@@ -148,6 +153,24 @@ export function valueOf(
           },
         };
       }
+      const imported = sum("import_cost");
+      const feedIn = sum("feed_in");
+      if (cost !== null && imported !== null && feedIn !== null) {
+        // What the grid connection cost follows from three parts.
+        const charge = cost - imported + feedIn;
+        return {
+          value: cost,
+          unit: "money",
+          line: {
+            key: Math.abs(charge) < 0.005 ? "line_bill_no_charge" : "line_bill",
+            values: {
+              imported: money(imported),
+              feed_in: money(feedIn),
+              charge: money(charge),
+            },
+          },
+        };
+      }
       if (cost !== null && energy !== null && area.kind === "grid") {
         return {
           value: cost,
@@ -157,6 +180,24 @@ export function valueOf(
       }
       return { value: cost, unit: "money" };
     }
+    case "grid_price": {
+      const cost = sum("import_cost");
+      if (cost === null || !energy) return { value: null, unit: "price" };
+      return {
+        value: cost / energy,
+        unit: "price",
+        line: {
+          key: "line_cost_for",
+          values: { cost: money(cost), energy: kwh(energy) },
+        },
+      };
+    }
+    case "cheap_saving":
+      return {
+        value: sum("cheap_saving"),
+        unit: "money",
+        line: { key: "line_against_normal", values: {} },
+      };
     case "price": {
       const cost = sum("cost");
       if (cost === null || !energy) return { value: null, unit: "price" };
@@ -227,17 +268,18 @@ export function valueOf(
       if (saving === null || alternative === null || cost === null) {
         return { value: saving, unit: "money" };
       }
-      // With solar power at the lost feed-in compensation, as in the
-      // device's costs; in the balance its benefit belongs to the PV plant.
+      // A device shows what it saved with its solar power, at the lost feed-in
+      // compensation as in its costs. In the balance the benefit of solar power
+      // belongs to the PV plant, so that nothing counts twice.
       const withSolar = alternative - cost;
       return {
-        value: saving,
+        value: withSolar,
         unit: "money",
         line: {
           key: "line_saving_split",
           values: {
-            total: { value: withSolar, unit: "money" },
-            solar: { value: withSolar - saving, unit: "money" },
+            solar: money(withSolar - saving),
+            saving: money(saving),
           },
         },
       };

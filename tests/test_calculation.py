@@ -15,6 +15,8 @@ from custom_components.electricity_lens.calculation import (
     heat_pump_saving,
     heating_cost,
     household_hour,
+    normal_price,
+    paid_prices,
     price_level,
     pv_saving,
     summarize,
@@ -69,6 +71,25 @@ def test_electricity_prices_order() -> None:
     assert electricity_prices(
         hours[:1], entity_prices={}, costs={}, energy={}, fixed=None, last_known=None
     ) == [None]
+
+
+def test_paid_prices() -> None:
+    """Costs per kWh count where they fit the prices of the hour."""
+    hours = [0.0, HOUR, 2 * HOUR, 3 * HOUR, 4 * HOUR]
+    paid = paid_prices(
+        hours,
+        prices=[0.24, 0.24, 0.32, 0.32, 0.32],
+        # A car charging in the cheap minutes; a meter catching up on a gap; no
+        # energy to derive a price from; no costs at all.
+        costs={0.0: 1.9, HOUR: 0.6, 2 * HOUR: 0.0},
+        energy={0.0: 10.0, HOUR: 65.0, 2 * HOUR: 0.0, 3 * HOUR: 1.0},
+        ranges={0.0: (0.18, 0.32), HOUR: (0.18, 0.32), 2 * HOUR: (0.32, 0.32)},
+    )
+    assert paid == pytest.approx([0.19, 0.24, 0.32, 0.32, 0.32])
+    # Without a sensor's prices the costs are all that is known.
+    assert paid_prices(
+        hours[:1], prices=[0.30], costs={0.0: 2.0}, energy={0.0: 10.0}, ranges={}
+    ) == pytest.approx([0.20])
 
 
 def test_pv_saving() -> None:
@@ -134,10 +155,27 @@ def test_summarize() -> None:
 
 def test_price_level() -> None:
     """Thresholds include their price; without them there are no levels."""
-    assert price_level(0.20, 0.20, 0.35) == "cheap"
-    assert price_level(0.35, 0.20, 0.35) == "expensive"
-    assert price_level(0.30, 0.20, 0.35) is None
-    assert price_level(0.10, None, None) is None
+    assert price_level(0.20, 0.20, 0.35, 0.20, 0.35) == "cheap"
+    assert price_level(0.35, 0.20, 0.35, 0.20, 0.35) == "expensive"
+    assert price_level(0.30, 0.20, 0.35, 0.20, 0.35) is None
+    assert price_level(0.10, None, None, 0.10, 0.35) is None
+
+
+def test_price_level_needs_a_contrast() -> None:
+    """With one price, as on a flat tariff, nothing is cheap or expensive."""
+    assert price_level(0.27, 0.30, None, 0.27, 0.27) is None
+    assert price_level(0.40, None, 0.35, 0.40, 0.40) is None
+    # Rounding noise of the sensor is no contrast.
+    assert price_level(0.27, 0.30, None, 0.27, 0.274) is None
+    assert price_level(0.27, 0.30, None, 0.27, 0.318) == "cheap"
+
+
+def test_normal_price() -> None:
+    """The average outside the cheap hours, so one peak does not rule it."""
+    assert normal_price([0.18, 0.32, 0.32], 0.30) == pytest.approx(0.32)
+    assert normal_price([0.18, 0.40, 1.20], 0.30) == pytest.approx(0.80)
+    assert normal_price([0.18, 0.18], 0.30) is None
+    assert normal_price([0.18, 0.32], None) is None
 
 
 def _hour(**changes: object) -> dict[str, float]:
@@ -154,7 +192,9 @@ def _hour(**changes: object) -> dict[str, float]:
         "export_revenue": 0.0,
         "standing_charge": 0.02,
         "tariffs": {"pump": 0.20},
-        "levels": (0.30, None),
+        "level": "cheap",
+        "normal": 0.40,
+        "debts": {},
     }
     return household_hour(**{**arguments, **changes})  # type: ignore[arg-type]
 
@@ -178,7 +218,65 @@ def test_household_hour() -> None:
         hour["car_cost"] + hour["pump_cost"] + hour["other_cost"]
     )
     assert hour["grid_cost"] == pytest.approx(1.0 * 0.30 + 0.02)
+    assert hour["grid_import_cost"] == pytest.approx(0.30)
+    assert hour["grid_feed_in"] == 0.0
+    assert hour["grid_cheap_saving"] == pytest.approx(1.0 * (0.40 - 0.30))
     assert "household_expensive" not in hour
+
+
+def test_household_hour_costs_by_source() -> None:
+    """What the solar power and each level cost add up to a consumer's costs."""
+    hour = _hour()
+    for area in ("household", "car", "pump", "other"):
+        assert hour[f"{area}_solar_cost"] == pytest.approx(hour[f"{area}_solar"] * 0.08)
+        assert hour[f"{area}_cost"] == pytest.approx(
+            hour[f"{area}_solar_cost"] + hour[f"{area}_cheap_cost"]
+        )
+    assert hour["pump_cheap_cost"] == pytest.approx(0.25 * 0.20)
+    # The household's cheap power costs what its consumers' cheap power costs.
+    assert hour["household_cheap_cost"] == pytest.approx(
+        hour["car_cheap_cost"] + hour["pump_cheap_cost"] + hour["other_cheap_cost"]
+    )
+    normal = _hour(level=None)
+    assert "household_cheap_cost" not in normal
+    assert "grid_cheap_saving" not in normal
+
+
+def test_consumers_add_up_when_a_meter_books_a_day_at_once() -> None:
+    """A meter's surplus is paid back by "other", in every figure."""
+    debts: dict[str, float] = {}
+    totals: dict[str, float] = {}
+    # Five hours of 2 kWh with the pump's meter silent, then the pump books them.
+    for pump in (0.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0):
+        hour = _hour(
+            grid_import=1.0,
+            solar=1.0,
+            devices={"pump": pump},
+            top_level=["pump"],
+            tariffs={},
+            debts=debts,
+        )
+        for key, value in hour.items():
+            totals[key] = totals.get(key, 0.0) + value
+    assert totals["household_energy"] == pytest.approx(20.0)
+    assert totals["other_energy"] == pytest.approx(10.0)
+    assert totals["household_cost"] == pytest.approx(10 * (0.30 + 0.08))
+    for figure in ("solar", "cost", "solar_cost", "cheap", "cheap_cost"):
+        assert totals[f"pump_{figure}"] + totals[f"other_{figure}"] == pytest.approx(
+            totals[f"household_{figure}"]
+        )
+    assert debts["energy"] == pytest.approx(0.0)
+
+
+def test_consumers_with_debt_stay_at_zero() -> None:
+    """Until the surplus is paid back, "other" shows nothing, not less."""
+    debts = {"energy": 5.0, "cost": 2.0}
+    hour = _hour(grid_import=1.0, solar=1.0, devices={}, top_level=[], debts=debts)
+    assert hour["other_energy"] == 0.0
+    assert hour["other_cost"] == 0.0
+    assert debts["energy"] == pytest.approx(3.0)
+    assert debts["cost"] == pytest.approx(2.0 - (0.30 + 0.08))
+    assert hour["household_energy"] == 2.0
 
 
 def test_household_hour_battery_from_grid() -> None:

@@ -151,7 +151,13 @@ def import_hourly(
 
 
 def import_hourly_mean(
-    hass: HomeAssistant, statistic_id: str, start: datetime, values: Sequence[float]
+    hass: HomeAssistant,
+    statistic_id: str,
+    start: datetime,
+    values: Sequence[float],
+    *,
+    low: float | None = None,
+    high: float | None = None,
 ) -> None:
     """Import a mean statistic, such as a price sensor."""
     async_import_statistics(
@@ -169,8 +175,8 @@ def import_hourly_mean(
             StatisticData(
                 start=start + timedelta(hours=index),
                 mean=value,
-                min=value,
-                max=value,
+                min=value if low is None else low,
+                max=value if high is None else high,
             )
             for index, value in enumerate(values)
         ],

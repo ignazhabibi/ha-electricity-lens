@@ -237,6 +237,10 @@ class HouseholdState:
     """Cumulative value of each figure, keyed like household_hour's result."""
     last_prices: dict[str, float] = field(default_factory=dict)
     standing_charge: Timeline = field(default_factory=Timeline)
+    debts: dict[str, float] = field(default_factory=dict)
+    """What meters reported beyond the household, to be paid back by "other"."""
+    recent_prices: list[list[float]] = field(default_factory=list)
+    """Start, lowest, and highest price of the hours of the last day."""
 
     def reset(self, fingerprint: str) -> None:
         """Forget the computed past, keeping the standing charge's timeline."""
@@ -245,6 +249,8 @@ class HouseholdState:
         self.next_hour = None
         self.totals = {}
         self.last_prices = {}
+        self.debts = {}
+        self.recent_prices = []
 
     def as_dict(self) -> dict[str, Any]:
         """Return the state for storage."""
@@ -255,6 +261,8 @@ class HouseholdState:
             "totals": self.totals,
             "last_prices": self.last_prices,
             "standing_charge": self.standing_charge.as_list(),
+            "debts": self.debts,
+            "recent_prices": self.recent_prices,
         }
 
     @classmethod
@@ -267,6 +275,8 @@ class HouseholdState:
             totals=_numbers(data.get("totals")),
             last_prices=_numbers(data.get("last_prices")),
             standing_charge=Timeline.from_list(data.get("standing_charge", [])),
+            debts=_numbers(data.get("debts")),
+            recent_prices=[list(row) for row in data.get("recent_prices", [])],
         )
 
 

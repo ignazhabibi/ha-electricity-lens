@@ -49,7 +49,7 @@ interface Part {
   name: string;
   color: string;
   value: number;
-  /** For consumers: the energy per source, to split the bar. */
+  /** For consumers: the value per source, to split the bar. */
   mix?: Array<{ color: string; value: number }>;
   /** For consumers by costs: their energy, for the average price. */
   energy?: number;
@@ -186,7 +186,16 @@ export class ElectricityLensBreakdownCard extends LitElement {
         // Each consumer's energy and its sources, for the line and the split bar.
         for (const series of this._series()) {
           const area = this._info.areas.find((item) => item.id === series.id);
-          for (const key of ["energy", "solar", "cheap", "expensive"]) {
+          for (const key of [
+            "energy",
+            "solar",
+            "cheap",
+            "expensive",
+            "cost",
+            "solar_cost",
+            "cheap_cost",
+            "expensive_cost",
+          ]) {
             (area?.statistics[key] ?? []).forEach((id) => ids.add(id));
           }
         }
@@ -306,11 +315,24 @@ export class ElectricityLensBreakdownCard extends LitElement {
           const cheap = of("cheap");
           const expensive = of("expensive");
           part.energy = energy;
+          // A bar of money splits by money: a kWh of solar power costs far less.
+          const money = this._figure === "cost";
+          const sources = {
+            solar: money ? of("solar_cost") : solar,
+            cheap: money ? of("cheap_cost") : cheap,
+            expensive: money ? of("expensive_cost") : expensive,
+          };
           part.mix = [
-            { color: colors.solar, value: solar },
-            { color: colors.cheap, value: cheap },
-            { color: colors.grid, value: Math.max(energy - solar - cheap - expensive, 0) },
-            { color: colors.expensive, value: expensive },
+            { color: colors.solar, value: sources.solar },
+            { color: colors.cheap, value: sources.cheap },
+            {
+              color: colors.grid,
+              value: Math.max(
+                (money ? of("cost") : energy) - sources.solar - sources.cheap - sources.expensive,
+                0
+              ),
+            },
+            { color: colors.expensive, value: sources.expensive },
           ];
         }
       }
@@ -395,11 +417,13 @@ export class ElectricityLensBreakdownCard extends LitElement {
   }
 
   private _bars(parts: Part[]): TemplateResult {
-    const max = Math.max(...parts.map((part) => part.value), 0);
+    // A consumer that would read as zero only pushes the others apart.
+    const shown = parts.filter((part) => this._value(part.value) !== this._value(0));
+    const max = Math.max(...shown.map((part) => part.value), 0);
     const split = this._config.color_by_source === true && this._by === "consumer";
     const t = this._localize;
     return html`<div class="bars">
-      ${parts.map((part) => {
+      ${shown.map((part) => {
         const width = max > 0 ? Math.max((part.value / max) * 100, 0) : 0;
         const mixTotal = part.mix?.reduce((sum, item) => sum + item.value, 0) ?? 0;
         let line = "";
@@ -456,9 +480,10 @@ export class ElectricityLensBreakdownCard extends LitElement {
     const missing = !this._byStatistics && this._info !== undefined && !this._area();
     const display =
       this._config.display ?? (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
-    // The ring names its total in the middle; the bars name it in the chip.
-    let chip = range ? rangeLabel(range, this._language) : "";
-    if (display === "bars" && this._sums && !this._sums.failed && total > 0) chip = this._value(total);
+    // The bars name each amount; a total would only repeat the card above them.
+    // Their period needs no chip either where the date selection shows it.
+    const followsDate = (this._config.period ?? "energy_date") === "energy_date";
+    const chip = range && !(display === "bars" && followsDate) ? rangeLabel(range, this._language) : "";
     let body: TemplateResult;
     if (calculating) body = html`<p class="summary">${t("calculating_all")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;

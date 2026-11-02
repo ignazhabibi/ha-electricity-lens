@@ -76,6 +76,8 @@ export interface HistoryCardConfig {
   figure?: BarFigure;
   stack?: Stack;
   line?: LineFigure;
+  /** Replaces the line's name. */
+  line_name?: string;
   lines?: HistoryLine[];
 }
 
@@ -270,9 +272,14 @@ export class ElectricityLensHistoryCard extends LitElement {
     if (bars.length === 1) bars[0].name = figureLabel(t, figure, area);
     const lineFigure =
       config.line && area.statistics
-        ? { figure: config.line, area, name: figureLabel(t, config.line, area) }
+        ? { figure: config.line, area, name: config.line_name ?? figureLabel(t, config.line, area) }
         : undefined;
-    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? []);
+    // Costs say what the solar power in them counts at.
+    const note =
+      figure === "cost"
+        ? [...(area.statistics.solar ?? []), ...(area.statistics.solar_cost ?? [])]
+        : [];
+    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? [], note);
   }
 
   private _plan(
@@ -280,9 +287,10 @@ export class ElectricityLensHistoryCard extends LitElement {
     bars: Plan["bars"],
     unit: Unit,
     lineFigure: Plan["lineFigure"],
-    lines: HistoryLine[]
+    lines: HistoryLine[],
+    note: string[] = []
   ): Plan {
-    const ids = new Set<string>();
+    const ids = new Set(note);
     for (const { series } of bars) [...series.plus, ...series.minus].forEach((id) => ids.add(id));
     if (lineFigure) {
       for (const list of Object.values(lineFigure.area.statistics)) {
@@ -402,8 +410,8 @@ export class ElectricityLensHistoryCard extends LitElement {
     const plus = this._perSlot(series.plus);
     const minus = this._perSlot(series.minus);
     return plus.map((value, i) => {
-      if (value === null) return null;
-      const result = value - (minus[i] ?? 0);
+      if (value === null && minus[i] === null) return null;
+      const result = (value ?? 0) - (minus[i] ?? 0);
       const shown = series.floor ? Math.max(result, 0) : result;
       return series.negative ? -shown : shown;
     });
@@ -499,6 +507,7 @@ export class ElectricityLensHistoryCard extends LitElement {
           ? fmt.value(value, "money")
           : `${fmt.number(value, Math.abs(value) < 10 ? 2 : 1)} ${plan.unit === "distance" ? "km" : "kWh"}`,
       tick: (value) => fmt.number(value, Math.abs(value) < 10 ? 2 : 0),
+      lineTick: (value) => fmt.number(value, Number.isInteger(value) ? 0 : 1),
       lines,
       lineUnit,
     });
@@ -543,6 +552,43 @@ export class ElectricityLensHistoryCard extends LitElement {
     return hasText(generic) ? t(generic) : t("history_title");
   }
 
+  /** What the shown figure is measured against, under the title. */
+  private _note(loaded: Loaded | undefined): string {
+    const t = this._localize;
+    if (!this.hass) return "";
+    if (this._savings) {
+      const compared = readCategories(this.hass).map((category) =>
+        t(
+          category.category === "pv"
+            ? "compare_pv"
+            : category.category === "wallbox"
+              ? "compare_fuel"
+              : category.heating === "oil"
+                ? "compare_oil"
+                : "compare_gas"
+        )
+      );
+      return compared.length
+        ? t("history_savings_note", {
+            list: new Intl.ListFormat(this._language, { type: "conjunction" }).format(compared),
+          })
+        : "";
+    }
+    const area = this._info?.areas.find((item) => item.id === this._config.area);
+    if (this._config.figure === "saving" && area?.statistics.alternative_cost?.length) {
+      return t("history_saving_note");
+    }
+    if (!loaded || loaded.failed || this._config.figure !== "cost") return "";
+    const total = (ids: string[] | undefined) =>
+      this._perSlot(ids ?? []).reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const solar = total(area?.statistics.solar);
+    return solar > 0
+      ? t("history_cost_note", {
+          rate: this._fmt.value(total(area?.statistics.solar_cost) / solar, "price"),
+        })
+      : t("history_cost_note_no_solar");
+  }
+
   protected render(): TemplateResult {
     const t = this._localize;
     if (!this.hass) return html``;
@@ -570,6 +616,7 @@ export class ElectricityLensHistoryCard extends LitElement {
       !this._info?.areas.some(
         (area) => area.id === this._config.area && area.statistics[this._config.figure ?? "energy"]?.length
       );
+    const note = this._note(loaded);
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${title}</h2>
@@ -579,6 +626,7 @@ export class ElectricityLensHistoryCard extends LitElement {
             ? html`<span class="chip">${rangeLabel(loaded.plan.range, this._language)}</span>`
             : nothing}
       </div>
+      ${note ? html`<p class="note">${note}</p>` : nothing}
       ${calculating
         ? html`<p class="summary">${t("calculating_all")}</p>`
         : missing
@@ -614,6 +662,13 @@ export class ElectricityLensHistoryCard extends LitElement {
   static styles = [
     cardStyles,
     css`
+      .note {
+        margin: 0;
+        padding: var(--ha-space-1, 4px) var(--ha-space-4, 16px) 0;
+        font-size: var(--ha-font-size-s, 12px);
+        line-height: 16px;
+        color: var(--secondary-text-color);
+      }
       .chart {
         position: relative;
         min-height: ${unsafeCSS(CHART_HEIGHT)};

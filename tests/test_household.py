@@ -21,10 +21,13 @@ from custom_components.electricity_lens.models import HouseholdState
 from .conftest import (
     FEED_IN_PRICE,
     GRID_PRICE,
+    HEAT_PUMP_DATA,
     HOURS,
     PREFS,
+    PV_DATA,
     WALLBOX_DATA,
     import_hourly,
+    import_hourly_mean,
     make_entry,
     set_energy_prefs,
     setup_entry,
@@ -109,20 +112,67 @@ async def test_household_statistics(hass: HomeAssistant, data_start: datetime) -
     assert metadata["electricity_lens:grid_cost"][1]["unit_of_measurement"] == "EUR"
 
 
+async def _two_prices(hass: HomeAssistant, start: datetime) -> None:
+    """Make the grid price a sensor that alternates between 0.20 and 0.40."""
+    grid = {
+        **PREFS["energy_sources"][0],
+        "entity_energy_price": "sensor.price",
+        "number_energy_price": None,
+    }
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [grid, *PREFS["energy_sources"][1:]]}
+    )
+    import_hourly_mean(
+        hass,
+        "sensor.price",
+        start,
+        [0.20 if index % 2 == 0 else 0.40 for index in range(HOURS)],
+    )
+    await async_wait_recording_done(hass)
+
+
+# Of the counted hours, the first has the odd index.
+CHEAP_HOURS = COUNTED // 2
+EXPENSIVE_HOURS = COUNTED - CHEAP_HOURS
+
+
 @pytest.mark.usefixtures("energy")
 async def test_price_levels(hass: HomeAssistant, data_start: datetime) -> None:
     """Grid power at or below the cheap threshold counts as cheap."""
+    await _two_prices(hass, data_start)
     await setup_entry(
-        hass, make_entry(options={"cheap_until": GRID_PRICE, "expensive_from": 0.5})
+        hass, make_entry(options={"cheap_until": 0.25, "expensive_from": 0.35})
     )
     grid = CONSUMPTION * (1 - SOLAR_SHARE)
     assert await _total(hass, "household_cheap", data_start) == pytest.approx(
-        COUNTED * grid
+        CHEAP_HOURS * grid
+    )
+    assert await _total(hass, "household_expensive", data_start) == pytest.approx(
+        EXPENSIVE_HOURS * grid
     )
     assert await _total(hass, "device_sensor_washer_cheap", data_start) == (
-        pytest.approx(COUNTED * 0.2 * (1 - SOLAR_SHARE))
+        pytest.approx(CHEAP_HOURS * 0.2 * (1 - SOLAR_SHARE))
     )
+    assert await _total(hass, "household_cheap_cost", data_start) == pytest.approx(
+        CHEAP_HOURS * grid * 0.20
+    )
+    # Against the normal price, here all the hours above the threshold.
+    assert await _total(hass, "grid_cheap_saving", data_start) == pytest.approx(
+        CHEAP_HOURS * 1.0 * (0.40 - 0.20)
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_flat_tariff_has_no_levels(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A single price is neither cheap nor expensive, whatever the thresholds say."""
+    await setup_entry(
+        hass, make_entry(options={"cheap_until": 0.50, "expensive_from": 0.60})
+    )
+    assert await _total(hass, "household_cheap", data_start) is None
     assert await _total(hass, "household_expensive", data_start) is None
+    assert await _total(hass, "grid_cheap_saving", data_start) is None
 
 
 @pytest.mark.usefixtures("energy")
@@ -130,19 +180,102 @@ async def test_new_levels_sort_the_past_again(
     hass: HomeAssistant, data_start: datetime
 ) -> None:
     """Changing the levels computes the household again; old levels disappear."""
-    entry = make_entry(options={"cheap_until": GRID_PRICE})
+    await _two_prices(hass, data_start)
+    entry = make_entry(options={"cheap_until": 0.25})
     await setup_entry(hass, entry)
     assert await _total(hass, "household_cheap", data_start)
 
-    hass.config_entries.async_update_entry(entry, options={"expensive_from": 0.25})
+    hass.config_entries.async_update_entry(entry, options={"expensive_from": 0.35})
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
     assert await _total(hass, "household_cheap", data_start) is None
     assert await _total(hass, "household_expensive", data_start) == pytest.approx(
-        COUNTED * CONSUMPTION * (1 - SOLAR_SHARE)
+        EXPENSIVE_HOURS * CONSUMPTION * (1 - SOLAR_SHARE)
     )
     assert await _total(hass, "household_energy", data_start) == pytest.approx(
         COUNTED * CONSUMPTION
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_prices_paid(hass: HomeAssistant, data_start: datetime) -> None:
+    """Grid power counts at what it cost, what did not come from it at the mean."""
+    mean = 0.30
+    grid = {
+        **PREFS["energy_sources"][0],
+        "stat_cost": "sensor.grid_cost",
+        "entity_energy_price": "sensor.price",
+        "number_energy_price": None,
+    }
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [grid, *PREFS["energy_sources"][1:]]}
+    )
+    import_hourly_mean(
+        hass, "sensor.price", data_start, [mean] * HOURS, low=0.20, high=0.40
+    )
+    # The load follows the cheap minutes; the last hour's costs have a gap.
+    import_hourly(
+        hass,
+        "sensor.grid_cost",
+        data_start,
+        [0.0] + [0.25] * (COUNTED - 1) + [0.05],
+        unit="EUR",
+    )
+    await async_wait_recording_done(hass)
+    await setup_entry(hass, make_entry(("pv", PV_DATA), ("wallbox", WALLBOX_DATA)))
+
+    paid = (COUNTED - 1) * 0.25 + mean
+    assert await _total(hass, "grid_import_cost", data_start) == pytest.approx(paid)
+    assert await _total(hass, "grid_feed_in", data_start) == pytest.approx(
+        COUNTED * 0.5 * FEED_IN_PRICE
+    )
+    assert await _total(hass, "grid_cost", data_start) == pytest.approx(
+        paid - COUNTED * 0.5 * FEED_IN_PRICE
+    )
+    assert await _total(hass, "pv_saving", data_start) == pytest.approx(
+        COUNTED * (1.5 * mean + 0.5 * FEED_IN_PRICE)
+    )
+    assert await _total(hass, "wallbox_saving", data_start) == pytest.approx(
+        COUNTED * 1.0 / 20 * 7 * 1.80 - paid
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_each_heat_meter_has_comparison_costs(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A device with its own heat meter knows what the old heating would cost."""
+    for statistic_id, per_hour in {"sensor.heat_a": 2.0, "sensor.heat_b": 1.0}.items():
+        import_hourly(hass, statistic_id, data_start, [0.0] + [per_hour] * (HOURS - 1))
+    await async_wait_recording_done(hass)
+    data = {
+        **HEAT_PUMP_DATA,
+        "meters": ["sensor.heat_pump", "sensor.washer"],
+        "heat_meters": ["sensor.heat_a", "sensor.heat_b"],
+    }
+    await setup_entry(hass, make_entry(("heat_pump", data)))
+    for device, heat in {"heat_pump": 2.0, "washer": 1.0}.items():
+        key = f"heat_pump_device_sensor_{device}_alternative_cost"
+        assert await _total(hass, key, data_start) == pytest.approx(
+            COUNTED * heat / 0.92 * HEAT_PUMP_DATA["current"]["price"]
+        )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_meter_running_back_is_no_energy(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A reset meter neither gives money back nor lowers the consumption."""
+    increments = [0.0] + [1.0] * (HOURS - 1)
+    increments[10] = -700.0
+    import_hourly(hass, "sensor.grid_import", data_start, increments)
+    await async_wait_recording_done(hass)
+    await setup_entry(hass, make_entry())
+    assert await _total(hass, "grid_cost", data_start) == pytest.approx(
+        (COUNTED - 1) * GRID_PRICE - COUNTED * 0.5 * FEED_IN_PRICE
+    )
+    assert await _total(hass, "household_energy", data_start) == pytest.approx(
+        (COUNTED - 1) * CONSUMPTION + 1.5
     )
 
 

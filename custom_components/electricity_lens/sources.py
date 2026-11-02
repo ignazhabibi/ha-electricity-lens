@@ -335,6 +335,49 @@ async def async_hourly_values(
     return values
 
 
+async def async_hourly_ranges(
+    hass: HomeAssistant, entity_ids: Iterable[str], start: float, end: float
+) -> dict[str, dict[float, tuple[float, float]]]:
+    """Return the lowest and highest value per hour of price entities.
+
+    Only entities with long-term statistics know them; others are left out.
+    """
+    ids = set(entity_ids)
+    if not ids:
+        return {}
+    instance = get_instance(hass)
+    metadata = await instance.async_add_executor_job(
+        lambda: get_metadata(hass, statistic_ids=ids)
+    )
+    with_mean = {
+        stat_id
+        for stat_id, (_, meta) in metadata.items()
+        if meta["mean_type"] != StatisticMeanType.NONE
+    }
+    if not with_mean:
+        return {}
+    rows = await instance.async_add_executor_job(
+        statistics_during_period,
+        hass,
+        dt_util.utc_from_timestamp(start),
+        dt_util.utc_from_timestamp(end),
+        with_mean,
+        "hour",
+        None,
+        {"min", "max"},
+    )
+    lows = _rows_to_series(rows, "min")
+    highs = _rows_to_series(rows, "max")
+    return {
+        stat_id: {
+            hour: (low, highs[stat_id][hour])
+            for hour, low in values.items()
+            if hour in highs.get(stat_id, {})
+        }
+        for stat_id, values in lows.items()
+    }
+
+
 def _hourly_steps(
     states: Iterable[Any], start: float, end: float
 ) -> dict[float, float]:

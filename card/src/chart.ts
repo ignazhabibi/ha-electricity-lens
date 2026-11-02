@@ -66,6 +66,8 @@ export interface ChartInput {
   format: (value: number) => string;
   /** Axis ticks in the user's number format. */
   tick: (value: number) => string;
+  /** The second axis's ticks; without it as the first's. */
+  lineTick?: (value: number) => string;
   /** Lines on a second axis, for example a price or a temperature. */
   lines?: ChartLine[];
   lineUnit?: string;
@@ -197,9 +199,8 @@ export function barChart(input: ChartInput) {
     name: input.lineUnit ?? "",
     nameGap: 2,
     nameTextStyle: { align: "right" },
-    axisLabel: { formatter: input.tick },
+    axisLabel: { formatter: input.lineTick ?? input.tick },
     splitLine: { show: false },
-    scale: true,
   };
   const options = {
     xAxis: {

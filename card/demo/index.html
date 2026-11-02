@@ -73,28 +73,37 @@
   const october = {
     "electricity_lens:household_energy": 2027.8, "electricity_lens:household_solar": 509.1,
     "electricity_lens:household_cost": 437.2, "electricity_lens:household_cheap": 592.0,
-    "sensor.grid_import": 1518.7, "sensor.grid_export": 233.9, "electricity_lens:grid_cost": 385.0,
+    "electricity_lens:household_solar_cost": 35.6, "electricity_lens:household_cheap_cost": 107.7,
+    "sensor.grid_import": 1518.7, "sensor.grid_export": 233.9, "electricity_lens:grid_cost": 398.5,
+    "electricity_lens:grid_import_cost": 400.4, "electricity_lens:grid_feed_in": 16.4, "electricity_lens:grid_cheap_saving": 83.1,
     "sensor.solar": 743.0, "electricity_lens:pv_saving": 178.2,
     "sensor.waschkuche": 105.2, "electricity_lens:device_sensor_waschkuche_solar": 26.4,
     "electricity_lens:device_sensor_waschkuche_cost": 22.3, "electricity_lens:device_sensor_waschkuche_cheap": 31.0,
+    "electricity_lens:device_sensor_waschkuche_solar_cost": 1.8, "electricity_lens:device_sensor_waschkuche_cheap_cost": 5.6,
     "sensor.goe": 485.6, "electricity_lens:device_sensor_goe_solar": 135.8,
     "electricity_lens:device_sensor_goe_cost": 77.5, "electricity_lens:device_sensor_goe_cheap": 260.1,
+    "electricity_lens:device_sensor_goe_solar_cost": 9.5, "electricity_lens:device_sensor_goe_cheap_cost": 47.3,
     "sensor.wp_heizung": 222.7, "sensor.wp_dhw": 120.0, "electricity_lens:heat_pump_saving": 82.4,
     "electricity_lens:heat_pump_heat": 1636.5, "electricity_lens:heat_pump_alternative_cost": 213.5, "electricity_lens:hp_cost": 77.5, "electricity_lens:hp_solar": 41.2,
+    "electricity_lens:hp_solar_cost": 2.9, "electricity_lens:hp_cheap": 82.0, "electricity_lens:hp_cheap_cost": 14.9,
     "electricity_lens:wallbox_saving": 159.2, "electricity_lens:wallbox_distance": 2428.0, "electricity_lens:wallbox_alternative_cost": 378.8,
   };
-  const levels = (area) => ({ solar: [`electricity_lens:${area}_solar`], cost: [`electricity_lens:${area}_cost`], cheap: [`electricity_lens:${area}_cheap`] });
+  const levels = (area) => ({ solar: [`electricity_lens:${area}_solar`], cost: [`electricity_lens:${area}_cost`], cheap: [`electricity_lens:${area}_cheap`],
+    solar_cost: [`electricity_lens:${area}_solar_cost`], cheap_cost: [`electricity_lens:${area}_cheap_cost`] });
   const figuresInfo = (calculating) => ({
     calculating: !!calculating,
     levels: { cheap_until: 0.22, expensive_from: null },
     areas: [
       { id: "household", kind: "household", name: "Haushalt", statistics: { energy: ["electricity_lens:household_energy"], ...levels("household") } },
-      { id: "grid", kind: "grid", name: "Netz", statistics: { energy: ["sensor.grid_import"], export: ["sensor.grid_export"], cost: ["electricity_lens:grid_cost"] } },
+      { id: "grid", kind: "grid", name: "Netz", statistics: { energy: ["sensor.grid_import"], export: ["sensor.grid_export"], cost: ["electricity_lens:grid_cost"],
+        import_cost: ["electricity_lens:grid_import_cost"], feed_in: ["electricity_lens:grid_feed_in"], cheap_saving: ["electricity_lens:grid_cheap_saving"] } },
       { id: "solar", kind: "solar", name: "Solar", forecast: true, statistics: { energy: ["sensor.solar"], self_used: ["electricity_lens:household_solar"], saving: ["electricity_lens:pv_saving"] } },
       { id: "heat_pump", kind: "category", name: "Wärmepumpe", statistics: { energy: ["sensor.wp_heizung", "sensor.wp_dhw"], saving: ["electricity_lens:heat_pump_saving"],
-        heat: ["electricity_lens:heat_pump_heat"], alternative_cost: ["electricity_lens:heat_pump_alternative_cost"], cost: ["electricity_lens:hp_cost"], solar: ["electricity_lens:hp_solar"] } },
+        heat: ["electricity_lens:heat_pump_heat"], alternative_cost: ["electricity_lens:heat_pump_alternative_cost"], cost: ["electricity_lens:hp_cost"], solar: ["electricity_lens:hp_solar"],
+        solar_cost: ["electricity_lens:hp_solar_cost"], cheap: ["electricity_lens:hp_cheap"], cheap_cost: ["electricity_lens:hp_cheap_cost"] } },
       { id: "wallbox", kind: "category", name: "E-Auto", statistics: { energy: ["sensor.goe"], saving: ["electricity_lens:wallbox_saving"],
-        distance: ["electricity_lens:wallbox_distance"], alternative_cost: ["electricity_lens:wallbox_alternative_cost"], cost: ["electricity_lens:device_sensor_goe_cost"], solar: ["electricity_lens:device_sensor_goe_solar"] } },
+        distance: ["electricity_lens:wallbox_distance"], alternative_cost: ["electricity_lens:wallbox_alternative_cost"], cost: ["electricity_lens:device_sensor_goe_cost"], solar: ["electricity_lens:device_sensor_goe_solar"],
+        solar_cost: ["electricity_lens:device_sensor_goe_solar_cost"], cheap: ["electricity_lens:device_sensor_goe_cheap"], cheap_cost: ["electricity_lens:device_sensor_goe_cheap_cost"] } },
       { id: "device_sensor_waschkuche", kind: "device", name: "Wäsche", statistics: { energy: ["sensor.waschkuche"], ...levels("device_sensor_waschkuche") } },
       { id: "device_sensor_goe", kind: "device", name: "E-Auto", statistics: { energy: ["sensor.goe"], ...levels("device_sensor_goe") } },
     ],
@@ -176,16 +185,22 @@
       { area: "wallbox", figure: "cost_per_100km" }, { area: "wallbox", figure: "distance" }, { area: "wallbox", figure: "saving" } ] }],
     ["r · Einzelne Kennzahl wie energy-stat-card", hass(household), { period: "last_month", tiles: [{ area: "household", figure: "price" }] }],
     ["s · Einzelne Kennzahl: JAZ", hass(household), { period: "last_month", tiles: [{ area: "heat_pump", figure: "scop" }] }],
+    ["t · Kosten: Stromrechnung", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "cost", name: "Stromrechnung" }] }],
+    ["u · Kosten: ø Netzpreis", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "grid_price" }] }],
+    ["v · Kosten: ø Preis inkl. Solar", hass(household), { period: "last_month", tiles: [{ area: "household", figure: "price", name: "ø Preis inkl. Solar" }] }],
+    ["w · Kosten: Ersparnis durch günstige Zeiten", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "cheap_saving" }] }],
+    ["x · Laden: Ersparnis mit PV", hass(household), { period: "last_month", tiles: [{ area: "wallbox", figure: "saving" }] }],
     ["m · Kennzahlen: wird berechnet, Bereich fehlt", hass(household, { calculating: true }), { title: "Haushalt", period: "this_month", tiles: [
       { area: "household", figure: "cost" }, { area: "device_sensor_weg", figure: "cost", name: "Trockner" } ] }],
   ];
   const info = figuresInfo();
   info.areas.push({ id: "other", kind: "other", name: "Sonstiges", statistics: { energy: ["electricity_lens:other_energy"], ...levels("other") } });
   Object.assign(october, { "electricity_lens:other_energy": 1095.0, "electricity_lens:other_solar": 279.5, "electricity_lens:other_cost": 254.0, "electricity_lens:other_cheap": 219.0,
+    "electricity_lens:other_solar_cost": 19.6, "electricity_lens:other_cheap_cost": 39.9,
     "sensor.heat_heating": 1187.7, "sensor.heat_dhw": 448.8 });
   const breakdownCases = [
     ["n · Aufteilung: Strommix", { area: "household", by: "source", display: "ring", period: "last_month" }],
-    ["o · Aufteilung: Kosten nach Verbraucher", { area: "household", by: "consumer", figure: "cost", display: "bars", color_by_source: true, period: "last_month" }],
+    ["o · Aufteilung: Kostenverteilung", { title: "Kostenverteilung", area: "household", by: "consumer", figure: "cost", display: "bars", color_by_source: true, period: "last_month" }],
     ["p · Aufteilung: Statistiken", { title: "Wärme nach Zweck", statistics: [{ statistic: "sensor.heat_heating", name: "Heizung" }, { statistic: "sensor.heat_dhw", name: "Warmwasser" }], period: "last_month" }],
   ];
   for (const [label, config] of breakdownCases) {

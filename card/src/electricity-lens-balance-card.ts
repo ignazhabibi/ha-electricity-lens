@@ -240,17 +240,20 @@ export class ElectricityLensBalanceCard extends LitElement {
               ? this._yearlyDetail(category)
               : this._totalDetail(category, name)}
         </div>
-        ${category.calculating ? nothing : this._since(category)}
+        ${category.calculating ? nothing : this._since(category, yearly)}
       </div>
     </li>`;
   }
 
-  /** Since when a row counts, and whether heat was partly estimated. */
-  private _since(category: CategoryFigures) {
+  /** Since when a row counts, what that makes per year, and whether heat was
+   * partly estimated. */
+  private _since(category: CategoryFigures, yearly: boolean) {
     const t = this._localize;
     const parts: string[] = [];
     if (category.countingSince)
       parts.push(t("since", { date: this._month(category.countingSince) }));
+    if (!yearly && category.perYear !== null)
+      parts.push(t("per_year", { amount: this._money(category.perYear) }));
     if (category.heatEstimated) parts.push(t("heat_estimated"));
     return parts.length
       ? html`<div class="sub since">${parts.join(" · ")}</div>`

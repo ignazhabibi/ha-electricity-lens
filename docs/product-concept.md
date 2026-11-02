@@ -237,6 +237,7 @@ the charging meters for the car.
 | Investments | The current value always counts. They are totals, not rates. | The same |
 
 - **Electricity price of an hour:** with several tariffs, such as day and night, it is the average of that hour. Before the energy dashboard has costs, its first known price applies.
+- **What a kWh cost:** grid power counts at the energy dashboard's costs per kWh, which price each kWh at its moment, where they fit the prices of the hour; otherwise at the mean price. Self-used solar power stays at the mean price, as it flows evenly over the hour.
 - **A price sensor** counts only in phase 3. Its history from before the setup is not used, so phase 2 follows one rule without exceptions. While the sensor is unavailable, its last value applies.
 - **Changes in phase 3** apply from the next full hour. Hours already computed keep their values.
 
@@ -268,8 +269,9 @@ an electricity price. Without it, setup ends with a short explanation.
 | Expensive from … per kWh | no | Setup |
 
 - The standing charge is shared evenly over the hours of its month. Its first value applies from the beginning; a change applies from the next full hour.
-- An hour's grid power is cheap when its price is at most the first threshold, expensive when it is at least the second, otherwise normal. Without thresholds there are no levels, only solar and grid.
-- With a device and one of its sub-devices (as nested in the energy dashboard), only the outer one counts, so nothing is counted twice; "Other" is what the household used beyond all outer devices.
+- An hour's grid power is cheap when its price is at most the first threshold and the last 24 hours had a higher price, expensive when it is at least the second and the last 24 hours had a lower price, otherwise normal. A flat tariff therefore has no levels. Without thresholds there are no levels, only solar and grid.
+- With a device and one of its sub-devices (as nested in the energy dashboard), only the outer one counts, so nothing is counted twice; "Other" is what the household used beyond all outer devices. All consumers add up to the household: what a meter books beyond the household in an hour, later hours of "Other" pay back.
+- A meter that runs back was reset or corrected and counts as no energy.
 
 ### 6.2 PV plant
 

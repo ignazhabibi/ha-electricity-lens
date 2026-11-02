@@ -17,7 +17,10 @@ import probatio
 from .calculation import (
     AREA_HOUSEHOLD,
     AREA_OTHER,
+    GRID_CHEAP_SAVING,
     GRID_COST,
+    GRID_FEED_IN,
+    GRID_IMPORT_COST,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
     effective_meters,
@@ -70,18 +73,20 @@ async def async_figures(
     setup = coordinator.setup or await async_get_energy_setup(hass)
     text = await coordinator.async_texts()
     cheap_until, expensive_from = coordinator.household.levels
+    levels = ((LEVEL_CHEAP, cheap_until), (LEVEL_EXPENSIVE, expensive_from))
 
     def household(area: str, **extra: list[str]) -> dict[str, list[str]]:
         statistics = {
             "solar": [household_statistic_id(f"{area}_solar")],
             "cost": [household_statistic_id(f"{area}_cost")],
+            "solar_cost": [household_statistic_id(f"{area}_solar_cost")],
         }
-        if cheap_until is not None:
-            statistics[LEVEL_CHEAP] = [household_statistic_id(f"{area}_{LEVEL_CHEAP}")]
-        if expensive_from is not None:
-            statistics[LEVEL_EXPENSIVE] = [
-                household_statistic_id(f"{area}_{LEVEL_EXPENSIVE}")
-            ]
+        for level, threshold in levels:
+            if threshold is not None:
+                statistics[level] = [household_statistic_id(f"{area}_{level}")]
+                statistics[f"{level}_cost"] = [
+                    household_statistic_id(f"{area}_{level}_cost")
+                ]
         return {**extra, **statistics}
 
     def area(kind: str, area_id: str, name: str, **statistics: Any) -> dict[str, Any]:
@@ -104,6 +109,13 @@ async def async_figures(
             energy=[grid.import_stat for grid in setup.grids if grid.import_stat],
             export=[grid.export_stat for grid in setup.grids if grid.export_stat],
             cost=[household_statistic_id(GRID_COST)],
+            import_cost=[household_statistic_id(GRID_IMPORT_COST)],
+            feed_in=[household_statistic_id(GRID_FEED_IN)],
+            **(
+                {"cheap_saving": [household_statistic_id(GRID_CHEAP_SAVING)]}
+                if cheap_until is not None
+                else {}
+            ),
         ),
     ]
     categories = {
@@ -137,16 +149,16 @@ async def async_figures(
                 energy=meters,
                 solar=[household_statistic_id(f"{device}_solar") for device in devices],
                 cost=[household_statistic_id(f"{device}_cost") for device in devices],
+                solar_cost=[
+                    household_statistic_id(f"{device}_solar_cost") for device in devices
+                ],
                 **{
-                    level: [
-                        household_statistic_id(f"{device}_{level}")
-                        for device in devices
+                    key: [
+                        household_statistic_id(f"{device}_{key}") for device in devices
                     ]
-                    for level, threshold in (
-                        (LEVEL_CHEAP, cheap_until),
-                        (LEVEL_EXPENSIVE, expensive_from),
-                    )
+                    for level, threshold in levels
                     if threshold is not None
+                    for key in (level, f"{level}_cost")
                 },
                 saving=[saving_statistic_id(category)],
                 **{
@@ -182,6 +194,12 @@ async def async_figures(
                             category_statistic_id(
                                 CATEGORY_HEAT_PUMP,
                                 f"{device_area(device.stat)}_saving",
+                            )
+                        ],
+                        "alternative_cost": [
+                            category_statistic_id(
+                                CATEGORY_HEAT_PUMP,
+                                f"{device_area(device.stat)}_alternative_cost",
                             )
                         ],
                     }
