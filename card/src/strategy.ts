@@ -259,6 +259,26 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   return views;
 }
 
+/** How long the dashboard waits for the integration while Home Assistant starts. */
+const STARTUP_WAIT_MS = 30_000;
+const STARTUP_RETRY_MS = 1_000;
+
+/** The integration's figures. While Home Assistant starts, the integration may
+ * not be loaded yet: a dashboard of one view instead of its real ones would break
+ * the open view until the start is over, so the dashboard waits for it. */
+async function loadFigures(hass: HomeAssistant): Promise<FiguresInfo> {
+  const starting = hass.config.state !== undefined && hass.config.state !== "RUNNING";
+  const deadline = Date.now() + STARTUP_WAIT_MS;
+  for (;;) {
+    try {
+      return await hass.callWS<FiguresInfo>({ type: `${DOMAIN}/figures` });
+    } catch (error) {
+      if (!starting || Date.now() >= deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, STARTUP_RETRY_MS));
+    }
+  }
+}
+
 export class ElectricityLensDashboardStrategy extends HTMLElement {
   /** The strategy has no settings. */
   static noEditor = true;
@@ -270,7 +290,7 @@ export class ElectricityLensDashboardStrategy extends HTMLElement {
     const t = localizer(hass.locale?.language ?? hass.language ?? "en");
     let info: FiguresInfo;
     try {
-      info = await hass.callWS<FiguresInfo>({ type: `${DOMAIN}/figures` });
+      info = await loadFigures(hass);
     } catch {
       return {
         title: t("strategy.title"),

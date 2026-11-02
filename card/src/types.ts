@@ -18,7 +18,7 @@ export interface HomeAssistant {
   entities: Record<string, HassEntityRegistryEntry>;
   locale: { language: string };
   language?: string;
-  config: { currency: string };
+  config: { currency: string; state?: string };
   /** The websocket connection; the energy date selection keeps its period here. */
   connection?: object;
   callWS<T>(message: Record<string, unknown>): Promise<T>;
