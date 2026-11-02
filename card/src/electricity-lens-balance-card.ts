@@ -425,25 +425,32 @@ export class ElectricityLensBalanceCard extends LitElement {
         display: flex;
         align-items: center;
         gap: 8px;
+        margin-top: 6px;
       }
       .bar {
         flex: 1;
-        height: 6px;
-        border-radius: 4px;
-        background: var(--divider-color);
+        height: 12px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
+        background-color: var(
+          --ha-bar-background-color,
+          var(--secondary-background-color)
+        );
         overflow: hidden;
       }
       .bar i {
         display: block;
         height: 100%;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         /* HA's energy look, as the swatch: half strength, framed by the full color. */
         background: color-mix(in srgb, var(--color) 50%, transparent);
         box-shadow: inset 0 0 0 1px var(--color);
-        border-radius: 4px;
       }
       .meter span {
         flex: none;
         white-space: nowrap;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--secondary-text-color);
       }
       .footer {
         padding: 4px 8px 8px;

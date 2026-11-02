@@ -301,10 +301,11 @@ ${r.format(o.value(0))}`,fill:r.centerColor,fontSize:14,lineHeight:24,fontWeight
       }
       .dot {
         display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 5px;
-        margin-right: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: var(--ha-border-radius-circle, 50%);
+        margin-right: 6px;
+        vertical-align: -1px;
       }
       .percent,
       .bar-line {
@@ -331,16 +332,19 @@ ${r.format(o.value(0))}`,fill:r.centerColor,fontSize:14,lineHeight:24,fontWeight
         font-size: 12px;
       }
       .track {
-        height: 10px;
-        margin-top: 4px;
-        border-radius: 5px;
+        height: 12px;
+        margin-top: 6px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         overflow: hidden;
-        background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        background-color: var(
+          --ha-bar-background-color,
+          var(--secondary-background-color)
+        );
       }
       .fill {
         display: flex;
         height: 100%;
-        border-radius: 5px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         overflow: hidden;
       }
       .fill span {
@@ -518,25 +522,32 @@ ${r.format(o.value(0))}`,fill:r.centerColor,fontSize:14,lineHeight:24,fontWeight
         display: flex;
         align-items: center;
         gap: 8px;
+        margin-top: 6px;
       }
       .bar {
         flex: 1;
-        height: 6px;
-        border-radius: 4px;
-        background: var(--divider-color);
+        height: 12px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
+        background-color: var(
+          --ha-bar-background-color,
+          var(--secondary-background-color)
+        );
         overflow: hidden;
       }
       .bar i {
         display: block;
         height: 100%;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         /* HA's energy look, as the swatch: half strength, framed by the full color. */
         background: color-mix(in srgb, var(--color) 50%, transparent);
         box-shadow: inset 0 0 0 1px var(--color);
-        border-radius: 4px;
       }
       .meter span {
         flex: none;
         white-space: nowrap;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--secondary-text-color);
       }
       .footer {
         padding: 4px 8px 8px;

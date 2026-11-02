@@ -553,10 +553,11 @@ export class ElectricityLensBreakdownCard extends LitElement {
       }
       .dot {
         display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 5px;
-        margin-right: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: var(--ha-border-radius-circle, 50%);
+        margin-right: 6px;
+        vertical-align: -1px;
       }
       .percent,
       .bar-line {
@@ -583,16 +584,19 @@ export class ElectricityLensBreakdownCard extends LitElement {
         font-size: 12px;
       }
       .track {
-        height: 10px;
-        margin-top: 4px;
-        border-radius: 5px;
+        height: 12px;
+        margin-top: 6px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         overflow: hidden;
-        background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        background-color: var(
+          --ha-bar-background-color,
+          var(--secondary-background-color)
+        );
       }
       .fill {
         display: flex;
         height: 100%;
-        border-radius: 5px;
+        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
         overflow: hidden;
       }
       .fill span {
