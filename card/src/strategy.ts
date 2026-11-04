@@ -1,7 +1,7 @@
 // Dashboard strategy of the Electricity Lens integration: a finished electricity
 // dashboard from Home Assistant's energy cards and the integration's cards.
-// It has no settings: it asks the integration which areas, categories, and
-// price levels exist, and shows only the views that fit. Whoever wants more
+// It has no settings: it asks the integration which areas and categories
+// exist, and shows only the views that fit. Whoever wants more
 // takes control of the dashboard and builds on with the same cards.
 
 import { localizer, type Localize } from "./localize";
@@ -87,7 +87,6 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     card(type, { title: t(key), ...options });
   const has = (id: string): FigureArea | undefined =>
     info.areas.find((area) => area.id === id);
-  const levels = info.levels.cheap_until !== null;
   const solar = has("solar");
   const heatPump = has("heat_pump");
   const car = has("wallbox");
@@ -183,21 +182,19 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           stack: "consumer",
           ...(solar ? {} : priceLine),
         }),
+      ],
+      [
+        own("grid", "grid_price", quiet),
+        price("household", quiet),
         titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
           area: "household",
           by: "consumer",
           figure: "cost",
           display: "bars",
           color_by_source: true,
+          ...wide,
         }),
-        ...(savings ? [card("electricity-lens-savings-card")] : []),
-      ],
-      [
-        named("grid", "bill", "strategy.bill", wide),
-        own("grid", "grid_price", quiet),
-        price("household", quiet),
-        own("household", levels ? "cheap_share" : "solar_share"),
-        ...(levels ? [own("grid", "cheap_saving")] : []),
+        ...(savings ? [card("electricity-lens-savings-card", wide)] : []),
       ]
     )
   );
