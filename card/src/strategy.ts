@@ -60,11 +60,10 @@ const view = (
 
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
-  balance?: string;
   categories: Category[];
 }
 
-/** Finds the balance and the categories among the entities. */
+/** Finds the categories among the entities. */
 export function findSensors(hass: HomeAssistant): Sensors {
   const entries = Object.values(hass.entities ?? {}).filter((entry) => entry.platform === DOMAIN);
   const order: Category[] = ["pv", "heat_pump", "wallbox"];
@@ -72,10 +71,7 @@ export function findSensors(hass: HomeAssistant): Sensors {
     .filter((entry) => entry.translation_key === "saving")
     .map((entry) => hass.states[entry.entity_id]?.attributes.category as Category)
     .filter((category) => order.includes(category));
-  return {
-    balance: entries.find((entry) => entry.translation_key === "balance")?.entity_id,
-    categories,
-  };
+  return { categories };
 }
 
 /** The views, one question each; every card has one home. Only the
@@ -97,7 +93,6 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const car = has("wallbox");
   const devices = info.areas.some((area) => area.kind === "device");
   const savings = Boolean(solar?.statistics.saving?.length || heatPump || car || sensors.categories.length);
-  const balance = sensors.balance && sensors.categories.length ? sensors.balance : undefined;
   const today = { period: "today" };
   // With a PV plant the price of a kWh includes its solar power; the name says so.
   const priceLine = {
@@ -118,22 +113,17 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     view(
       t("strategy.overview"),
       "now",
-      [card("energy-distribution"), sourceHistory("household", today)],
+      [
+        card("energy-distribution"),
+        sourceHistory("household", today),
+        ...(savings ? [card("electricity-lens-balance-card")] : []),
+      ],
       [
         named("household", "cost", "strategy.cost_today", today),
         named("household", "solar_share", "strategy.self_sufficiency_today", today),
         solar
           ? named("solar", "energy", "strategy.solar_today", today)
           : named("household", "energy", "strategy.consumption_today", today),
-        ...(balance
-          ? [
-              card("electricity-lens-figures-card", {
-                entity: balance,
-                name: t("strategy.balance"),
-                ...half,
-              }),
-            ]
-          : []),
         ...(solar?.forecast ? [own("solar", "forecast_today"), own("solar", "forecast_tomorrow")] : []),
       ],
       false
@@ -200,7 +190,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           display: "bars",
           color_by_source: true,
         }),
-        ...(savings ? [card("electricity-lens-savings-card"), card("electricity-lens-balance-card")] : []),
+        ...(savings ? [card("electricity-lens-savings-card")] : []),
       ],
       [
         named("grid", "bill", "strategy.bill", wide),

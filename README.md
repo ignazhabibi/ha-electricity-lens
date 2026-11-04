@@ -407,9 +407,9 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | Power flow; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure; solar forecast for today and tomorrow |
+| Now | How is today going? | Power flow; consumption by source with the price; the balance card, which always shows the current state; costs, self-sufficiency, and solar today; solar forecast for today and tomorrow |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
-| Costs | What does my electricity cost, what did I save, and does it pay off? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; consumers ranked and split by source; the savings of the period as a table; the balance card; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
+| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; consumers ranked and split by source; the savings of the period as a table; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source, costs, and saving; seasonal COP, heat price, average price, saving, its electricity mix, and its meters |
 | Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |
 
