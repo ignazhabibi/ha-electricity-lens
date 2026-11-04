@@ -1,21 +1,20 @@
-// Editor of the key figure card: title, period, and columns, then the list
-// of tiles. Each tile is edited in a form that fits its source, so no YAML is
-// needed. Areas and figures come from the integration.
+// Editor of the key figure card: the form fits the figure's source, so no YAML
+// is needed. Areas and figures come from the integration.
 
-import { mdiDelete, mdiPencil } from "@mdi/js";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
 import {
   PERIODS,
   figureLabel,
+  figuresConfig,
   type FiguresCardConfig,
 } from "./electricity-lens-figures-card";
 import {
   STATISTIC_VALUES,
   figuresOf,
   sourceOf,
+  type FigureConfig,
   type Source,
-  type Tile,
 } from "./figures";
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
@@ -33,24 +32,18 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     hass: { attribute: false },
     _config: { state: true },
     _info: { state: true },
-    _editing: { state: true },
   };
 
   hass?: HomeAssistant;
   private _config?: FiguresCardConfig;
   private _info?: FiguresInfo | null;
-  private _editing?: number;
 
   setConfig(config: FiguresCardConfig): void {
-    this._config = config;
+    this._config = figuresConfig(config);
   }
 
   private get _localize(): Localize {
     return localizer(this.hass?.locale?.language ?? this.hass?.language ?? "en");
-  }
-
-  private get _tiles(): Tile[] {
-    return this._config?.tiles ?? [];
   }
 
   protected willUpdate(): void {
@@ -65,85 +58,9 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     }
   }
 
-  private _changed(config: FiguresCardConfig): void {
-    this._config = config;
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
-  private _setTiles(tiles: Tile[]): void {
-    if (!this._config) return;
-    this._changed({ ...this._config, tiles });
-  }
-
-  // Card options
-
-  private _cardSchema() {
+  private _schema(config: FiguresCardConfig) {
     const t = this._localize;
-    return [
-      { name: "title", selector: { text: {} } },
-      {
-        name: "period",
-        selector: select(
-          PERIODS.map((period) => ({ value: period, label: t(`period.${period}`) }))
-        ),
-      },
-      {
-        name: "columns",
-        selector: select([
-          { value: "auto", label: t("editor_columns_auto") },
-          ...["1", "2", "3", "4"].map((value) => ({ value, label: value })),
-        ]),
-      },
-    ];
-  }
-
-  private _cardChanged(event: CustomEvent<{ value: FormData }>): void {
-    if (!this._config) return;
-    const { title, period, columns } = event.detail.value;
-    const config: FiguresCardConfig = { ...this._config };
-    if (typeof title === "string" && title) config.title = title;
-    else delete config.title;
-    config.period = (period as FiguresCardConfig["period"]) ?? "energy_date";
-    if (columns && columns !== "auto") config.columns = Number(columns);
-    else delete config.columns;
-    this._changed(config);
-  }
-
-  // Tiles
-
-  private _describe(tile: Tile): { title: string; detail: string } {
-    const t = this._localize;
-    const source = sourceOf(tile);
-    if (source === "statistic") {
-      return {
-        title: tile.name ?? tile.statistic ?? "",
-        detail: `${tile.statistic ?? ""} · ${t(`value.${tile.value ?? "change"}`)}`,
-      };
-    }
-    if (source === "entity") {
-      return {
-        title: tile.name ?? tile.entity ?? "",
-        detail: `${tile.entity ?? ""} · ${t("value_current")}`,
-      };
-    }
-    const area = this._info?.areas.find((item) => item.id === tile.area);
-    const label =
-      area && tile.figure ? figureLabel(t, tile.figure, area) : (tile.figure ?? "");
-    return {
-      title: tile.name ?? label,
-      detail: `${area?.name ?? tile.area ?? ""} · ${t("source.energy")}`,
-    };
-  }
-
-  private _tileSchema(tile: Tile) {
-    const t = this._localize;
-    const source = sourceOf(tile);
+    const source = sourceOf(config);
     const schema: FormData[] = [
       {
         name: "source",
@@ -154,7 +71,7 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     ];
     if (source === "energy") {
       const areas = this._info?.areas ?? [];
-      const area = areas.find((item) => item.id === tile.area);
+      const area = areas.find((item) => item.id === config.area);
       schema.push(
         {
           name: "area",
@@ -182,7 +99,7 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
           ),
         }
       );
-      if ((tile.value ?? "change") === "mean") {
+      if ((config.value ?? "change") === "mean") {
         schema.push({
           name: "secondary",
           selector: select(
@@ -196,136 +113,97 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     } else {
       schema.push({ name: "entity", selector: { entity: {} } });
     }
-    schema.push({ name: "name", selector: { text: {} } });
+    schema.push(
+      { name: "name", selector: { text: {} } },
+      {
+        name: "period",
+        selector: select(
+          PERIODS.map((period) => ({ value: period, label: t(`period.${period}`) }))
+        ),
+      }
+    );
     return schema;
   }
 
-  private _tileData(tile: Tile): FormData {
-    return {
-      source: sourceOf(tile),
-      ...tile,
-      value: tile.value ?? "change",
-      secondary: tile.secondary ?? "none",
-    };
-  }
-
-  private _tileChanged(index: number, event: CustomEvent<{ value: FormData }>): void {
-    const value = event.detail.value;
-    const old = this._tiles[index];
-    // A cleared selection keeps what the tile had.
+  private _figureFrom(value: FormData, old: FiguresCardConfig): FigureConfig {
+    // A cleared selection keeps what the card had.
     const source = (value.source as Source | undefined) ?? sourceOf(old);
-    const name = typeof value.name === "string" && value.name ? value.name : undefined;
-    let tile: Tile;
     if (source !== sourceOf(old)) {
-      tile =
-        source === "energy"
-          ? { area: "household", figure: "cost" }
-          : source === "statistic"
-            ? { statistic: "", value: "change" }
-            : { entity: "" };
-    } else if (source === "energy") {
+      return source === "energy"
+        ? { area: "household", figure: "cost" }
+        : source === "statistic"
+          ? { statistic: "", value: "change" }
+          : { entity: "" };
+    }
+    if (source === "energy") {
       const areaId = (value.area as string | undefined) ?? old.area;
       const area = this._info?.areas.find((item) => item.id === areaId);
       const figures = area ? figuresOf(area) : [];
       const figure = figures.includes(value.figure as never)
-        ? (value.figure as Tile["figure"])
+        ? (value.figure as FigureConfig["figure"])
         : figures[0];
-      tile = { area: areaId, figure };
-    } else if (source === "statistic") {
-      tile = {
-        statistic: (value.statistic as string) ?? "",
-        value: (value.value as Tile["value"]) ?? "change",
-      };
-      if (tile.value === "mean" && value.secondary === "range") tile.secondary = "range";
-    } else {
-      tile = { entity: (value.entity as string) ?? "" };
+      return { area: areaId, figure, ...(old.secondary === "none" ? { secondary: "none" } : {}) };
     }
-    if (name) tile.name = name;
-    this._setTiles(this._tiles.map((item, i) => (i === index ? tile : item)));
+    if (source === "statistic") {
+      const figure: FigureConfig = {
+        statistic: (value.statistic as string) ?? "",
+        value: (value.value as FigureConfig["value"]) ?? "change",
+      };
+      if (figure.value === "mean" && value.secondary === "range") figure.secondary = "range";
+      return figure;
+    }
+    return { entity: (value.entity as string) ?? "" };
   }
 
-  private _add(): void {
-    const tiles = [...this._tiles, { area: "household", figure: "cost" } as Tile];
-    this._setTiles(tiles);
-    this._editing = tiles.length - 1;
+  private _changed(event: CustomEvent<{ value: FormData }>): void {
+    if (!this._config) return;
+    const value = event.detail.value;
+    // Only the figure's own keys change; layout options and the like stay.
+    const { area, figure, statistic, value: kind, secondary, entity, name, ...rest } =
+      this._config;
+    const config: FiguresCardConfig = {
+      ...rest,
+      period: (value.period as FiguresCardConfig["period"]) ?? "energy_date",
+      ...this._figureFrom(value, this._config),
+    };
+    if (typeof value.name === "string" && value.name) config.name = value.name;
+    this._config = config;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
-  private _remove(index: number): void {
-    this._setTiles(this._tiles.filter((_, i) => i !== index));
-  }
-
-  private _label = (schema: { name: string }): string => {
-    const t = this._localize;
-    const key = `editor_${schema.name}`;
-    return t(key as Parameters<Localize>[0]);
-  };
+  private _label = (schema: { name: string }): string =>
+    this._localize(`editor_${schema.name}` as Parameters<Localize>[0]);
 
   private _helper = (schema: { name: string }): string | undefined =>
     schema.name === "period" ? this._localize("editor_period_hint") : undefined;
 
   protected render(): TemplateResult {
     if (!this.hass || !this._config) return html``;
-    const t = this._localize;
-    if (this._editing !== undefined && this._tiles[this._editing]) {
-      const index = this._editing;
-      const tile = this._tiles[index];
-      return html`<div class="editor">
-        <div class="heading">
-          <ha-icon-button-arrow-prev
-            .label=${t("editor_back")}
-            @click=${() => (this._editing = undefined)}
-          ></ha-icon-button-arrow-prev>
-          <span>${t("editor_edit_tile", { number: String(index + 1) })}</span>
-        </div>
-        ${sourceOf(tile) === "energy" && this._info === null
-          ? html`<p class="hint">${t("editor_not_loaded")}</p>`
-          : nothing}
-        <ha-form
-          .hass=${this.hass}
-          .data=${this._tileData(tile)}
-          .schema=${this._tileSchema(tile)}
-          .computeLabel=${this._label}
-          @value-changed=${(event: CustomEvent<{ value: FormData }>) =>
-            this._tileChanged(index, event)}
-        ></ha-form>
-      </div>`;
-    }
+    const config = this._config;
     return html`<div class="editor">
+      ${sourceOf(config) === "energy" && this._info === null
+        ? html`<p class="hint">${this._localize("editor_not_loaded")}</p>`
+        : nothing}
       <ha-form
         .hass=${this.hass}
         .data=${{
-          title: this._config.title ?? "",
-          period: this._config.period ?? "energy_date",
-          columns: this._config.columns ? String(this._config.columns) : "auto",
+          source: sourceOf(config),
+          ...config,
+          value: config.value ?? "change",
+          secondary: config.secondary ?? "none",
+          period: config.period ?? "energy_date",
         }}
-        .schema=${this._cardSchema()}
+        .schema=${this._schema(config)}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
-        @value-changed=${this._cardChanged}
+        @value-changed=${this._changed}
       ></ha-form>
-      <div class="heading"><span>${t("editor_tiles")}</span></div>
-      <div class="tiles">
-        ${this._tiles.map((tile, index) => {
-          const { title, detail } = this._describe(tile);
-          return html`<div class="tile">
-            <div class="text">
-              <div class="name">${title || "–"}</div>
-              <div class="detail">${detail}</div>
-            </div>
-            <ha-icon-button
-              .path=${mdiPencil}
-              .label=${t("editor_edit")}
-              @click=${() => (this._editing = index)}
-            ></ha-icon-button>
-            <ha-icon-button
-              .path=${mdiDelete}
-              .label=${t("editor_remove")}
-              @click=${() => this._remove(index)}
-            ></ha-icon-button>
-          </div>`;
-        })}
-      </div>
-      <ha-button @click=${this._add}>${t("editor_add_tile")}</ha-button>
     </div>`;
   }
 
@@ -335,54 +213,9 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
       flex-direction: column;
       gap: 12px;
     }
-    .heading {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-weight: 500;
-    }
-    .tiles {
-      display: flex;
-      flex-direction: column;
-      border: 1px solid var(--divider-color);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .tiles:empty {
-      display: none;
-    }
-    .tile {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 4px 4px 16px;
-      border-bottom: 1px solid var(--divider-color);
-    }
-    .tile:last-child {
-      border-bottom: none;
-    }
-    .text {
-      flex: 1;
-      min-width: 0;
-    }
-    .name {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .detail {
-      font-size: 12px;
-      color: var(--secondary-text-color);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
     .hint {
       margin: 0;
       color: var(--secondary-text-color);
-    }
-    ha-button {
-      align-self: flex-start;
     }
   `;
 }

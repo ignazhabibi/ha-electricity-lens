@@ -1,7 +1,8 @@
-// Key figure card of the Electricity Lens integration: tiles with one figure
-// each for a period, such as the household's costs, a device's solar share,
-// or any statistic or entity of Home Assistant shown as it is. It follows the
-// energy date selection on the same dashboard, or shows a fixed period.
+// Key figure card of the Electricity Lens integration: one figure for a period,
+// such as the household's costs, a device's solar share, or any statistic or
+// entity of Home Assistant shown as it is. It looks like the stat cards of the
+// energy dashboards: several figures are several cards. It follows the energy
+// date selection on the same dashboard, or shows a fixed period.
 
 import {
   LitElement,
@@ -12,7 +13,6 @@ import {
   type TemplateResult,
 } from "lit";
 
-import { CSS_COLORS } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import { formatter, splitUnit, type Format } from "./format";
 import {
@@ -22,14 +22,13 @@ import {
   statisticsOf,
   valueOf,
   type Figure,
+  type FigureConfig,
   type FigureValue,
-  type Tile,
   type Unit,
 } from "./figures";
 import {
   fixedRange,
   periodOf,
-  rangeLabel,
   statisticsPeriod,
   type FixedPeriod,
   type Range,
@@ -56,13 +55,24 @@ export const PERIODS: PeriodOption[] = [
   "last_year",
 ];
 
-export interface FiguresCardConfig {
+export interface FiguresCardConfig extends FigureConfig {
   type: string;
-  title?: string;
   period?: PeriodOption;
-  /** 1 to 4; without it as many as fit. */
-  columns?: number;
-  tiles?: Tile[];
+}
+
+/** The card's config. Before each figure was its own card, a card held a list
+ * of tiles: one still works, several have to become one card each. */
+export function figuresConfig(
+  config: FiguresCardConfig & { tiles?: FigureConfig[]; title?: string; columns?: number }
+): FiguresCardConfig {
+  if (!config) throw new Error("Invalid configuration");
+  const { tiles, title, columns: _columns, ...rest } = config;
+  if (tiles === undefined) return rest;
+  if (!Array.isArray(tiles) || tiles.length > 1) {
+    throw new Error("Each key figure is its own card now: use one card per entry in tiles");
+  }
+  const tile = tiles[0] ?? {};
+  return { ...rest, ...tile, ...(title && !tile.name ? { name: title } : {}) };
 }
 
 /** A figure's name; devices and the like are named with their area. */
@@ -76,13 +86,6 @@ export function figureLabel(t: Localize, figure: Figure, area: FigureArea): stri
 
 /** The integration computes new hours every 15 minutes. */
 const REFRESH_MS = 5 * 60 * 1000;
-
-const BAR_COLORS: Partial<Record<Figure, string>> = {
-  solar_share: CSS_COLORS.solar,
-  self_consumption: CSS_COLORS.solar,
-  cheap_share: CSS_COLORS.cheap,
-  expensive_share: CSS_COLORS.expensive,
-};
 
 interface Loaded {
   key: string;
@@ -146,10 +149,8 @@ export class ElectricityLensFiguresCard extends LitElement {
   static getStubConfig(): Partial<FiguresCardConfig> {
     return {
       period: "energy_date",
-      tiles: [
-        { area: "household", figure: "cost" },
-        { area: "household", figure: "solar_share" },
-      ],
+      area: "household",
+      figure: "cost",
     };
   }
 
@@ -158,18 +159,15 @@ export class ElectricityLensFiguresCard extends LitElement {
   }
 
   setConfig(config: FiguresCardConfig): void {
-    if (!config || (config.tiles !== undefined && !Array.isArray(config.tiles))) {
-      throw new Error("tiles must be a list");
-    }
-    this._config = config;
+    this._config = figuresConfig(config);
   }
 
   getCardSize(): number {
-    return 1 + 2 * Math.ceil((this._config?.tiles?.length ?? 1) / 2);
+    return 2;
   }
 
   getGridOptions(): { columns: number; min_columns: number } {
-    return { columns: 12, min_columns: 3 };
+    return { columns: 6, min_columns: 6 };
   }
 
   connectedCallback(): void {
@@ -197,10 +195,6 @@ export class ElectricityLensFiguresCard extends LitElement {
     return this._config?.period ?? "energy_date";
   }
 
-  private get _tiles(): Tile[] {
-    return this._config?.tiles ?? [];
-  }
-
   private _follow(): void {
     if (this._period !== "energy_date") return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
@@ -221,13 +215,13 @@ export class ElectricityLensFiguresCard extends LitElement {
     return this._info?.areas.find((area) => area.id === id);
   }
 
-  /** The figure of an energy tile, if its area has it. */
-  private _figure(tile: Tile): { area: FigureArea; figure: Figure } | undefined {
-    const area = this._area(tile.area);
-    if (!area || !tile.figure || !figuresOf(area).includes(tile.figure)) {
+  /** The figure of the integration, if its area has it. */
+  private _figure(config: FigureConfig): { area: FigureArea; figure: Figure } | undefined {
+    const area = this._area(config.area);
+    if (!area || !config.figure || !figuresOf(area).includes(config.figure)) {
       return undefined;
     }
-    return { area, figure: tile.figure };
+    return { area, figure: config.figure };
   }
 
   private async _loadInfo(): Promise<void> {
@@ -244,22 +238,20 @@ export class ElectricityLensFiguresCard extends LitElement {
 
   private _request(): Request | undefined {
     const range = this._range();
-    if (!range) return undefined;
-    const tiles = this._tiles;
-    const needsInfo = tiles.some((tile) => sourceOf(tile) === "energy");
-    if (needsInfo && !this._info) return undefined;
+    const config = this._config;
+    if (!range || !config) return undefined;
+    const source = sourceOf(config);
+    if (source === "energy" && !this._info) return undefined;
     const ids = new Set<string>();
     const statistics = new Set<string>();
     let forecast = false;
-    for (const tile of tiles) {
-      const source = sourceOf(tile);
-      if (source === "statistic" && tile.statistic) {
-        ids.add(tile.statistic);
-        statistics.add(tile.statistic);
-      } else if (source === "energy") {
-        const found = this._figure(tile);
-        if (!found) continue;
-        if (isForecast(found.figure)) forecast = true;
+    if (source === "statistic" && config.statistic) {
+      ids.add(config.statistic);
+      statistics.add(config.statistic);
+    } else if (source === "energy") {
+      const found = this._figure(config);
+      if (found) {
+        forecast = isForecast(found.figure);
         if (!this._info?.calculating) {
           statisticsOf(found.area, found.figure).forEach((id) => ids.add(id));
         }
@@ -358,7 +350,7 @@ export class ElectricityLensFiguresCard extends LitElement {
     return this._fmt.value(value, unit);
   }
 
-  // Tiles
+  // The figure
 
   /** The rows of a statistic within the period. Days and months begin at
    * midnight of the server's time zone, which may be a few hours off the
@@ -383,24 +375,24 @@ export class ElectricityLensFiguresCard extends LitElement {
     return total;
   }
 
-  private _energyTile(tile: Tile): TemplateResult {
+  private _energyCard(config: FigureConfig): TemplateResult {
     const t = this._localize;
-    const found = this._figure(tile);
+    const found = this._figure(config);
     if (!found) {
-      const generic = `figure.${tile.figure ?? ""}`;
-      const label = tile.name ?? (hasText(generic) ? t(generic) : (tile.figure ?? ""));
-      // Until the integration answered, the tile is loading, not missing.
+      const generic = `figure.${config.figure ?? ""}`;
+      const label = config.name ?? (hasText(generic) ? t(generic) : (config.figure ?? ""));
+      // Until the integration answered, the figure is loading, not missing.
       return this._info === undefined
-        ? this._tile(label, "…")
-        : this._tile(label, "–", t("figures_unavailable"));
+        ? this._card(label, "…")
+        : this._card(label, "–", t("figures_unavailable"));
     }
     const { area, figure } = found;
-    const label = tile.name ?? figureLabel(this._localize, figure, area);
+    const label = config.name ?? figureLabel(this._localize, figure, area);
     if (this._info?.calculating && !isForecast(figure)) {
-      return this._tile(label, "…", t("calculating"));
+      return this._card(label, "…", t("calculating"));
     }
-    if (!this._loaded) return this._tile(label, "…");
-    if (this._loaded.failed) return this._tile(label, "–");
+    if (!this._loaded) return this._card(label, "…");
+    if (this._loaded.failed) return this._card(label, "–", t("figures_failed"));
     const forecast =
       figure === "forecast_today"
         ? this._loaded.forecast.today
@@ -424,21 +416,19 @@ export class ElectricityLensFiguresCard extends LitElement {
           )
         )
       : undefined;
-    return this._tile(
+    return this._card(
       label,
       result.value === null ? "–" : this._format(result.value, result.unit),
-      line,
-      result.bar,
-      BAR_COLORS[figure]
+      config.secondary === "none" ? undefined : line
     );
   }
 
-  private _statisticTile(tile: Tile): TemplateResult {
+  private _statisticCard(config: FigureConfig): TemplateResult {
     const t = this._localize;
-    const id = tile.statistic ?? "";
+    const id = config.statistic ?? "";
     const metadata = this._loaded?.metadata[id];
     const label =
-      tile.name ??
+      config.name ??
       metadata?.name ??
       (this.hass?.states[id]?.attributes.friendly_name as string | undefined) ??
       id;
@@ -453,7 +443,7 @@ export class ElectricityLensFiguresCard extends LitElement {
       rows
         .map((row) => row[key])
         .filter((value): value is number => typeof value === "number");
-    const kind = tile.value ?? "change";
+    const kind = config.value ?? "change";
     let value: number | null = null;
     if (kind === "change") {
       value = rows.length ? rows.reduce((sum, row) => sum + (row.change ?? 0), 0) : null;
@@ -464,8 +454,9 @@ export class ElectricityLensFiguresCard extends LitElement {
       const all = values(kind);
       value = all.length ? (kind === "min" ? Math.min(...all) : Math.max(...all)) : null;
     }
-    let line = t(`value.${kind}`);
-    if (tile.secondary === "range") {
+    // A total needs no words; a mean, minimum, or maximum says which it is.
+    let line = kind === "change" ? undefined : t(`value.${kind}`);
+    if (config.secondary === "range") {
       const mins = values("min");
       const maxes = values("max");
       if (mins.length && maxes.length) {
@@ -475,22 +466,19 @@ export class ElectricityLensFiguresCard extends LitElement {
         });
       }
     }
-    return this._tile(
-      label,
-      this._loaded?.failed ? "–" : show(value),
-      tile.secondary === "none" ? undefined : line
-    );
+    if (this._loaded?.failed) return this._card(label, "–", t("figures_failed"));
+    return this._card(label, show(value), config.secondary === "none" ? undefined : line);
   }
 
-  private _entityTile(tile: Tile): TemplateResult {
+  private _entityCard(config: FigureConfig): TemplateResult {
     const t = this._localize;
-    const state = this.hass?.states[tile.entity ?? ""];
+    const state = this.hass?.states[config.entity ?? ""];
     const label =
-      tile.name ??
+      config.name ??
       (state?.attributes.friendly_name as string | undefined) ??
-      tile.entity ??
+      config.entity ??
       "";
-    if (!state) return this._tile(label, "–", t("figures_unavailable"));
+    if (!state) return this._card(label, "–", t("figures_unavailable"));
     const number = Number(state.state);
     const currency = this.hass?.config.currency ?? "";
     // Units such as "EUR/a" show the currency's symbol, as amounts do.
@@ -508,132 +496,61 @@ export class ElectricityLensFiguresCard extends LitElement {
       : unit && unit === symbol
         ? this._format(number, "money")
         : `${this._number(number)}${unit ? ` ${unit}` : ""}`;
-    return this._tile(label, value, tile.secondary === "none" ? undefined : t("value_current"));
+    return this._card(label, value);
   }
 
-  /** One figure alone, without a title, is a small stat card as in Home
-   * Assistant's energy dashboards: the name as its header. */
-  private get _single(): boolean {
-    return this._tiles.length === 1 && !this._config?.title;
-  }
-
-  private _tile(
-    label: string,
-    value: string,
-    line?: string,
-    bar?: number,
-    color?: string
-  ): TemplateResult {
+  /** The stat card of the energy dashboards: the name as its header, the
+   * value with its unit, and the line that explains it. */
+  private _card(label: string, value: string, line?: string): TemplateResult {
     const [number, unit] = splitUnit(value);
-    const shown = html`<div class="value">
-      <span class="number">${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
-    </div>`;
-    if (this._single) {
-      return html`<div class="header stat-header"><h2 class="title">${label}</h2></div>
-        <div class="stat">${shown}<div class="line">${line ?? ""}</div></div>`;
-    }
-    return html`<div class="tile">
-      <div class="label">${label}</div>
-      ${shown}
-      ${bar !== undefined
-        ? html`<div class="track" role="presentation">
-            <div
-              class="fill"
-              style="width: ${Math.min(Math.max(bar, 0), 100)}%; --c: ${color ?? "var(--primary-color)"}"
-            ></div>
-          </div>`
-        : nothing}
-      ${line ? html`<div class="line">${line}</div>` : nothing}
-    </div>`;
-  }
-
-  protected render(): TemplateResult {
-    if (!this.hass || !this._config) return html``;
-    const t = this._localize;
-    const range = this._range();
-    const columns = this._config.columns;
-    const fixed = !!columns && columns >= 1 && columns <= 4;
-    if (this._single) {
-      return html`<ha-card lang=${this._language}>${this._renderTiles()}</ha-card>`;
-    }
     return html`<ha-card lang=${this._language}>
-      <div class="header">
-        <h2 class="title">${this._config.title ?? ""}</h2>
-        ${range && this._tiles.some((tile) => sourceOf(tile) !== "entity")
-          ? html`<span class="chip">${rangeLabel(range, this._language)}</span>`
-          : nothing}
-      </div>
-      ${this._loaded?.failed
-        ? html`<p class="summary">${t("figures_failed")}</p>`
-        : nothing}
-      <div class="content">
-      <div
-        class="tiles ${fixed ? "fixed" : ""}"
-        style=${fixed ? `--columns: ${columns}` : ""}
-      >
-        ${this._renderTiles()}
-      </div>
+      <div class="header"><h2 class="title">${label}</h2></div>
+      <div class="stat">
+        <div class="value">
+          <span class="number">${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
+        </div>
+        ${line ? html`<div class="line">${line}</div>` : nothing}
       </div>
     </ha-card>`;
   }
 
-  private _renderTiles(): TemplateResult[] {
-    return this._tiles.map((tile) => {
-      const source = sourceOf(tile);
-      if (source === "statistic") return this._statisticTile(tile);
-      if (source === "entity") return this._entityTile(tile);
-      return this._energyTile(tile);
-    });
+  protected render(): TemplateResult {
+    if (!this.hass || !this._config) return html``;
+    const source = sourceOf(this._config);
+    if (source === "statistic") return this._statisticCard(this._config);
+    if (source === "entity") return this._entityCard(this._config);
+    return this._energyCard(this._config);
   }
 
   static styles = [
     cardStyles,
     css`
-      .header {
-        min-height: 32px;
+      /* As the stat cards of the energy dashboards. */
+      :host {
+        display: block;
       }
-      .content {
-        container-type: inline-size;
+      ha-card {
+        box-sizing: border-box;
       }
-      .tiles {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-        gap: 12px;
-        padding: 12px 16px 16px;
+      .title {
+        font-size: var(--ha-font-size-l, 16px);
+        line-height: var(--ha-line-height-normal, 24px);
+        color: var(--secondary-text-color);
       }
-      .tiles.fixed {
-        grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-      }
-      /* On a narrow card a fixed column count would squeeze the tiles. */
-      @container (max-width: 440px) {
-        .tiles.fixed {
-          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-        }
-      }
-      .tile {
-        container-type: inline-size;
+      .stat {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        min-width: 0;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-      }
-      .label {
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-        color: var(--secondary-text-color);
-        overflow-wrap: break-word;
-        hyphens: auto;
+        gap: var(--ha-space-1, 4px);
+        /* The line's space stays reserved, so cards with and without one are
+           equally tall across rows. */
+        min-height: 56px;
+        padding: var(--ha-space-2, 8px) var(--ha-space-4, 16px) var(--ha-space-4, 16px);
       }
       .value {
         display: flex;
-        flex-wrap: wrap;
         align-items: baseline;
-        column-gap: var(--ha-space-1, 4px);
+        gap: var(--ha-space-1, 4px);
+        white-space: nowrap;
         color: var(--primary-text-color);
       }
       .number {
@@ -646,49 +563,10 @@ export class ElectricityLensFiguresCard extends LitElement {
         font-size: var(--ha-font-size-m, 14px);
         color: var(--secondary-text-color);
       }
-      @container (max-width: 150px) {
-        .number {
-          font-size: 22px;
-          line-height: 28px;
-        }
-      }
-      /* A single figure: the stat card of the energy dashboards. */
-      .stat-header .title {
-        font-size: var(--ha-font-size-l, 16px);
-        line-height: var(--ha-line-height-normal, 24px);
-        color: var(--secondary-text-color);
-      }
-      .stat {
-        display: flex;
-        flex-direction: column;
-        gap: var(--ha-space-1, 4px);
-        min-height: 56px;
-        padding: var(--ha-space-2, 8px) var(--ha-space-4, 16px) var(--ha-space-4, 16px);
-      }
-      .stat .number {
-        white-space: nowrap;
-      }
-      .stat .line {
+      .line {
         font-size: var(--ha-font-size-s, 12px);
         line-height: 16px;
-      }
-      .line {
-        font-size: 13px;
-        line-height: 18px;
         color: var(--secondary-text-color);
-      }
-      .track {
-        height: 6px;
-        border-radius: 3px;
-        overflow: hidden;
-        background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-      }
-      .fill {
-        height: 100%;
-        border-radius: 3px;
-        /* HA's energy look: the color at half strength, framed by the full color. */
-        background: color-mix(in srgb, var(--c) 50%, transparent);
-        box-shadow: inset 0 0 0 1px var(--c);
       }
     `,
   ];

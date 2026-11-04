@@ -34,7 +34,7 @@ registerCards([
     card: ElectricityLensFiguresCard,
     name: "Electricity Lens key figures",
     description:
-      "Tiles with key figures for a period: costs, solar share, cheap grid power, savings, or any statistic or entity.",
+      "One key figure for a period: costs, solar share, cheap grid power, savings, or any statistic or entity.",
     editor: {
       tag: "electricity-lens-figures-card-editor",
       element: ElectricityLensFiguresCardEditor,

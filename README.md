@@ -301,17 +301,17 @@ lines:
 
 ### Electricity Lens key figures
 
-Tiles with one figure each for a period, set up in the card editor without
-YAML. The period is *Follow the date selection* (this month without an
+One figure for a period as a small card, like the stat cards of the energy
+dashboards; several figures are several cards. It is set up in the card editor
+without YAML. The period is *Follow the date selection* (this month without an
 *Energy date selection* card), or a fixed one such as today, last month, or
 this year, so the card also works on dashboards without a date selection.
-Columns are automatic, or 1 to 4 on wide cards.
 
-Each tile has one of three sources:
+A card has one of three sources:
 
 | Source | Shows |
 |---|---|
-| Energy data | A figure of an area, computed by Electricity Lens, with a line below that explains it |
+| Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
 | Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
 | Entity | Any entity's current state |
 
@@ -332,19 +332,26 @@ share per hour comes from the integration. In YAML:
 
 ```yaml
 type: custom:electricity-lens-figures-card
-title: Household
 period: energy_date
-tiles:
-  - area: household
-    figure: cost
-  - area: household
-    figure: solar_share
-  - statistic: sensor.outside_temperature
-    value: mean
-    secondary: range
-  - entity: sensor.electricity_price
-    name: Price now
+area: household
+figure: cost
 ```
+
+```yaml
+type: custom:electricity-lens-figures-card
+statistic: sensor.outside_temperature
+value: mean
+secondary: range
+```
+
+```yaml
+type: custom:electricity-lens-figures-card
+entity: sensor.electricity_price
+name: Price now
+```
+
+A card with a list of `tiles` from an earlier version still works if the list
+has one entry. With several it shows an error: make one card of each entry.
 
 ### Electricity Lens breakdown
 

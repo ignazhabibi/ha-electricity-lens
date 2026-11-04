@@ -24,7 +24,9 @@ const wide = { grid_options: { columns: 12 } };
  * replaces the figure's name, for example without the area in its own view. */
 const stat = (area: string, figure: string, options: Card = {}, name?: string): Card =>
   card("electricity-lens-figures-card", {
-    tiles: [{ area, figure, ...(name ? { name } : {}) }],
+    area,
+    figure,
+    ...(name ? { name } : {}),
     ...half,
     ...options,
   });
@@ -102,8 +104,10 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     line: "price",
     ...(solar ? { line_name: t("strategy.price_with_solar") } : {}),
   };
-  const price = (area: string): Card =>
-    solar ? named(area, "price", "strategy.price_with_solar") : own(area, "price");
+  const price = (area: string, options: Card = {}): Card =>
+    solar ? named(area, "price", "strategy.price_with_solar", options) : own(area, "price", options);
+  // Without the line below: its numbers stand on the cards next to it.
+  const quiet = { secondary: "none" };
   const sourceHistory = (area: string, options: Card = {}) =>
     card("electricity-lens-history-card", { area, figure: "energy", stack: "source", ...priceLine, ...options });
   const ring = (area: string) =>
@@ -124,7 +128,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         ...(balance
           ? [
               card("electricity-lens-figures-card", {
-                tiles: [{ entity: balance, name: t("strategy.balance"), secondary: "none" }],
+                entity: balance,
+                name: t("strategy.balance"),
                 ...half,
               }),
             ]
@@ -183,8 +188,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ],
       [
         named("grid", "cost", "strategy.bill", wide),
-        own("grid", "grid_price"),
-        price("household"),
+        own("grid", "grid_price", quiet),
+        price("household", quiet),
         own("household", levels ? "cheap_share" : "solar_share"),
         ...(levels ? [own("grid", "cheap_saving")] : []),
       ]
@@ -204,7 +209,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         ],
         [
           own("heat_pump", "scop"),
-          own("heat_pump", "heat_price"),
+          own("heat_pump", "heat_price", quiet),
           price("heat_pump"),
           own("heat_pump", "saving"),
           ring("heat_pump"),
@@ -247,8 +252,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           card("electricity-lens-history-card", { area: "wallbox", figure: "saving" }),
         ],
         [
-          own("wallbox", "cost_per_100km"),
-          own("wallbox", "distance"),
+          own("wallbox", "cost_per_100km", quiet),
+          own("wallbox", "distance", quiet),
           price("wallbox"),
           own("wallbox", "saving"),
           ring("wallbox"),

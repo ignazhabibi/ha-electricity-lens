@@ -99,8 +99,6 @@ export interface FigureValue {
   unit: Unit;
   /** The line below the value, for example "509 of 2,028 kWh from solar". */
   line?: Line;
-  /** A share to show as a bar, 0 to 100. */
-  bar?: number;
 }
 
 const share = (part: number, whole: number): number | null =>
@@ -220,7 +218,6 @@ export function valueOf(
       return {
         value: percent,
         unit: "percent",
-        bar: percent ?? 0,
         line: {
           key: "line_from_solar",
           values: { part: plain(solar), whole: kwh(energy) },
@@ -237,7 +234,6 @@ export function valueOf(
       return {
         value: percent,
         unit: "percent",
-        bar: percent ?? 0,
         line: {
           key: "line_of_grid",
           values: { part: plain(level), whole: kwh(grid) },
@@ -252,7 +248,6 @@ export function valueOf(
       return {
         value: percent,
         unit: "percent",
-        bar: percent ?? 0,
         line: {
           key: "line_self_used",
           values: { part: plain(used), whole: kwh(energy) },
@@ -272,6 +267,8 @@ export function valueOf(
       // compensation as in its costs. In the balance the benefit of solar power
       // belongs to the PV plant, so that nothing counts twice.
       const withSolar = alternative - cost;
+      // Without a part by solar power the line would only repeat the value.
+      if (Math.abs(withSolar - saving) < 0.005) return { value: withSolar, unit: "money" };
       return {
         value: withSolar,
         unit: "money",
@@ -303,7 +300,7 @@ export function valueOf(
         unit: "number",
         line: {
           key: "line_heat_from",
-          values: { heat: plain(heat), energy: kwh(energy) },
+          values: { heat: kwh(heat), energy: kwh(energy) },
         },
       };
     }
@@ -356,13 +353,14 @@ export function valueOf(
 export type StatisticValue = "change" | "mean" | "min" | "max";
 export const STATISTIC_VALUES: StatisticValue[] = ["change", "mean", "min", "max"];
 
-/** One tile: a figure of the integration, a statistic, or an entity. */
-export interface Tile {
+/** What a key figure card shows: a figure of the integration, a statistic, or
+ * an entity. */
+export interface FigureConfig {
   area?: string;
   figure?: Figure;
   statistic?: string;
   value?: StatisticValue;
-  /** The line below: the range of a mean, or none. */
+  /** The line below the value: the range of a mean, or none. */
   secondary?: "range" | "none";
   entity?: string;
   name?: string;
@@ -370,9 +368,9 @@ export interface Tile {
 
 export type Source = "energy" | "statistic" | "entity";
 
-export const sourceOf = (tile: Tile): Source =>
-  tile.statistic !== undefined
+export const sourceOf = (config: FigureConfig): Source =>
+  config.statistic !== undefined
     ? "statistic"
-    : tile.entity !== undefined
+    : config.entity !== undefined
       ? "entity"
       : "energy";

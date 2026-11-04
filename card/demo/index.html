@@ -167,31 +167,24 @@
   ];
   const grid = document.getElementById("grid");
   const figureCases = [
-    ["j · Kennzahlen: Haushalt", hass(household), { title: "Haushalt", period: "last_month", tiles: [
-      { area: "household", figure: "cost" }, { area: "household", figure: "price" },
-      { area: "household", figure: "solar_share" }, { area: "household", figure: "cheap_share" } ] }],
-    ["k · Kennzahlen: andere Statistiken", { ...hass(household), states: { ...hass(household).states,
+    ["j · Kennzahl: Kosten", hass(household), { period: "last_month", area: "household", figure: "cost" }],
+    ["k · Kennzahl: Statistik, Summe", hass(household), { period: "last_month", statistic: "sensor.waschkuche", value: "change" }],
+    ["l · Kennzahl: Statistik, Mittel mit Spanne", hass(household), { period: "last_month", statistic: "sensor.aussentemperatur", value: "mean", secondary: "range" }],
+    ["q · Kennzahl: Entität", { ...hass(household), states: { ...hass(household).states,
       "sensor.strompreis_helfer": { entity_id: "sensor.strompreis_helfer", state: "31.8", attributes: { friendly_name: "Strompreis", unit_of_measurement: "ct/kWh" } } } },
-      { title: "Oktober im Haus", period: "last_month", tiles: [
-      { statistic: "sensor.waschkuche", value: "change" },
-      { statistic: "sensor.aussentemperatur", value: "mean", secondary: "range" },
-      { entity: "sensor.strompreis_helfer", name: "Strompreis jetzt" },
-      { area: "heat_pump", figure: "saving" } ] }],
-    ["l · Kennzahlen: Solar und Geräte, 3 Spalten", hass(household), { period: "last_month", columns: 3, tiles: [
-      { area: "solar", figure: "energy" }, { area: "solar", figure: "self_consumption" }, { area: "solar", figure: "forecast_today" },
-      { area: "device_sensor_goe", figure: "cost" }, { area: "device_sensor_goe", figure: "solar_share" }, { area: "grid", figure: "cost" } ] }],
-    ["q · Kennzahlen: Wärmepumpe und E-Auto", hass(household), { title: "Wärmepumpe und E-Auto", period: "last_month", tiles: [
-      { area: "heat_pump", figure: "scop" }, { area: "heat_pump", figure: "heat_price" }, { area: "heat_pump", figure: "saving" },
-      { area: "wallbox", figure: "cost_per_100km" }, { area: "wallbox", figure: "distance" }, { area: "wallbox", figure: "saving" } ] }],
-    ["r · Einzelne Kennzahl wie energy-stat-card", hass(household), { period: "last_month", tiles: [{ area: "household", figure: "price" }] }],
-    ["s · Einzelne Kennzahl: JAZ", hass(household), { period: "last_month", tiles: [{ area: "heat_pump", figure: "scop" }] }],
-    ["t · Kosten: Stromrechnung", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "cost", name: "Stromrechnung" }] }],
-    ["u · Kosten: ø Netzpreis", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "grid_price" }] }],
-    ["v · Kosten: ø Preis inkl. Solar", hass(household), { period: "last_month", tiles: [{ area: "household", figure: "price", name: "ø Preis inkl. Solar" }] }],
-    ["w · Kosten: Ersparnis durch günstige Zeiten", hass(household), { period: "last_month", tiles: [{ area: "grid", figure: "cheap_saving" }] }],
-    ["x · Laden: Ersparnis mit PV", hass(household), { period: "last_month", tiles: [{ area: "wallbox", figure: "saving" }] }],
-    ["m · Kennzahlen: wird berechnet, Bereich fehlt", hass(household, { calculating: true }), { title: "Haushalt", period: "this_month", tiles: [
-      { area: "household", figure: "cost" }, { area: "device_sensor_weg", figure: "cost", name: "Trockner" } ] }],
+      { entity: "sensor.strompreis_helfer", name: "Strompreis jetzt" }],
+    ["r · Kennzahl: Solaranteil", hass(household), { period: "last_month", area: "household", figure: "solar_share" }],
+    ["s · Kennzahl: JAZ", hass(household), { period: "last_month", area: "heat_pump", figure: "scop" }],
+    ["t · Kosten: Stromrechnung", hass(household), { period: "last_month", area: "grid", figure: "cost", name: "Stromrechnung" }],
+    ["u · Kosten: ø Netzpreis", hass(household), { period: "last_month", area: "grid", figure: "grid_price" }],
+    ["v · Kosten: ø Preis inkl. Solar", hass(household), { period: "last_month", area: "household", figure: "price", name: "ø Preis inkl. Solar" }],
+    ["w · Kosten: Ersparnis durch günstige Zeiten", hass(household), { period: "last_month", area: "grid", figure: "cheap_saving" }],
+    ["x · Laden: Ersparnis mit PV", hass(household), { period: "last_month", area: "wallbox", figure: "saving" }],
+    ["y · Kennzahl: Prognose", hass(household), { period: "last_month", area: "solar", figure: "forecast_today" }],
+    ["z2 · Kennzahl: ohne Zeile", hass(household), { period: "last_month", area: "heat_pump", figure: "heat_price", secondary: "none" }],
+    ["z · Alte Konfiguration mit einer Kachel", hass(household), { title: "Haushalt", period: "last_month", tiles: [{ area: "household", figure: "cost" }] }],
+    ["m · Kennzahl: wird berechnet", hass(household, { calculating: true }), { period: "this_month", area: "household", figure: "cost" }],
+    ["m2 · Kennzahl: Bereich fehlt", hass(household), { period: "this_month", area: "device_sensor_weg", figure: "cost", name: "Trockner" }],
   ];
   const info = figuresInfo();
   info.areas.push({ id: "other", kind: "other", name: "Sonstiges", statistics: { energy: ["electricity_lens:other_energy"], ...levels("other") } });

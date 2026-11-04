@@ -147,7 +147,7 @@ Home Assistant's card editor, with lists to choose from, no YAML needed.
 
 | Card | Shows | Options |
 |---|---|---|
-| Key figure | One or several tiles for the period, each with a line below such as "19.0 instead of 27.0 ct/kWh" | Title, period, columns; per tile its source |
+| Key figure | One figure for the period as a small card, with a line below such as "19.0 instead of 27.0 ct/kWh"; several figures are several cards | Name, period, source |
 | History | Bars per hour, day, month, or year, optionally a line | Title, period, source, stacking (by source, device, or not), line, further lines from statistics |
 | Breakdown | Shares as a ring or as bars | Title, period, source, split by source or by consumer, energy or costs, ring or bars, bars colored by source |
 | Balance | The payback of all categories | None |
