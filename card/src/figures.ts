@@ -8,6 +8,7 @@ import type { FigureArea } from "./types";
 export type Figure =
   | "energy"
   | "cost"
+  | "bill"
   | "grid_price"
   | "price"
   | "solar_share"
@@ -39,6 +40,8 @@ export type Unit =
 const NEEDS: Record<Figure, string[]> = {
   energy: ["energy"],
   cost: ["cost"],
+  // What the supplier charges: the feed-in compensation is not set off.
+  bill: ["cost", "import_cost", "feed_in"],
   grid_price: ["import_cost", "energy"],
   // A price per kWh consumed, so only where solar power is shared out.
   price: ["cost", "energy", "solar"],
@@ -188,6 +191,23 @@ export function valueOf(
         };
       }
       return { value: cost, unit: "money" };
+    }
+    case "bill": {
+      const cost = sum("cost");
+      const imported = sum("import_cost");
+      const feedIn = sum("feed_in");
+      if (cost === null || imported === null || feedIn === null) {
+        return { value: null, unit: "money" };
+      }
+      const charge = cost - imported + feedIn;
+      return {
+        value: imported + charge,
+        unit: "money",
+        line:
+          Math.abs(charge) < 0.005
+            ? undefined
+            : { key: "line_bill_parts", values: { imported: money(imported), charge: money(charge) } },
+      };
     }
     case "grid_price": {
       const cost = sum("import_cost");

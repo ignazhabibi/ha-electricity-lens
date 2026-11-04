@@ -490,7 +490,7 @@ export class ElectricityLensHistoryCard extends LitElement {
       name,
       color: bar.color,
       values: this._barValues(bar),
-      inTotal: !bar.negative || bar.counted === true,
+      inTotal: !bar.negative,
     }));
     const lines = this._lines();
     const lineUnits: Partial<Record<Unit, string>> = {
@@ -584,8 +584,7 @@ export class ElectricityLensHistoryCard extends LitElement {
       return t("history_saving_note");
     }
     if (!loaded || loaded.failed || this._config.figure !== "cost") return "";
-    // By source the costs are the bill, not what the consumers cost.
-    if (this._config.stack === "source") return t("history_bill_note");
+    if (this._config.stack === "bill") return t("history_bill_note");
     const total = (ids: string[] | undefined) =>
       this._perSlot(ids ?? []).reduce<number>((sum, value) => sum + (value ?? 0), 0);
     const solar = total(area?.statistics.solar);

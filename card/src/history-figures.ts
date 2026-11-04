@@ -25,7 +25,7 @@ export type LineFigure =
   | "scop"
   | "heat_price"
   | "cost_per_100km";
-export type Stack = "source" | "consumer" | "none";
+export type Stack = "source" | "consumer" | "bill" | "none";
 
 const BARS: BarFigure[] = [
   "energy",
@@ -66,7 +66,7 @@ export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {
   if (area.kind === "household" && (figure === "energy" || figure === "cost")) {
     stacks.push("consumer");
   }
-  if (area.kind === "household" && figure === "cost") stacks.push("source");
+  if (area.kind === "household" && figure === "cost") stacks.push("source", "bill");
   if (
     area.kind === "category" &&
     (area.statistics.energy?.length ?? 0) > 1 &&
@@ -91,8 +91,6 @@ export interface BarSeries {
   floor?: boolean;
   /** Whether the series counts downwards, as the feed-in. */
   negative?: boolean;
-  /** Whether a series counting downwards still takes part in the total. */
-  counted?: boolean;
 }
 
 /** What a figure of an area adds up. A device's saving includes its solar
@@ -105,9 +103,9 @@ function sums(area: FigureArea, figure: BarFigure): { plus: string[]; minus: str
     : { plus: area.statistics[figure] ?? [], minus: [] };
 }
 
-/** The electricity bill in its parts: the standing charge, the grid power by
- * price level, and the feed-in compensation below the line. Together they add
- * up to the grid connection's cost. */
+/** The electricity bill in its parts: the standing charge and the grid power by
+ * price level, what the supplier charges. The feed-in compensation is not set
+ * off against it. */
 function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): BarSeries[] {
   const grid = info.areas.find((item) => item.kind === "grid")?.statistics ?? {};
   const imported = grid.import_cost ?? [];
@@ -138,16 +136,37 @@ function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
   if (expensive.length) {
     series.push({ id: "expensive", name: { key: "source.expensive" }, color: colors.expensive, plus: expensive, minus: [] });
   }
+  return series;
+}
+
+/** What all consumption costs, as consumption by source in money: solar power
+ * at the feed-in compensation it did not earn, and grid power by price level.
+ * The feed-in shows below the line but is no part of the total: it pays for
+ * power that was not consumed. */
+function costSeries(info: FiguresInfo, household: FigureArea, colors: Palette): BarSeries[] {
+  const of = (key: string) => household.statistics[key] ?? [];
+  const cheap = of("cheap_cost");
+  const expensive = of("expensive_cost");
+  const series: BarSeries[] = [
+    { id: "solar", name: { key: "source.solar" }, color: colors.solar, plus: of("solar_cost"), minus: [] },
+  ];
+  if (cheap.length) {
+    series.push({ id: "cheap", name: { key: "source.cheap" }, color: colors.cheap, plus: cheap, minus: [] });
+  }
+  series.push({
+    id: "grid",
+    name: { key: cheap.length || expensive.length ? "source.normal" : "source.grid" },
+    color: colors.grid,
+    plus: of("cost"),
+    minus: [...of("solar_cost"), ...cheap, ...expensive],
+    floor: true,
+  });
+  if (expensive.length) {
+    series.push({ id: "expensive", name: { key: "source.expensive" }, color: colors.expensive, plus: expensive, minus: [] });
+  }
+  const feedIn = info.areas.find((item) => item.kind === "grid")?.statistics.feed_in ?? [];
   if (feedIn.length) {
-    series.push({
-      id: "feed_in",
-      name: { key: "source.export" },
-      color: colors.export,
-      plus: feedIn,
-      minus: [],
-      negative: true,
-      counted: true,
-    });
+    series.push({ id: "export", name: { key: "source.export" }, color: colors.export, plus: feedIn, minus: [], negative: true });
   }
   return series;
 }
@@ -162,7 +181,8 @@ export function barSeries(
 ): BarSeries[] {
   const of = (key: string) => area.statistics[key] ?? [];
   const consumers = consumerColors(info, colors);
-  if (stack === "source" && figure === "cost") return billSeries(info, area, colors);
+  if (stack === "bill" && figure === "cost") return billSeries(info, area, colors);
+  if (stack === "source" && figure === "cost") return costSeries(info, area, colors);
   if (stack === "source" && figure === "energy") {
     const series: BarSeries[] = [
       { id: "solar", name: { key: "source.solar" }, color: colors.solar, plus: of("solar"), minus: [] },

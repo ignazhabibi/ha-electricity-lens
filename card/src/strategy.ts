@@ -174,14 +174,24 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         titled("electricity-lens-history-card", "strategy.bill", {
           area: "household",
           figure: "cost",
-          stack: "source",
+          stack: "bill",
           line: "grid_price",
         }),
-        titled("electricity-lens-history-card", solar ? "strategy.cost_with_solar" : "strategy.cost_history", {
+        ...(solar
+          ? [
+              titled("electricity-lens-history-card", "strategy.cost_with_solar", {
+                area: "household",
+                figure: "cost",
+                stack: "source",
+                ...priceLine,
+              }),
+            ]
+          : []),
+        titled("electricity-lens-history-card", "strategy.cost_history", {
           area: "household",
           figure: "cost",
           stack: "consumer",
-          ...priceLine,
+          ...(solar ? {} : priceLine),
         }),
         titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
           area: "household",
@@ -193,7 +203,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         ...(savings ? [card("electricity-lens-history-card"), card("electricity-lens-balance-card")] : []),
       ],
       [
-        named("grid", "cost", "strategy.bill", wide),
+        named("grid", "bill", "strategy.bill", wide),
         own("grid", "grid_price", quiet),
         price("household", quiet),
         own("household", levels ? "cheap_share" : "solar_share"),
