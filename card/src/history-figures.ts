@@ -77,6 +77,10 @@ export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {
     stacks.push("consumer");
   }
   stacks.push("none");
+  // After "none", which stays the default of a device's costs.
+  if (area.kind === "category" && figure === "cost" && area.statistics.solar_cost?.length) {
+    stacks.push("source");
+  }
   return stacks;
 }
 
@@ -101,6 +105,18 @@ function sums(area: FigureArea, figure: BarFigure): { plus: string[]; minus: str
   return figure === "saving" && alternative?.length && cost?.length
     ? { plus: alternative, minus: cost }
     : { plus: area.statistics[figure] ?? [], minus: [] };
+}
+
+/** The heat pump's devices with a heat meter of their own, if it has several. */
+export function heatDevices(info: FiguresInfo): FigureArea[] {
+  const meters = new Set(info.areas.find((area) => area.id === "heat_pump")?.statistics.energy ?? []);
+  const devices = info.areas.filter(
+    (area) =>
+      area.kind === "device" &&
+      area.statistics.heat?.length &&
+      area.statistics.energy?.some((stat) => meters.has(stat))
+  );
+  return devices.length > 1 ? devices : [];
 }
 
 /** The electricity bill in its parts: the standing charge and the grid power by
@@ -139,12 +155,12 @@ function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
   return series;
 }
 
-/** What all consumption costs, as consumption by source in money: solar power
- * at the feed-in compensation it did not earn, and grid power by price level.
- * The feed-in shows below the line but is no part of the total: it pays for
- * power that was not consumed. */
-function costSeries(info: FiguresInfo, household: FigureArea, colors: Palette): BarSeries[] {
-  const of = (key: string) => household.statistics[key] ?? [];
+/** What an area's consumption costs, as consumption by source in money: solar
+ * power at the feed-in compensation it did not earn, and grid power by price
+ * level. The household's feed-in shows below the line but is no part of the
+ * total: it pays for power that was not consumed. */
+function costSeries(info: FiguresInfo, area: FigureArea, colors: Palette): BarSeries[] {
+  const of = (key: string) => area.statistics[key] ?? [];
   const cheap = of("cheap_cost");
   const expensive = of("expensive_cost");
   const series: BarSeries[] = [
@@ -165,7 +181,7 @@ function costSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
     series.push({ id: "expensive", name: { key: "source.expensive" }, color: colors.expensive, plus: expensive, minus: [] });
   }
   const feedIn = info.areas.find((item) => item.kind === "grid")?.statistics.feed_in ?? [];
-  if (feedIn.length) {
+  if (area.kind === "household" && feedIn.length) {
     series.push({ id: "export", name: { key: "source.export" }, color: colors.export, plus: feedIn, minus: [], negative: true });
   }
   return series;

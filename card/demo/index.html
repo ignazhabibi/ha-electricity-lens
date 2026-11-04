@@ -106,6 +106,8 @@
         solar_cost: ["electricity_lens:device_sensor_goe_solar_cost"], cheap: ["electricity_lens:device_sensor_goe_cheap"], cheap_cost: ["electricity_lens:device_sensor_goe_cheap_cost"] } },
       { id: "device_sensor_waschkuche", kind: "device", name: "Wäsche", statistics: { energy: ["sensor.waschkuche"], ...levels("device_sensor_waschkuche") } },
       { id: "device_sensor_goe", kind: "device", name: "E-Auto", statistics: { energy: ["sensor.goe"], ...levels("device_sensor_goe") } },
+      { id: "device_sensor_wp_heizung", kind: "device", name: "Heizung", top_level: false, statistics: { energy: ["sensor.wp_heizung"], heat: ["sensor.heat_heating"] } },
+      { id: "device_sensor_wp_dhw", kind: "device", name: "Warmwasser", top_level: false, statistics: { energy: ["sensor.wp_dhw"], heat: ["sensor.heat_dhw"] } },
     ],
   });
   async function ws(message, calculating) {
@@ -222,6 +224,15 @@
     const card = document.createElement("electricity-lens-history-card");
     card.setConfig({});
     card.hass = mock;
+    wrap.append(card);
+    grid.append(wrap);
+  }
+  for (const [label, tag, config] of [["h5 · Heizung & Warmwasser", "electricity-lens-heat-meters-card", {}], ["h6 · Ersparnis der Wärmepumpe", "electricity-lens-savings-card", { area: "heat_pump" }]]) {
+    const wrap = document.createElement("section");
+    wrap.innerHTML = `<p class="label">${label}</p>`;
+    const card = document.createElement(tag);
+    card.setConfig(config);
+    card.hass = { ...hass(household), callWS: (m) => m.type === "electricity_lens/figures" ? Promise.resolve(info) : ws(m) };
     wrap.append(card);
     grid.append(wrap);
   }

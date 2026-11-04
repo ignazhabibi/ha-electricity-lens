@@ -4,6 +4,7 @@
 // exist, and shows only the views that fit. Whoever wants more
 // takes control of the dashboard and builds on with the same cards.
 
+import { heatDevices } from "./history-figures";
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
 import type { Category, FigureArea, FiguresInfo, HomeAssistant } from "./types";
@@ -205,39 +206,56 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         t("strategy.heating"),
         "heating",
         [
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "heat", stack: "consumer", line: "scop" }),
-          sourceHistory("heat_pump"),
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "cost", stack: "consumer", ...priceLine }),
-          card("electricity-lens-history-card", { area: "heat_pump", figure: "saving", stack: "consumer" }),
+          titled("electricity-lens-history-card", "figure.heat", {
+            area: "heat_pump",
+            figure: "heat",
+            stack: "consumer",
+            line: "scop",
+            line_name: t("figure.scop"),
+          }),
+          titled("electricity-lens-history-card", "strategy.usage_graph", {
+            area: "heat_pump",
+            figure: "energy",
+            stack: "source",
+          }),
+          titled("electricity-lens-history-card", solar ? "strategy.cost_with_solar" : "figure.cost", {
+            area: "heat_pump",
+            figure: "cost",
+            stack: "source",
+            ...priceLine,
+          }),
         ],
         [
-          own("heat_pump", "scop"),
+          own("heat_pump", "scop", quiet),
           own("heat_pump", "heat_price", quiet),
-          price("heat_pump"),
-          own("heat_pump", "saving"),
           ring("heat_pump"),
-          ...((heatPump.statistics.energy?.length ?? 0) > 1
-            ? [
-                card("electricity-lens-breakdown-card", {
-                  area: "heat_pump",
-                  by: "consumer",
-                  figure: "energy",
-                  display: "bars",
-                  color_by_source: true,
-                  ...wide,
-                }),
-              ]
-            : []),
-          ...((heatPump.statistics.heat_meters?.length ?? 0) > 1
-            ? [
-                card("electricity-lens-breakdown-card", {
-                  title: t("figure.heat"),
-                  statistics: (heatPump.statistics.heat_meters ?? []).map((statistic) => ({ statistic })),
-                  display: "bars",
-                  ...wide,
-                }),
-              ]
-            : []),
+          ...(heatDevices(info).length
+            ? [card("electricity-lens-heat-meters-card", wide)]
+            : [
+                ...((heatPump.statistics.energy?.length ?? 0) > 1
+                  ? [
+                      card("electricity-lens-breakdown-card", {
+                        area: "heat_pump",
+                        by: "consumer",
+                        figure: "energy",
+                        display: "bars",
+                        color_by_source: true,
+                        ...wide,
+                      }),
+                    ]
+                  : []),
+                ...((heatPump.statistics.heat_meters?.length ?? 0) > 1
+                  ? [
+                      card("electricity-lens-breakdown-card", {
+                        title: t("figure.heat"),
+                        statistics: (heatPump.statistics.heat_meters ?? []).map((statistic) => ({ statistic })),
+                        display: "bars",
+                        ...wide,
+                      }),
+                    ]
+                  : []),
+              ]),
+          card("electricity-lens-savings-card", { area: "heat_pump", ...wide }),
         ]
       )
     );

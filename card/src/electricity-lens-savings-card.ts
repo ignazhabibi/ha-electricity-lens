@@ -1,23 +1,22 @@
 // Savings card of the Electricity Lens integration: what was saved in the
-// selected period, one row per thing replaced. It needs no options: the
-// amounts are the balance's, so they add up to the same total and nothing
-// counts twice. It follows the energy date selection on the same dashboard.
+// selected period. Without options it has one row per thing replaced, with the
+// balance's amounts, so they add up to the same total and nothing counts twice.
+// With an area it reckons up that area's saving, including its solar power.
 
-import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { html, nothing, type TemplateResult } from "lit";
 
 import { CSS_COLORS, consumerColors, palette } from "./colors";
-import { followEnergyDate } from "./energy-date";
-import { formatter, type Format } from "./format";
-import { fixedRange, type Range } from "./history";
-import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
-import { localizer, type Key, type Localize } from "./localize";
+import type { Key } from "./localize";
 import { readCategories } from "./model";
+import { PeriodSumsCard, addUp, tableStyles } from "./period-sums-card";
 import { cardStyles } from "./styles";
-import { loadSums } from "./sums";
-import type { CategoryFigures, FigureArea, FiguresInfo, HomeAssistant } from "./types";
+import type { CategoryFigures, FigureArea, FiguresInfo } from "./types";
 
-/** The integration computes new hours every 15 minutes. */
-const REFRESH_MS = 5 * 60 * 1000;
+export interface SavingsCardConfig {
+  type?: string;
+  /** "heat_pump" or "wallbox"; without one the card shows all categories. */
+  area?: string;
+}
 
 interface Row {
   name: Key;
@@ -27,15 +26,6 @@ interface Row {
   minus: string[];
   energy: string[];
 }
-
-interface Sums {
-  key: string;
-  at: number;
-  values: Record<string, number> | null;
-}
-
-const add = (values: Record<string, number>, ids: string[]): number =>
-  ids.reduce((total, id) => total + (values[id] ?? 0), 0);
 
 /** The rows of the categories that are set up. The PV plant's saving includes
  * the feed-in compensation, which has a row of its own. */
@@ -84,82 +74,38 @@ export function savingsRows(
   return rows;
 }
 
-export class ElectricityLensSavingsCard extends LitElement {
-  static properties = {
-    hass: { attribute: false },
-    _info: { state: true },
-    _selected: { state: true },
-    _sums: { state: true },
-  };
-
-  hass?: HomeAssistant;
-  private _info?: FiguresInfo | null;
-  private _infoLoading = false;
-  /** The date selection's period; null without one, undefined until known. */
-  private _selected?: Range | null;
-  private _sums?: Sums;
-  private _loading?: string;
-  private _unfollow?: () => void;
-  private _retryTimer?: ReturnType<typeof setTimeout>;
+export class ElectricityLensSavingsCard extends PeriodSumsCard {
+  private _config: SavingsCardConfig = {};
 
   static getStubConfig(): Record<string, never> {
     return {};
   }
 
-  static getConfigForm(): { schema: never[] } {
-    return { schema: [] };
+  static getConfigForm(): { schema: unknown[] } {
+    return {
+      schema: [
+        {
+          name: "area",
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "heat_pump", label: "Heat pump" },
+                { value: "wallbox", label: "Electric car" },
+              ],
+            },
+          },
+        },
+      ],
+    };
   }
 
-  setConfig(_config: unknown): void {
-    // The card has no options.
+  setConfig(config: SavingsCardConfig | undefined): void {
+    this._config = config ?? {};
   }
 
-  getCardSize(): number {
-    return 4;
-  }
-
-  getGridOptions(): { columns: number; min_columns: number } {
-    return { columns: 12, min_columns: 6 };
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._follow();
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unfollow?.();
-    this._unfollow = undefined;
-    clearTimeout(this._retryTimer);
-    this._retryTimer = undefined;
-  }
-
-  private get _localize(): Localize {
-    return localizer(this.hass?.locale?.language ?? this.hass?.language ?? "en");
-  }
-
-  private get _fmt(): Format {
-    return formatter(this.hass?.locale?.language ?? "en", this.hass?.config.currency ?? "EUR");
-  }
-
-  private _follow(): void {
-    if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, (range) => {
-      this._selected = range;
-    });
-  }
-
-  private async _loadInfo(): Promise<void> {
-    if (!this.hass || this._infoLoading) return;
-    this._infoLoading = true;
-    this._info = await loadInfo(this.hass);
-    this._infoLoading = false;
-    clearTimeout(this._retryTimer);
-    this._retryTimer = undefined;
-    if (this.isConnected && (!this._info || this._info.calculating)) {
-      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
-    }
+  private get _area(): FigureArea | undefined {
+    return this._info?.areas.find((area) => area.id === this._config.area);
   }
 
   private _rows(): Row[] {
@@ -171,63 +117,80 @@ export class ElectricityLensSavingsCard extends LitElement {
     });
   }
 
-  private async _load(key: string, ids: string[], range: Range): Promise<void> {
-    if (!this.hass) return;
-    this._loading = key;
-    let values: Record<string, number> | null = null;
-    try {
-      values = await loadSums(this.hass, ids, range);
-    } catch {
-      // The card says so.
+  protected _ids(): string[] {
+    if (this._config.area) {
+      const statistics = this._area?.statistics;
+      return statistics?.alternative_cost?.length && statistics.cost?.length && statistics.saving?.length
+        ? [...statistics.alternative_cost, ...statistics.cost, ...statistics.saving]
+        : [];
     }
-    if (this._loading !== key) return;
-    this._loading = undefined;
-    this._sums = { key, at: Date.now(), values };
-  }
-
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hass) return;
-    if (changed.has("hass")) this._follow();
-    if (this._info === undefined) this._info = cachedInfo();
-    if (infoStale() && !this._infoLoading) void this._loadInfo();
-    if (this._selected === undefined || !this._info || this._info.calculating) return;
-    const range = this._selected ?? fixedRange("this_month");
-    const ids = [
-      ...new Set(this._rows().flatMap((row) => [...row.plus, ...row.minus, ...row.energy])),
-    ].sort();
-    if (!ids.length) return;
-    const key = JSON.stringify([ids, range.start, range.end]);
-    const stale = !this._sums || Date.now() - this._sums.at > REFRESH_MS;
-    if (key !== this._loading && (key !== this._sums?.key || (stale && !this._loading))) {
-      void this._load(key, ids, range);
-    }
+    return this._rows().flatMap((row) => [...row.plus, ...row.minus, ...row.energy]);
   }
 
   protected render(): TemplateResult {
     const t = this._localize;
     if (!this.hass) return html``;
-    const categories = readCategories(this.hass);
+    const waiting = this._waiting();
     return html`<ha-card>
       <div class="header"><h2 class="title">${t("savings_title")}</h2></div>
-      ${this._body(categories)}
+      ${waiting
+        ? html`<p class="summary">${t(waiting)}</p>`
+        : this._config.area
+          ? this._reckoning()
+          : this._table()}
     </ha-card>`;
   }
 
-  private _body(categories: CategoryFigures[]) {
+  /** One area's saving: what the alternative would have cost, less its power. */
+  private _reckoning(): TemplateResult {
     const t = this._localize;
-    const message = (key: Key) => html`<p class="summary">${t(key)}</p>`;
-    if (!categories.length) return message("not_set_up");
-    if (categories.some((category) => category.calculating) || this._info?.calculating) {
-      return message("calculating_all");
-    }
-    if (this._info === null) return message("editor_not_loaded");
-    if (!this._sums) return message("loading");
-    if (!this._sums.values) return message("history_failed");
-    const rows = this._rows();
-    const values = this._sums.values;
     const fmt = this._fmt;
-    const amount = (row: Row) => add(values, row.plus) - add(values, row.minus);
+    const area = this._area;
+    const values = this._sums?.values ?? {};
+    const alternative = addUp(values, area?.statistics.alternative_cost);
+    const cost = addUp(values, area?.statistics.cost);
+    const saving = alternative - cost;
+    // The balance gives the benefit of solar power to the PV plant.
+    const solar = saving - addUp(values, area?.statistics.saving);
+    const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
+    const instead: Key =
+      area?.id === "wallbox" ? "savings_instead_fuel" : heating === "oil" ? "savings_instead_oil" : "savings_instead_gas";
+    const hasSolar = Math.abs(solar) >= 0.005;
+    return html`${hasSolar ? html`<p class="note">${t("savings_area_note")}</p>` : nothing}
+      <table>
+        <tbody>
+          <tr>
+            <td class="name">${t(instead)}</td>
+            <td>${fmt.value(alternative, "money")}</td>
+          </tr>
+          <tr>
+            <td class="name">${t("savings_electricity", { name: area?.name ?? "" })}</td>
+            <td>${fmt.value(-cost, "money")}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" class="name">${t("savings_title")}</th>
+            <td>${fmt.value(saving, "money")}</td>
+          </tr>
+          ${hasSolar
+            ? html`<tr class="quiet">
+                <th scope="row" class="name">${t("savings_solar_part")}</th>
+                <td>${fmt.value(solar, "money")}</td>
+              </tr>`
+            : nothing}
+        </tfoot>
+      </table>`;
+  }
+
+  private _table(): TemplateResult {
+    const t = this._localize;
+    const fmt = this._fmt;
+    const rows = this._rows();
+    const values = this._sums?.values ?? {};
+    const amount = (row: Row) => addUp(values, row.plus) - addUp(values, row.minus);
     const total = rows.reduce((sum, row) => sum + amount(row), 0);
+    const categories = readCategories(this.hass!);
     return html`${rows.length > 1 && categories.some((c) => c.category === "pv")
         ? html`<p class="note">${t("savings_note")}</p>`
         : nothing}
@@ -241,7 +204,7 @@ export class ElectricityLensSavingsCard extends LitElement {
         </thead>
         <tbody>
           ${rows.map((row) => {
-            const energy = add(values, row.energy);
+            const energy = addUp(values, row.energy);
             return html`<tr>
               <td class="swatch-cell">
                 <span class="swatch" style="--color: ${row.color}" aria-hidden="true"></span>
@@ -263,67 +226,5 @@ export class ElectricityLensSavingsCard extends LitElement {
       </table>`;
   }
 
-  static styles = [
-    cardStyles,
-    css`
-      .note {
-        margin: 0;
-        padding: var(--ha-space-1, 4px) var(--ha-space-4, 16px) 0;
-        font-size: var(--ha-font-size-s, 12px);
-        line-height: 16px;
-        color: var(--secondary-text-color);
-      }
-      table {
-        width: 100%;
-        margin-top: 8px;
-        border-collapse: collapse;
-        font-variant-numeric: tabular-nums;
-        color: var(--primary-text-color);
-      }
-      th,
-      td {
-        padding: 12px 8px;
-        text-align: end;
-        white-space: nowrap;
-        border-bottom: 1px solid var(--divider-color);
-      }
-      th:first-child,
-      td:first-child {
-        padding-inline-start: 16px;
-      }
-      th:last-child,
-      td:last-child {
-        padding-inline-end: 16px;
-      }
-      thead th {
-        padding-block: 8px;
-        font-size: var(--ha-font-size-s, 12px);
-        font-weight: var(--ha-font-weight-medium, 500);
-        color: var(--secondary-text-color);
-      }
-      .name {
-        width: 100%;
-        text-align: start;
-        white-space: normal;
-      }
-      .swatch-cell {
-        width: 32px;
-        line-height: 0;
-      }
-      .swatch {
-        display: inline-block;
-        width: 32px;
-        height: 16px;
-        border-radius: 4px;
-        border: 1px solid var(--color);
-        background: color-mix(in srgb, var(--color) 50%, transparent);
-        box-sizing: border-box;
-      }
-      tfoot th,
-      tfoot td {
-        border-bottom: none;
-        font-weight: var(--ha-font-weight-medium, 500);
-      }
-    `,
-  ];
+  static styles = [cardStyles, tableStyles];
 }

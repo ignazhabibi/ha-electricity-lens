@@ -4,6 +4,7 @@ import { ElectricityLensBreakdownCardEditor } from "./breakdown-editor";
 import { ElectricityLensBalanceCard } from "./electricity-lens-balance-card";
 import { ElectricityLensBreakdownCard } from "./electricity-lens-breakdown-card";
 import { ElectricityLensFiguresCard } from "./electricity-lens-figures-card";
+import { ElectricityLensHeatMetersCard } from "./electricity-lens-heat-meters-card";
 import { ElectricityLensHistoryCard } from "./electricity-lens-history-card";
 import { ElectricityLensSavingsCard } from "./electricity-lens-savings-card";
 import { ElectricityLensFiguresCardEditor } from "./figures-editor";
@@ -24,7 +25,14 @@ registerCards([
     card: ElectricityLensSavingsCard,
     name: "Electricity Lens savings",
     description:
-      "What solar power, the heat pump, and the electric car saved in the selected period, as a table. Follows the energy date selection.",
+      "What solar power, the heat pump, and the electric car saved in the selected period, as a table, or one area's saving reckoned up. Follows the energy date selection.",
+  },
+  {
+    tag: "electricity-lens-heat-meters-card",
+    card: ElectricityLensHeatMetersCard,
+    name: "Electricity Lens heat meters",
+    description:
+      "Heat, electricity, and seasonal COP of each of the heat pump's meters in the selected period. Follows the energy date selection.",
   },
   {
     tag: "electricity-lens-history-card",

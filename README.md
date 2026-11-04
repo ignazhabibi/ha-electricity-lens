@@ -276,9 +276,19 @@ power, the feed-in, electricity instead of gas or oil, and electricity instead
 of fuel, each with its energy and amount. The amounts are the balance's, so
 they add up without counting solar power twice; the saving on the Heating and
 Charging views includes the device's solar power and can be higher. The card
-needs no options and follows the energy date selection, without one this month.
+follows the energy date selection, without one this month.
 Where a period holds a saving but no energy, the energy shows as a dash: the
 household's figures can begin later than the savings.
+
+With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
+instead: what the alternative would have cost, less the electricity costs, and
+how much of it is solar power.
+
+### Electricity Lens heat meters
+
+Heat, electricity, and seasonal COP of each of the heat pump's meters in the
+selected period, for example heating and hot water. It needs a heat meter per
+electricity meter and has no options.
 
 ### Electricity Lens history
 
@@ -291,7 +301,7 @@ than it saved shows below the line.
 |---|---|
 | Period | *Follow the date selection*, or a fixed period such as last month or this year |
 | Area and figure | The savings of all categories, or an area's consumption, costs, savings, or feed-in |
-| Stacking | By source (solar, cheap, normal, and expensive grid power, with the feed-in below the line and outside the total) for consumption and the household's costs; for the household's costs also as the electricity bill (standing charge and grid power by price level, without the feed-in); by consumer (top-level devices and Other) for the household's consumption and costs; or not stacked |
+| Stacking | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also as the electricity bill (standing charge and grid power by price level, without the feed-in); by consumer (top-level devices and Other) for the household's consumption and costs; or not stacked |
 | Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency; for the household also the grid price |
 | Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
 
@@ -410,7 +420,7 @@ other views follow the energy date selection.
 | Now | How is today going? | Power flow; consumption by source with the price; the balance card, which always shows the current state; costs, self-sufficiency, and solar today; solar forecast for today and tomorrow |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
-| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source, costs, and saving; seasonal COP, heat price, average price, saving, its electricity mix, and its meters |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
 | Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |
 
 ### Colors
