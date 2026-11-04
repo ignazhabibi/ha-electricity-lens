@@ -396,8 +396,8 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | Electricity distribution; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure; solar forecast for today and tomorrow |
-| Household | Where does my electricity come from, and where does it go? | Electricity balance; solar production and forecast; individual devices; electricity distribution, electricity mix, self-sufficiency, and self-consumption |
+| Now | How is today going? | Power flow; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure; solar forecast for today and tomorrow |
+| Consumption | Where does my electricity come from, and where does it go? | Consumption as one figure; consumption by source; solar production and forecast; consumption over time and its distribution by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, what did I save, and does it pay off? | Costs by consumer with the average price; consumers ranked and split by source; savings by category; the balance card; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source, costs, and saving; seasonal COP, heat price, average price, saving, its electricity mix, and its meters |
 | Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |

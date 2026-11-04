@@ -119,6 +119,17 @@ export function valueOf(
   switch (figure) {
     case "energy": {
       if (energy !== null && solar !== null && energy > 0) {
+        // The household's consumption in its parts, as the bill in costs.
+        if (area.kind === "household") {
+          return {
+            value: energy,
+            unit: "energy",
+            line: {
+              key: "line_energy_parts",
+              values: { grid: kwh(Math.max(energy - solar, 0)), solar: kwh(solar) },
+            },
+          };
+        }
         const percent = share(solar, energy) ?? 0;
         return {
           value: energy,

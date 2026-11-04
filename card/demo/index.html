@@ -168,6 +168,7 @@
   const grid = document.getElementById("grid");
   const figureCases = [
     ["j · Kennzahl: Kosten", hass(household), { period: "last_month", area: "household", figure: "cost" }],
+    ["j2 · Kennzahl: Verbrauch", hass(household), { period: "last_month", area: "household", figure: "energy" }],
     ["k · Kennzahl: Statistik, Summe", hass(household), { period: "last_month", statistic: "sensor.waschkuche", value: "change" }],
     ["l · Kennzahl: Statistik, Mittel mit Spanne", hass(household), { period: "last_month", statistic: "sensor.aussentemperatur", value: "mean", secondary: "range" }],
     ["q · Kennzahl: Entität", { ...hass(household), states: { ...hass(household).states,
@@ -177,7 +178,7 @@
     ["s · Kennzahl: JAZ", hass(household), { period: "last_month", area: "heat_pump", figure: "scop" }],
     ["t · Kosten: Stromrechnung", hass(household), { period: "last_month", area: "grid", figure: "cost", name: "Stromrechnung" }],
     ["u · Kosten: ø Netzpreis", hass(household), { period: "last_month", area: "grid", figure: "grid_price" }],
-    ["v · Kosten: ø Preis inkl. Solar", hass(household), { period: "last_month", area: "household", figure: "price", name: "ø Preis inkl. Solar" }],
+    ["v · Kosten: ø Preis inkl. PV", hass(household), { period: "last_month", area: "household", figure: "price", name: "ø Preis inkl. PV" }],
     ["w · Kosten: Ersparnis durch günstige Zeiten", hass(household), { period: "last_month", area: "grid", figure: "cheap_saving" }],
     ["x · Laden: Ersparnis mit PV", hass(household), { period: "last_month", area: "wallbox", figure: "saving" }],
     ["y · Kennzahl: Prognose", hass(household), { period: "last_month", area: "solar", figure: "forecast_today" }],
@@ -193,6 +194,7 @@
     "sensor.heat_heating": 1187.7, "sensor.heat_dhw": 448.8 });
   const breakdownCases = [
     ["n · Aufteilung: Strommix", { area: "household", by: "source", display: "ring", period: "last_month" }],
+    ["o2 · Aufteilung: Verbrauchsverteilung", { title: "Verbrauchsverteilung", area: "household", by: "consumer", figure: "energy", display: "bars", color_by_source: true, period: "last_month" }],
     ["o · Aufteilung: Kostenverteilung", { title: "Kostenverteilung", area: "household", by: "consumer", figure: "cost", display: "bars", color_by_source: true, period: "last_month" }],
     ["p · Aufteilung: Statistiken", { title: "Wärme nach Zweck", statistics: [{ statistic: "sensor.heat_heating", name: "Heizung" }, { statistic: "sensor.heat_dhw", name: "Warmwasser" }], period: "last_month" }],
   ];

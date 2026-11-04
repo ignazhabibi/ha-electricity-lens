@@ -155,10 +155,18 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
                 figure: "energy",
                 stack: "consumer",
               }),
+              titled("electricity-lens-breakdown-card", "strategy.consumption_distribution", {
+                area: "household",
+                by: "consumer",
+                figure: "energy",
+                display: "bars",
+                color_by_source: true,
+              }),
             ]
           : []),
       ],
       [
+        own("household", "energy", wide),
         titled("energy-distribution", "strategy.distribution", wide),
         ring("household"),
         ...(solar ? [card("energy-self-sufficiency-gauge", half), card("energy-solar-consumed-gauge", half)] : []),
