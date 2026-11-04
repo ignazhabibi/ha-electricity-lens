@@ -506,7 +506,7 @@ export class ElectricityLensHistoryCard extends LitElement {
         plan.unit === "money"
           ? fmt.value(value, "money")
           : `${fmt.number(value, Math.abs(value) < 10 ? 2 : 1)} ${plan.unit === "distance" ? "km" : "kWh"}`,
-      tick: (value) => fmt.number(value, Math.abs(value) < 10 ? 2 : 0),
+      tick: (value) => fmt.number(value),
       lineTick: (value) => fmt.number(value, Number.isInteger(value) ? 0 : 1),
       lines,
       lineUnit,

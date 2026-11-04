@@ -488,7 +488,7 @@ export class ElectricityLensBreakdownCard extends LitElement {
     if (calculating) body = html`<p class="summary">${t("calculating_all")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
     else if (this._sums?.failed) body = html`<p class="summary">${t("figures_failed")}</p>`;
-    else if (!this._sums) body = html`<p class="summary">${t("calculating")}</p>`;
+    else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
     else body = display === "bars" ? this._bars(parts) : this._ring(parts);
     return html`<ha-card>
