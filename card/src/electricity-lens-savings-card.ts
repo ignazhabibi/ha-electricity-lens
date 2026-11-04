@@ -164,7 +164,11 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
             <td>${fmt.value(alternative, "money")}</td>
           </tr>
           <tr>
-            <td class="name">${t("savings_electricity", { name: area?.name ?? "" })}</td>
+            <td class="name">
+              ${area?.id === "wallbox"
+                ? t("strategy.charging_cost")
+                : t("savings_electricity", { name: area?.name ?? "" })}
+            </td>
             <td>${fmt.value(-cost, "money")}</td>
           </tr>
         </tbody>

@@ -10,6 +10,7 @@ export type Figure =
   | "cost"
   | "bill"
   | "grid_price"
+  | "device_grid_price"
   | "price"
   | "solar_share"
   | "cheap_share"
@@ -43,6 +44,8 @@ const NEEDS: Record<Figure, string[]> = {
   // What the supplier charges: the feed-in compensation is not set off.
   bill: ["cost", "import_cost", "feed_in"],
   grid_price: ["import_cost", "energy"],
+  // What a device's grid power cost, without its solar power.
+  device_grid_price: ["cost", "solar_cost", "energy", "solar"],
   // A price per kWh consumed, so only where solar power is shared out.
   price: ["cost", "energy", "solar"],
   solar_share: ["solar", "energy"],
@@ -219,6 +222,21 @@ export function valueOf(
           key: "line_cost_for",
           values: { cost: money(cost), energy: kwh(energy) },
         },
+      };
+    }
+    case "device_grid_price": {
+      const cost = sum("cost");
+      const solarCost = sum("solar_cost");
+      if (cost === null || solarCost === null || energy === null || solar === null) {
+        return { value: null, unit: "price" };
+      }
+      const grid = energy - solar;
+      if (grid <= 0) return { value: null, unit: "price" };
+      const gridCost = cost - solarCost;
+      return {
+        value: gridCost / grid,
+        unit: "price",
+        line: { key: "line_cost_for", values: { cost: money(gridCost), energy: kwh(grid) } },
       };
     }
     case "cheap_saving":

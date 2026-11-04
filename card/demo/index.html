@@ -183,6 +183,7 @@
     ["v · Kosten: ø Preis inkl. PV", hass(household), { period: "last_month", area: "household", figure: "price", name: "ø Preis inkl. PV" }],
     ["w · Kosten: Ersparnis durch günstige Zeiten", hass(household), { period: "last_month", area: "grid", figure: "cheap_saving" }],
     ["x · Laden: Ersparnis mit PV", hass(household), { period: "last_month", area: "wallbox", figure: "saving" }],
+    ["x2 · Laden: ø Netzpreis", hass(household), { period: "last_month", area: "wallbox", figure: "device_grid_price", name: "ø Netzpreis" }],
     ["y · Kennzahl: Prognose", hass(household), { period: "last_month", area: "solar", figure: "forecast_today" }],
     ["z2 · Kennzahl: ohne Zeile", hass(household), { period: "last_month", area: "heat_pump", figure: "heat_price", secondary: "none" }],
     ["z · Alte Konfiguration mit einer Kachel", hass(household), { title: "Haushalt", period: "last_month", tiles: [{ area: "household", figure: "cost" }] }],
@@ -227,7 +228,7 @@
     wrap.append(card);
     grid.append(wrap);
   }
-  for (const [label, tag, config] of [["h5 · Heizung & Warmwasser", "electricity-lens-heat-meters-card", {}], ["h6 · Ersparnis der Wärmepumpe", "electricity-lens-savings-card", { area: "heat_pump" }]]) {
+  for (const [label, tag, config] of [["h5 · Heizung & Warmwasser", "electricity-lens-heat-meters-card", {}], ["h6 · Ersparnis der Wärmepumpe", "electricity-lens-savings-card", { area: "heat_pump" }], ["h7 · Ersparnis des E-Autos", "electricity-lens-savings-card", { area: "wallbox" }]]) {
     const wrap = document.createElement("section");
     wrap.innerHTML = `<p class="label">${label}</p>`;
     const card = document.createElement(tag);

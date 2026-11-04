@@ -267,17 +267,23 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         t("strategy.charging"),
         "charging",
         [
-          sourceHistory("wallbox"),
-          card("electricity-lens-history-card", { area: "wallbox", figure: "distance", line: "cost_per_100km" }),
-          card("electricity-lens-history-card", { area: "wallbox", figure: "cost", ...priceLine }),
-          card("electricity-lens-history-card", { area: "wallbox", figure: "saving" }),
+          titled("electricity-lens-history-card", "strategy.charged_energy", {
+            area: "wallbox",
+            figure: "energy",
+            stack: "source",
+          }),
+          titled("electricity-lens-history-card", "strategy.charging_cost", {
+            area: "wallbox",
+            figure: "cost",
+            stack: "source",
+            ...priceLine,
+          }),
         ],
         [
-          own("wallbox", "cost_per_100km", quiet),
-          own("wallbox", "distance", quiet),
-          price("wallbox"),
-          own("wallbox", "saving"),
+          own("wallbox", "device_grid_price", quiet),
+          price("wallbox", quiet),
           ring("wallbox"),
+          card("electricity-lens-savings-card", { area: "wallbox", ...wide }),
         ]
       )
     );

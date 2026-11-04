@@ -343,9 +343,9 @@ Areas and their figures:
 | Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
 | Grid | Grid import, feed-in, the electricity bill (what the supplier charges, without the feed-in), grid costs with their parts, average grid price, saving from cheap hours (with a cheap level) |
 | Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard) |
-| Heat pump | Consumption, costs, average price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power |
-| Electric car | Consumption, costs, average price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power |
-| Each device, Other | Consumption, costs, average price, solar share, cheap and expensive grid power |
+| Heat pump | Consumption, costs, average price, average grid price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power |
+| Electric car | Consumption, costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power |
+| Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
 
 The card computes nothing beyond adding up the hours of the period and
 dividing two such sums, for example costs by consumption; every cost and
@@ -421,7 +421,7 @@ other views follow the energy date selection.
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
-| Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |
+| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
 
 ### Colors
 
