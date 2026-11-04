@@ -179,7 +179,6 @@ const en = {
   "strategy.usage_graph": "Consumption by source",
   "strategy.solar_graph": "Solar production",
   "strategy.devices_graph": "Consumption over time",
-  "strategy.consumption_distribution": "Consumption distribution",
   "strategy.distribution": "Power flow",
   "strategy.not_loaded": "Set up the Electricity Lens integration to see this dashboard.",
 };
@@ -365,7 +364,6 @@ const de: Record<Key, string> = {
   "strategy.usage_graph": "Verbrauch nach Quelle",
   "strategy.solar_graph": "PV-Erzeugung",
   "strategy.devices_graph": "Verbrauchsverlauf",
-  "strategy.consumption_distribution": "Verbrauchsverteilung",
   "strategy.distribution": "Stromfluss",
   "strategy.not_loaded": "Richte die Integration Electricity Lens ein, um dieses Dashboard zu sehen.",
 };
