@@ -269,6 +269,17 @@ shown at the bottom; selecting them opens the integration page, where they are
 changed. The card follows light and dark themes, works on phones and desktops,
 and can be used with keyboard and screen reader.
 
+### Electricity Lens savings
+
+What was saved in the selected period, as a table: solar power instead of grid
+power, the feed-in, electricity instead of gas or oil, and electricity instead
+of fuel, each with its energy and amount. The amounts are the balance's, so
+they add up without counting solar power twice; the saving on the Heating and
+Charging views includes the device's solar power and can be higher. The card
+needs no options and follows the energy date selection, without one this month.
+Where a period holds a saving but no energy, the energy shows as a dash: the
+household's figures can begin later than the savings.
+
 ### Electricity Lens history
 
 A figure per hour, day, month, or year as bars, in the look of the energy
@@ -398,7 +409,7 @@ other views follow the energy date selection.
 |---|---|---|
 | Now | How is today going? | Power flow; consumption by source with the price; costs, self-sufficiency, and solar today; the balance as one figure; solar forecast for today and tomorrow |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
-| Costs | What does my electricity cost, what did I save, and does it pay off? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; consumers ranked and split by source; savings by category; the balance card; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
+| Costs | What does my electricity cost, what did I save, and does it pay off? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; consumers ranked and split by source; the savings of the period as a table; the balance card; the electricity bill with the standing charge, average price, share of cheap grid power, and per category the saving, paid back, and saving per year |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source, costs, and saving; seasonal COP, heat price, average price, saving, its electricity mix, and its meters |
 | Charging | What does driving cost, and where does the charging power come from? | Charging by source, distance with the costs per 100 km, charging costs, and saving; costs per 100 km, distance, average price, saving, and the charging mix |
 

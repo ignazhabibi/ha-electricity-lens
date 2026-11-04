@@ -225,6 +225,15 @@
     wrap.append(card);
     grid.append(wrap);
   }
+  for (const [label, categories] of [["h2 · Ersparnis", household], ["h3 · Ersparnis, Ölheizung", [{ ...household[1], heating: "oil" }]], ["h4 · Ersparnis, nicht eingerichtet", []]]) {
+    const wrap = document.createElement("section");
+    wrap.innerHTML = `<p class="label">${label}</p>`;
+    const card = document.createElement("electricity-lens-savings-card");
+    card.setConfig({});
+    card.hass = { ...hass(categories), callWS: (m) => m.type === "electricity_lens/figures" ? Promise.resolve(info) : ws(m) };
+    wrap.append(card);
+    grid.append(wrap);
+  }
   for (const [label, mock, view] of cases) {
     const wrap = document.createElement("section");
     wrap.innerHTML = `<p class="label">${label}</p>`;

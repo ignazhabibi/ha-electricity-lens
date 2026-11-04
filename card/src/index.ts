@@ -5,6 +5,7 @@ import { ElectricityLensBalanceCard } from "./electricity-lens-balance-card";
 import { ElectricityLensBreakdownCard } from "./electricity-lens-breakdown-card";
 import { ElectricityLensFiguresCard } from "./electricity-lens-figures-card";
 import { ElectricityLensHistoryCard } from "./electricity-lens-history-card";
+import { ElectricityLensSavingsCard } from "./electricity-lens-savings-card";
 import { ElectricityLensFiguresCardEditor } from "./figures-editor";
 import { ElectricityLensHistoryCardEditor } from "./history-editor";
 import { registerCards } from "./register";
@@ -17,6 +18,13 @@ registerCards([
     name: "Electricity Lens balance",
     description:
       "What your PV plant, heat pump, and electric car have saved, and when they pay off.",
+  },
+  {
+    tag: "electricity-lens-savings-card",
+    card: ElectricityLensSavingsCard,
+    name: "Electricity Lens savings",
+    description:
+      "What solar power, the heat pump, and the electric car saved in the selected period, as a table. Follows the energy date selection.",
   },
   {
     tag: "electricity-lens-history-card",

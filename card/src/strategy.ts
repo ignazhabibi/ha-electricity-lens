@@ -200,7 +200,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           display: "bars",
           color_by_source: true,
         }),
-        ...(savings ? [card("electricity-lens-history-card"), card("electricity-lens-balance-card")] : []),
+        ...(savings ? [card("electricity-lens-savings-card"), card("electricity-lens-balance-card")] : []),
       ],
       [
         named("grid", "bill", "strategy.bill", wide),
