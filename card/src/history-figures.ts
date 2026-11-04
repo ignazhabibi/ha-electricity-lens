@@ -17,6 +17,7 @@ export type BarFigure =
   | "alternative_cost";
 export type LineFigure =
   | "price"
+  | "grid_price"
   | "solar_share"
   | "cheap_share"
   | "expensive_share"
@@ -37,6 +38,7 @@ const BARS: BarFigure[] = [
 ];
 const LINES: LineFigure[] = [
   "price",
+  "grid_price",
   "solar_share",
   "cheap_share",
   "expensive_share",
@@ -49,8 +51,13 @@ const LINES: LineFigure[] = [
 export const barFiguresOf = (area: FigureArea): BarFigure[] =>
   BARS.filter((figure) => figuresOf(area).includes(figure));
 
+/** The household's bill is the grid's, so its charts can show the grid price. */
 export const lineFiguresOf = (area: FigureArea): LineFigure[] =>
-  LINES.filter((figure) => figuresOf(area).includes(figure as Figure));
+  LINES.filter(
+    (figure) =>
+      figuresOf(area).includes(figure as Figure) ||
+      (figure === "grid_price" && area.kind === "household")
+  );
 
 /** The ways a figure of an area can stack. */
 export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {

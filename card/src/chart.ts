@@ -108,6 +108,42 @@ interface TooltipParam {
   value?: number | null;
 }
 
+/** The next round step at or above a value: 1, 2, 2.5, or 5 times a power of ten. */
+function roundStep(value: number): number {
+  if (value <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(value));
+  const fraction = value / power;
+  const factor = [1, 2, 2.5, 5, 10].find((item) => fraction <= item * (1 + 1e-9)) ?? 10;
+  return factor * power;
+}
+
+const clean = (value: number) => Number(value.toFixed(10));
+
+export interface AxisRange {
+  min: number;
+  max: number;
+  interval: number;
+}
+
+/** Ranges of the bar and the line axis that put both zeros on one height, with
+ * ticks on the same grid lines. Only needed where a side goes below zero. */
+export function alignedAxes(
+  bars: { min: number; max: number },
+  lines: { min: number; max: number }
+): { bar: AxisRange; line: AxisRange } | undefined {
+  if (bars.min >= 0 && lines.min >= 0) return undefined;
+  const step = roundStep((bars.max - bars.min) / 6);
+  const up = Math.max(Math.ceil(clean(bars.max / step)), lines.max > 0 ? 1 : 0);
+  const down = Math.max(Math.ceil(clean(-bars.min / step)), lines.min < 0 ? 1 : 0);
+  const lineStep = roundStep(
+    Math.max(up ? lines.max / up : 0, down ? -lines.min / down : 0)
+  );
+  return {
+    bar: { min: clean(-down * step), max: clean(up * step), interval: step },
+    line: { min: clean(-down * lineStep), max: clean(up * lineStep), interval: lineStep },
+  };
+}
+
 /** The data and options for `ha-chart-base`. Values can be negative, for
  * example a heat pump's saving in a month of cheap gas: those bars stack
  * downwards. */
@@ -202,6 +238,36 @@ export function barChart(input: ChartInput) {
     axisLabel: { formatter: input.lineTick ?? input.tick },
     splitLine: { show: false },
   };
+  if (lines.length) {
+    // Bars stack, so each side's extent is the sum of a slot.
+    const stacked = input.labels.map((_, i) => {
+      const values = input.series.map((series) => series.values[i] ?? 0);
+      return {
+        up: values.filter((value) => value > 0).reduce((sum, value) => sum + value, 0),
+        down: values.filter((value) => value < 0).reduce((sum, value) => sum + value, 0),
+      };
+    });
+    const lineValues = lines.flatMap((line) =>
+      line.values.filter((value): value is number => value !== null)
+    );
+    const lineMin = Math.min(0, ...lineValues);
+    const aligned = alignedAxes(
+      {
+        min: Math.min(0, ...stacked.map((slot) => slot.down)),
+        max: Math.max(0, ...stacked.map((slot) => slot.up)),
+      },
+      { min: lineMin, max: Math.max(0, ...lineValues) }
+    );
+    if (aligned) {
+      Object.assign(barAxis, aligned.bar);
+      Object.assign(lineAxis, aligned.line);
+      // A line that never goes below zero needs no ticks there.
+      const lineTick = input.lineTick ?? input.tick;
+      if (lineMin >= 0) {
+        lineAxis.axisLabel = { formatter: (value: number) => (value < 0 ? "" : lineTick(value)) };
+      }
+    }
+  }
   const options = {
     xAxis: {
       type: "category",

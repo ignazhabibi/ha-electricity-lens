@@ -270,9 +270,14 @@ export class ElectricityLensHistoryCard extends LitElement {
         (series.name.key && hasText(series.name.key) ? t(series.name.key) : series.id),
     }));
     if (bars.length === 1) bars[0].name = figureLabel(t, figure, area);
+    // The grid price comes from the grid, whichever area the bars show.
+    const lineArea =
+      config.line === "grid_price"
+        ? (info.areas.find((item) => item.kind === "grid") ?? area)
+        : area;
     const lineFigure =
       config.line && area.statistics
-        ? { figure: config.line, area, name: config.line_name ?? figureLabel(t, config.line, area) }
+        ? { figure: config.line, area: lineArea, name: config.line_name ?? figureLabel(t, config.line, lineArea) }
         : undefined;
     // Costs say what the solar power in them counts at.
     const note =
