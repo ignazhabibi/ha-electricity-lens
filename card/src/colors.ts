@@ -8,6 +8,8 @@
 //   matching HA's own individual devices graph; "Other" is always neutral grey.
 // - Categories (PV, heat pump, car) keep their energy colors; the heat pump
 //   has the fixed device color --color-30, the car its device's color.
+// - The standing charge is no power at all, so a quiet taupe outside these
+//   families; a theme can set --electricity-lens-standing-charge-color.
 // - Lines are quiet: ratios and prices in the secondary text color.
 // ECharts cannot read CSS variables, so the colors are resolved here.
 
@@ -19,6 +21,7 @@ export interface Palette {
   cheap: string;
   expensive: string;
   export: string;
+  standing: string;
   heat: string;
   car: string;
   other: string;
@@ -100,6 +103,7 @@ export function palette(element: Element): Palette {
     cheap: mix(grid, "white", 0.55),
     expensive: mix(grid, "black", 0.7),
     export: read("--energy-grid-return-color", "#8353d1"),
+    standing: read("--electricity-lens-standing-charge-color", "#a1887f"),
     // The heat pump keeps one fixed device color (--color-30), never gas.
     heat:
       style.getPropertyValue("--graph-color-30").trim() || read("--color-30", "#bf3947"),

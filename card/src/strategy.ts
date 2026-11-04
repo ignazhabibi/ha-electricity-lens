@@ -171,11 +171,16 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       t("strategy.costs"),
       "costs",
       [
+        titled("electricity-lens-history-card", "strategy.cost_by_source", {
+          area: "household",
+          figure: "cost",
+          stack: "source",
+          ...priceLine,
+        }),
         titled("electricity-lens-history-card", "strategy.cost_history", {
           area: "household",
           figure: "cost",
           stack: "consumer",
-          ...priceLine,
         }),
         titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
           area: "household",

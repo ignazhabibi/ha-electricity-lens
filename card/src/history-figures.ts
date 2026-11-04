@@ -59,6 +59,7 @@ export function stacksOf(area: FigureArea, figure: BarFigure): Stack[] {
   if (area.kind === "household" && (figure === "energy" || figure === "cost")) {
     stacks.push("consumer");
   }
+  if (area.kind === "household" && figure === "cost") stacks.push("source");
   if (
     area.kind === "category" &&
     (area.statistics.energy?.length ?? 0) > 1 &&
@@ -83,6 +84,8 @@ export interface BarSeries {
   floor?: boolean;
   /** Whether the series counts downwards, as the feed-in. */
   negative?: boolean;
+  /** Whether a series counting downwards still takes part in the total. */
+  counted?: boolean;
 }
 
 /** What a figure of an area adds up. A device's saving includes its solar
@@ -95,6 +98,53 @@ function sums(area: FigureArea, figure: BarFigure): { plus: string[]; minus: str
     : { plus: area.statistics[figure] ?? [], minus: [] };
 }
 
+/** The electricity bill in its parts: the standing charge, the grid power by
+ * price level, and the feed-in compensation below the line. Together they add
+ * up to the grid connection's cost. */
+function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): BarSeries[] {
+  const grid = info.areas.find((item) => item.kind === "grid")?.statistics ?? {};
+  const imported = grid.import_cost ?? [];
+  const feedIn = grid.feed_in ?? [];
+  const cheap = household.statistics.cheap_cost ?? [];
+  const expensive = household.statistics.expensive_cost ?? [];
+  const series: BarSeries[] = [
+    {
+      id: "standing_charge",
+      name: { key: "source.standing_charge" },
+      color: colors.standing,
+      plus: [...(grid.cost ?? []), ...feedIn],
+      minus: imported,
+      floor: true,
+    },
+  ];
+  if (cheap.length) {
+    series.push({ id: "cheap", name: { key: "source.cheap" }, color: colors.cheap, plus: cheap, minus: [] });
+  }
+  series.push({
+    id: "grid",
+    name: { key: cheap.length || expensive.length ? "source.normal" : "source.grid" },
+    color: colors.grid,
+    plus: imported,
+    minus: [...cheap, ...expensive],
+    floor: true,
+  });
+  if (expensive.length) {
+    series.push({ id: "expensive", name: { key: "source.expensive" }, color: colors.expensive, plus: expensive, minus: [] });
+  }
+  if (feedIn.length) {
+    series.push({
+      id: "feed_in",
+      name: { key: "source.export" },
+      color: colors.export,
+      plus: feedIn,
+      minus: [],
+      negative: true,
+      counted: true,
+    });
+  }
+  return series;
+}
+
 /** The bar series of a figure of an area, stacked as asked. */
 export function barSeries(
   info: FiguresInfo,
@@ -105,6 +155,7 @@ export function barSeries(
 ): BarSeries[] {
   const of = (key: string) => area.statistics[key] ?? [];
   const consumers = consumerColors(info, colors);
+  if (stack === "source" && figure === "cost") return billSeries(info, area, colors);
   if (stack === "source" && figure === "energy") {
     const series: BarSeries[] = [
       { id: "solar", name: { key: "source.solar" }, color: colors.solar, plus: of("solar"), minus: [] },
