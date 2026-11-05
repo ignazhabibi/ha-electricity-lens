@@ -1101,6 +1101,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 saving=state.saving,
                 payback=summary.payback,
                 per_year=summary.per_year,
+                years_left=summary.years_left,
+                annual_return=summary.annual_return,
                 counting_since=dt_util.utc_from_timestamp(counting_since),
                 yearly_from=dt_util.utc_from_timestamp(summary.yearly_from),
                 heat_estimated=state.estimated if is_heat_pump else None,

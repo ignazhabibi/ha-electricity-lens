@@ -223,6 +223,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "saving": "Saving",
             "payback": "Paid back",
             "saving_per_year": "Saving per year",
+            "annual_return": "Return per year",
             "balance": "Balance",
         },
         "attributes": {
@@ -234,6 +235,19 @@ TEXTS: dict[str, dict[str, Any]] = {
             "price": "Price",
             "heating": "Former heating",
             "heat_estimated": "Heat partly estimated",
+        },
+        "figure_attributes": {
+            "payback": {"investment": "Investment", "years_left": "Years left"},
+            "annual_return": {
+                "surplus": "Beyond the investment",
+                "surplus_percent": "Beyond the investment (percent)",
+            },
+            "balance": {
+                "saved": "Saved",
+                "invested": "Invested",
+                "per_year": "Saving per year",
+                "in_the_plus_from": "In the plus from",
+            },
         },
         "exceptions": {
             "energy_interface": "Cannot read the energy dashboard: {error}",
@@ -463,6 +477,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "saving": "Ersparnis",
             "payback": "Amortisiert",
             "saving_per_year": "Ersparnis pro Jahr",
+            "annual_return": "Rendite pro Jahr",
             "balance": "Bilanz",
         },
         "attributes": {
@@ -474,6 +489,19 @@ TEXTS: dict[str, dict[str, Any]] = {
             "price": "Preis",
             "heating": "Frühere Heizung",
             "heat_estimated": "Wärme teilweise geschätzt",
+        },
+        "figure_attributes": {
+            "payback": {"investment": "Investition", "years_left": "Restliche Jahre"},
+            "annual_return": {
+                "surplus": "Über die Investition hinaus",
+                "surplus_percent": "Über die Investition hinaus (Prozent)",
+            },
+            "balance": {
+                "saved": "Gespart",
+                "invested": "Investiert",
+                "per_year": "Ersparnis pro Jahr",
+                "in_the_plus_from": "Im Plus ab",
+            },
         },
         "exceptions": {
             "energy_interface": "Das Energie-Dashboard kann nicht gelesen werden: {error}",
@@ -784,9 +812,16 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                     "name": t["entities"]["saving"],
                     "state_attributes": attributes,
                 },
+                "saving_per_year": {"name": t["entities"]["saving_per_year"]},
                 **{
-                    key: {"name": t["entities"][key]}
-                    for key in ("payback", "saving_per_year", "balance")
+                    key: {
+                        "name": t["entities"][key],
+                        "state_attributes": {
+                            attribute: {"name": name}
+                            for attribute, name in names.items()
+                        },
+                    }
+                    for key, names in t["figure_attributes"].items()
                 },
             }
         },

@@ -690,14 +690,47 @@
           }
         }
       },
-      "payback": {
-        "name": "Paid back"
-      },
       "saving_per_year": {
         "name": "Saving per year"
       },
+      "payback": {
+        "name": "Paid back",
+        "state_attributes": {
+          "investment": {
+            "name": "Investment"
+          },
+          "years_left": {
+            "name": "Years left"
+          }
+        }
+      },
+      "annual_return": {
+        "name": "Return per year",
+        "state_attributes": {
+          "surplus": {
+            "name": "Beyond the investment"
+          },
+          "surplus_percent": {
+            "name": "Beyond the investment (percent)"
+          }
+        }
+      },
       "balance": {
-        "name": "Balance"
+        "name": "Balance",
+        "state_attributes": {
+          "saved": {
+            "name": "Saved"
+          },
+          "invested": {
+            "name": "Invested"
+          },
+          "per_year": {
+            "name": "Saving per year"
+          },
+          "in_the_plus_from": {
+            "name": "In the plus from"
+          }
+        }
       }
     }
   },

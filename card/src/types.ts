@@ -35,6 +35,15 @@ export type StatisticsResult = Record<
 
 export type Category = "pv" | "heat_pump" | "wallbox";
 
+export interface BalanceFigures {
+  /** Savings minus investments; null while it cannot be said. */
+  balance: number | null;
+  saved: number;
+  invested: number;
+  /** When the balance reaches zero at the yearly savings; null if not. */
+  inThePlusFrom: Date | null;
+}
+
 export interface CategoryFigures {
   category: Category;
   /** The statistic that holds the saving per hour, kept by the integration. */
@@ -42,7 +51,6 @@ export interface CategoryFigures {
   calculating: boolean;
   saving: number | null;
   investment: number | null;
-  payback: number | null;
   perYear: number | null;
   countingSince: Date | null;
   yearlyFrom: Date | null;

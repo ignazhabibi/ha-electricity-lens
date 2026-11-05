@@ -690,14 +690,47 @@
           }
         }
       },
-      "payback": {
-        "name": "Amortisiert"
-      },
       "saving_per_year": {
         "name": "Ersparnis pro Jahr"
       },
+      "payback": {
+        "name": "Amortisiert",
+        "state_attributes": {
+          "investment": {
+            "name": "Investition"
+          },
+          "years_left": {
+            "name": "Restliche Jahre"
+          }
+        }
+      },
+      "annual_return": {
+        "name": "Rendite pro Jahr",
+        "state_attributes": {
+          "surplus": {
+            "name": "Über die Investition hinaus"
+          },
+          "surplus_percent": {
+            "name": "Über die Investition hinaus (Prozent)"
+          }
+        }
+      },
       "balance": {
-        "name": "Bilanz"
+        "name": "Bilanz",
+        "state_attributes": {
+          "saved": {
+            "name": "Gespart"
+          },
+          "invested": {
+            "name": "Investiert"
+          },
+          "per_year": {
+            "name": "Ersparnis pro Jahr"
+          },
+          "in_the_plus_from": {
+            "name": "Im Plus ab"
+          }
+        }
       }
     }
   },

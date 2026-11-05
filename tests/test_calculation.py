@@ -15,6 +15,8 @@ from custom_components.electricity_lens.calculation import (
     heat_pump_saving,
     heating_cost,
     household_hour,
+    in_the_plus_at,
+    internal_rate_of_return,
     normal_price,
     paid_prices,
     price_level,
@@ -22,6 +24,8 @@ from custom_components.electricity_lens.calculation import (
     summarize,
     wallbox_saving,
 )
+from custom_components.electricity_lens.models import CategoryResult, PaybackData
+from custom_components.electricity_lens.sensor import _surplus
 
 
 def test_timeline() -> None:
@@ -151,6 +155,47 @@ def test_summarize() -> None:
     later = summarize(saving=3000, counting_since=0, until=2 * YEAR, investment=None)
     assert later.per_year == pytest.approx(1500)
     assert later.payback is None
+
+
+def test_payback_figures() -> None:
+    """Years left until paid back, the return from then on."""
+    paying = summarize(saving=2000, counting_since=0, until=2 * YEAR, investment=5000)
+    assert paying.years_left == pytest.approx(3)
+    assert paying.annual_return is None
+
+    paid = summarize(
+        saving=24349, counting_since=0, until=10 * YEAR, investment=12174.5
+    )
+    assert paid.years_left is None
+    assert paid.annual_return == pytest.approx(17.28, abs=0.01)
+
+    # Before twelve months there is no average to go on.
+    early = summarize(saving=100, counting_since=0, until=100 * DAY, investment=1000)
+    assert early.years_left is None
+
+
+def test_internal_rate_of_return() -> None:
+    """The rate so far: zero at break-even, none before it."""
+    rate = internal_rate_of_return
+    assert rate(investment=12174.5, saving=12174.5, years=5.19) == pytest.approx(
+        0, abs=1e-6
+    )
+    assert rate(investment=12174.5, saving=12572.4, years=5.191) == pytest.approx(
+        1.25, abs=0.01
+    )
+    assert rate(investment=12174.5, saving=24349, years=10) == pytest.approx(
+        17.28, abs=0.01
+    )
+    assert rate(investment=1000, saving=999, years=5) is None
+    assert rate(investment=0, saving=999, years=5) is None
+    assert rate(investment=1000, saving=2000, years=0.05) is None
+
+
+def test_in_the_plus_at() -> None:
+    """A negative balance reaches zero at the yearly saving."""
+    assert in_the_plus_at(-2500, 5000, 100.0) == pytest.approx(100 + YEAR / 2)
+    assert in_the_plus_at(100, 5000, 100.0) is None
+    assert in_the_plus_at(-100, 0, 100.0) is None
 
 
 def test_price_level() -> None:
@@ -288,3 +333,38 @@ def test_household_hour_battery_from_grid() -> None:
     # Bad readings leave the household at zero, not below.
     hour = _hour(grid_import=0.0, solar=0.0, devices={}, top_level=[], tariffs={})
     assert hour["household_energy"] == 0.0
+
+
+def test_balance_figures() -> None:
+    """The sums behind the balance, and the yearly savings only when all have one."""
+    paid = CategoryResult(
+        category="pv",
+        calculating=False,
+        saving=12000,
+        investment=10000,
+        payback=120,
+        per_year=2000,
+        annual_return=5,
+    )
+    paying = CategoryResult(
+        category="heat_pump",
+        calculating=False,
+        saving=1000,
+        investment=9000,
+        payback=11,
+        per_year=500,
+    )
+    data = PaybackData({"a": paid, "b": paying})
+    assert data.balance == pytest.approx(-6000)
+    assert data.saved == pytest.approx(13000)
+    assert data.invested == pytest.approx(19000)
+    assert data.per_year == pytest.approx(2500)
+
+    young = CategoryResult(category="wallbox", calculating=False, saving=10)
+    assert PaybackData({"a": paid, "c": young}).per_year is None
+
+    assert _surplus(paid) == {
+        "surplus": pytest.approx(2000),
+        "surplus_percent": pytest.approx(20),
+    }
+    assert _surplus(paying) == {"surplus": None, "surplus_percent": None}

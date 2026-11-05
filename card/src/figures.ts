@@ -409,8 +409,9 @@ export interface FigureConfig {
   figure?: Figure;
   statistic?: string;
   value?: StatisticValue;
-  /** The line below the value: the range of a mean, or none. */
-  secondary?: "range" | "none";
+  /** The line below the value: the range of a mean, what a payback sensor or
+   * a return sensor tells about an investment, or none. */
+  secondary?: "range" | "none" | "payback" | "return";
   entity?: string;
   name?: string;
 }

@@ -15,7 +15,9 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
+from .calculation import in_the_plus_at
 from .coordinator import ElectricityLensConfigEntry, ElectricityLensCoordinator
 from .entity import ElectricityLensEntity
 from .models import CategoryResult
@@ -31,6 +33,17 @@ class CategorySensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[CategoryResult], float | None]
     unit_fn: Callable[[str], str]
+    attributes_fn: Callable[[CategoryResult], dict[str, Any]] | None = None
+
+
+def _surplus(result: CategoryResult) -> dict[str, Any]:
+    """Return how far the saving has gone beyond the investment."""
+    if result.annual_return is None or result.payback is None:
+        return {"surplus": None, "surplus_percent": None}
+    return {
+        "surplus": (result.saving or 0.0) - (result.investment or 0.0),
+        "surplus_percent": result.payback - 100,
+    }
 
 
 CATEGORY_SENSORS: tuple[CategorySensorDescription, ...] = (
@@ -51,6 +64,19 @@ CATEGORY_SENSORS: tuple[CategorySensorDescription, ...] = (
         suggested_display_precision=0,
         value_fn=lambda result: result.payback,
         unit_fn=lambda _: PERCENTAGE,
+        attributes_fn=lambda result: {
+            "investment": result.investment,
+            "years_left": result.years_left,
+        },
+    ),
+    CategorySensorDescription(
+        key="annual_return",
+        translation_key="annual_return",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda result: result.annual_return,
+        unit_fn=lambda _: PERCENTAGE,
+        attributes_fn=_surplus,
     ),
     CategorySensorDescription(
         key="saving_per_year",
@@ -94,6 +120,11 @@ async def async_setup_entry(
 class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """All savings minus all investments."""
 
+    # The card reads these. The recorder skips them, as the categories' attributes.
+    _unrecorded_attributes = frozenset(
+        {"saved", "invested", "per_year", "in_the_plus_from"}
+    )
+
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, BALANCE_SENSOR, entry_id, "total")
@@ -103,6 +134,26 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
     def native_value(self) -> float | None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return the balance, unknown while it would be misleading."""
         return self.coordinator.data.balance
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:  # pyright: ignore[reportIncompatibleVariableOverride]
+        """Return the sums behind the balance and when it reaches zero."""
+        data = self.coordinator.data
+        balance = data.balance
+        per_year = data.per_year
+        in_the_plus = (
+            in_the_plus_at(balance, per_year, dt_util.utcnow().timestamp())
+            if balance is not None and per_year is not None
+            else None
+        )
+        return {
+            "saved": data.saved,
+            "invested": data.invested,
+            "per_year": per_year,
+            "in_the_plus_from": dt_util.utc_from_timestamp(in_the_plus).isoformat()
+            if in_the_plus is not None
+            else None,
+        }
 
 
 class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -122,6 +173,9 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
             "heating",
             "heat_estimated",
             "statistic_id",
+            "years_left",
+            "surplus",
+            "surplus_percent",
         }
     )
 
@@ -154,8 +208,11 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return since when the saving counts and the price it uses now."""
-        if self.entity_description.key != "saving" or (result := self._result) is None:
+        if (result := self._result) is None:
             return None
+        if self.entity_description.key != "saving":
+            attributes_fn = self.entity_description.attributes_fn
+            return attributes_fn(result) if attributes_fn else None
         attributes: dict[str, Any] = {
             "category": self._category,
             "statistic_id": saving_statistic_id(self._category),

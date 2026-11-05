@@ -296,6 +296,8 @@ class CategoryResult:
     investment: float | None = None
     payback: float | None = None
     per_year: float | None = None
+    years_left: float | None = None
+    annual_return: float | None = None
     counting_since: datetime | None = None
     yearly_from: datetime | None = None
     price: float | None = None
@@ -329,3 +331,21 @@ class PaybackData:
         return sum(
             (result.saving or 0.0) - (result.investment or 0.0) for result in results
         )
+
+    @property
+    def saved(self) -> float:
+        """Return all savings so far."""
+        return sum(result.saving or 0.0 for result in self.categories.values())
+
+    @property
+    def invested(self) -> float:
+        """Return all investments."""
+        return sum(result.investment or 0.0 for result in self.categories.values())
+
+    @property
+    def per_year(self) -> float | None:
+        """Return all yearly savings, once every category has a yearly figure."""
+        yearly = [result.per_year for result in self.categories.values()]
+        if self.balance is None or None in yearly:
+            return None
+        return sum(value or 0.0 for value in yearly)

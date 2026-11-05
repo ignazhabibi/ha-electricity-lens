@@ -112,12 +112,23 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     )
     # No investment, no payback; and no yearly figure after two days.
     assert _state(hass, "sensor.electric_car_paid_back").state == "unknown"
+    paid_back = _state(hass, "sensor.pv_plant_paid_back")
+    assert paid_back.attributes["investment"] == 10000
+    assert paid_back.attributes["years_left"] is None
+    annual_return = _state(hass, "sensor.pv_plant_return_per_year")
+    assert annual_return.state == "unknown"
+    assert annual_return.attributes["surplus"] is None
     assert _state(hass, "sensor.pv_plant_saving_per_year").state == "unknown"
 
     total = COUNTED * (PV_PER_HOUR + HEAT_PUMP_PER_HOUR + WALLBOX_PER_HOUR)
     assert float(
         _state(hass, "sensor.electricity_lens_balance").state
     ) == pytest.approx(total - 19000)
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert balance.attributes["saved"] == pytest.approx(total)
+    assert balance.attributes["invested"] == 19000
+    assert balance.attributes["per_year"] is None
+    assert balance.attributes["in_the_plus_from"] is None
 
 
 @pytest.mark.usefixtures("energy")

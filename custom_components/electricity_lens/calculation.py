@@ -9,6 +9,7 @@ from __future__ import annotations
 from bisect import bisect_right
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from math import log1p
 
 from .const import BOILER_EFFICIENCY, HEATING_OIL, OIL_KWH_PER_LITRE
 
@@ -397,6 +398,44 @@ class Summary:
     """Average saving per year, once there are twelve months of data."""
     yearly_from: float
     """When the yearly average becomes available."""
+    years_left: float | None
+    """Years until the investment is covered, at the yearly average."""
+    annual_return: float | None
+    """Internal rate of return so far, in percent per year, once paid back."""
+
+
+def internal_rate_of_return(
+    *, investment: float, saving: float, years: float
+) -> float | None:
+    """Return the internal rate of return so far, in percent per year.
+
+    The investment at the start, the saving evenly over the years since, and no
+    value left at the end: zero when the saving has just covered the investment.
+    None before that.
+    """
+    if investment <= 0 or saving < investment or years < 0.1:
+        return None
+    low, high = 0.0, 5.0
+    for _ in range(30):
+        rate = (low + high) / 2
+        growth = log1p(rate)
+        worth_now = (
+            saving / years * ((1 - (1 + rate) ** -years) / growth)
+            if growth > 1e-9
+            else saving
+        )
+        if worth_now > investment:
+            low = rate
+        else:
+            high = rate
+    return (low + high) / 2 * 100
+
+
+def in_the_plus_at(balance: float, per_year: float, now: float) -> float | None:
+    """Return when a negative balance reaches zero at the yearly saving."""
+    if balance >= 0 or per_year <= 0:
+        return None
+    return now + -balance / per_year * YEAR
 
 
 def summarize(
@@ -408,10 +447,24 @@ def summarize(
 ) -> Summary:
     """Return payback figures, leaving out what the data cannot support."""
     yearly_from = counting_since + YEAR
+    years = (until - counting_since) / YEAR
     per_year = None
     if until >= yearly_from:
-        per_year = saving / ((until - counting_since) / YEAR)
+        per_year = saving / years
     payback = None
+    years_left = None
+    annual_return = None
     if investment is not None and investment > 0:
         payback = saving / investment * 100
-    return Summary(payback=payback, per_year=per_year, yearly_from=yearly_from)
+        if saving < investment and per_year is not None and per_year > 0:
+            years_left = (investment - saving) / per_year
+        annual_return = internal_rate_of_return(
+            investment=investment, saving=saving, years=years
+        )
+    return Summary(
+        payback=payback,
+        per_year=per_year,
+        yearly_from=yearly_from,
+        years_left=years_left,
+        annual_return=annual_return,
+    )

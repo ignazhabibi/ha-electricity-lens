@@ -13,7 +13,7 @@ import {
 } from "lit";
 
 import { followEnergyDate } from "./energy-date";
-import { formatter, splitUnit, type Format } from "./format";
+import { formatter, numberFormat, splitUnit, type Format } from "./format";
 import {
   figuresOf,
   isForecast,
@@ -486,6 +486,16 @@ export class ElectricityLensFiguresCard extends LensCard {
       "";
     if (!state) return this._card(label, "–", t("figures_unavailable"));
     const number = Number(state.state);
+    if (Number.isFinite(number) && config.secondary === "payback") {
+      return this._card(label, this._format(number, "percent"), this._paybackLine(state.attributes));
+    }
+    if (Number.isFinite(number) && config.secondary === "return") {
+      const rate = numberFormat(this.hass?.locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(number);
+      return this._card(label, t("return_value", { rate }), this._returnLine(state.attributes));
+    }
     const currency = this.hass?.config.currency ?? "";
     // Units such as "EUR/a" show the currency's symbol, as amounts do.
     const unit = (state.attributes.unit_of_measurement as string | undefined)?.replace(
@@ -503,6 +513,41 @@ export class ElectricityLensFiguresCard extends LensCard {
         ? this._format(number, "money")
         : `${this._number(number)}${unit ? ` ${unit}` : ""}`;
     return this._card(label, value);
+  }
+
+  /** What a payback sensor tells: the investment and the time still to go. */
+  private _paybackLine(attributes: Record<string, unknown>): string | undefined {
+    const t = this._localize;
+    if (typeof attributes.investment !== "number") return undefined;
+    const investment = this._format(attributes.investment, "money");
+    if (typeof attributes.years_left !== "number") return t("line_payback", { investment });
+    const years = attributes.years_left;
+    const count = Math.max(1, Math.round(years < 1 ? years * 12 : years));
+    const time =
+      years < 1
+        ? t(count === 1 ? "months_one" : "months_other", { count: String(count) })
+        : t(count === 1 ? "years_one" : "years_other", { count: String(count) });
+    return t("line_payback_left", { investment, time });
+  }
+
+  /** What a return sensor tells: how far the saving has gone beyond the investment. */
+  private _returnLine(attributes: Record<string, unknown>): string | undefined {
+    const { surplus, surplus_percent: percent } = attributes;
+    if (typeof surplus !== "number" || typeof percent !== "number") return undefined;
+    const locale = this.hass?.locale;
+    return this._localize("line_return", {
+      percent: numberFormat(locale, {
+        style: "percent",
+        maximumFractionDigits: 0,
+        signDisplay: "exceptZero",
+      }).format(percent / 100),
+      amount: numberFormat(locale, {
+        style: "currency",
+        currency: this.hass?.config.currency ?? "EUR",
+        maximumFractionDigits: 0,
+        signDisplay: "exceptZero",
+      }).format(surplus),
+    });
   }
 
   /** The stat card of the energy dashboards: the name as its header, the
