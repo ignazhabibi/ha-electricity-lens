@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from collections.abc import Callable, Iterator
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
 from time import time
@@ -443,10 +444,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         counting_since = _ceil_hour(state.data_start)
         computing_past = state.next_hour is None
         start = state.next_hour if state.next_hour is not None else counting_since
+        # A failure halfway must not count its hours again in the next update,
+        # so the state changes only once they are written.
+        progress = deepcopy(state)
         history: dict[str, list[tuple[float, float]]] = {}
         while start < end:
             chunk_end = min(start + CHUNK, end)
-            rows = await self._async_compute(config, setup, state, start, chunk_end)
+            rows = await self._async_compute(config, setup, progress, start, chunk_end)
             for figure, series in rows.items():
                 history.setdefault(figure, []).extend(series)
             start = chunk_end
@@ -454,7 +458,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             subentry_id, config, history, replace=computing_past
         )
         await async_wait_recorder(self.hass)
-        state.next_hour = max(start, counting_since)
+        progress.next_hour = max(start, counting_since)
+        self.states[subentry_id] = progress
 
     async def _async_compute(
         self,
@@ -802,10 +807,14 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         counting_since = _ceil_hour(state.data_start)
         computing_past = state.next_hour is None
         start = state.next_hour if state.next_hour is not None else counting_since
+        # As for a category: the state changes only once the hours are written.
+        progress = deepcopy(state)
         history: dict[str, list[tuple[float, float]]] = {}
         while start < end:
             chunk_end = min(start + CHUNK, end)
-            rows = await self._async_compute_household(setup, state, start, chunk_end)
+            rows = await self._async_compute_household(
+                setup, progress, start, chunk_end
+            )
             for key, series in rows.items():
                 history.setdefault(key, []).extend(series)
             start = chunk_end
@@ -834,7 +843,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 replace=False,
             )
         await async_wait_recorder(self.hass)
-        state.next_hour = max(start, counting_since)
+        progress.next_hour = max(start, counting_since)
+        self.household_state = progress
 
     async def async_texts(self) -> Callable[[str], str]:
         """Return the names of areas and figures in the system language."""
