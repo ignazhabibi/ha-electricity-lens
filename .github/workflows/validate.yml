@@ -2,23 +2,28 @@ name: Validate
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
   schedule:
     - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
 
 jobs:
   hassfest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: home-assistant/actions/hassfest@master
+    - uses: actions/checkout@v7
+    - uses: home-assistant/actions/hassfest@master
 
   hacs:
     # The HACS action can only validate public repositories.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
-      - uses: hacs/action@main
-        with:
-          category: integration
+    - uses: hacs/action@main
+      with:
+        category: integration

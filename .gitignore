@@ -6,7 +6,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage-report.json
 htmlcov/
 node_modules/
 .claude/
 coverage.xml
+build/
+dist/
+*.egg-info/

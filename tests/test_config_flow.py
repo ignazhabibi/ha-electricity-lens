@@ -1,21 +1,28 @@
 """Tests for the config flow and the category subentry flows."""
 
+# Flow results declare their keys as optional; the tests know the step.
+# pyright: reportTypedDictNotRequiredAccess=false
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any
 from unittest.mock import patch
 
+import pytest
 from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
+from custom_components.electricity_lens.config_flow import (
+    async_scop_needed,
+    values_form_input,
+)
 from custom_components.electricity_lens.const import DOMAIN
 from custom_components.electricity_lens.sources import EnergyInterfaceError
 
@@ -114,7 +121,7 @@ async def test_full_setup(hass: HomeAssistant) -> None:
         result["flow_id"], {"standing_charge": 12.5, "cheap_until": 0.2}
     )
     assert result["step_id"] == "pv"
-    assert "since" in result["description_placeholders"]
+    assert "since" in result["description_placeholders"]  # pyright: ignore[reportOperatorIssue]
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"investment": 14500}
     )
@@ -225,7 +232,7 @@ async def test_scop_only_where_heat_data_is_missing(
         result["flow_id"], {**HEAT_PUMP_METERS, "heat_meters": ["sensor.heat_late"]}
     )
     assert result["step_id"] == "heat_pump_values_gas_scop_until"
-    assert result["description_placeholders"]["heat_until"]
+    assert result["description_placeholders"]["heat_until"]  # pyright: ignore[reportOptionalSubscript]
 
 
 async def test_household_only(hass: HomeAssistant) -> None:
@@ -459,7 +466,7 @@ async def test_reconfigure_values_from_now_on(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "values_from"
-    assert result["description_placeholders"]["time"]
+    assert result["description_placeholders"]["time"]  # pyright: ignore[reportOptionalSubscript]
     data = _data(entry, "heat_pump")
     assert data["current"] == {"price": 0.13, "scop": 4.0, "price_entity": "sensor.gas"}
     assert data["before"] == HEAT_PUMP_DATA["before"]
@@ -607,7 +614,7 @@ async def test_options_household(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "household_saved"
-    assert result["description_placeholders"]["time"]
+    assert result["description_placeholders"]["time"]  # pyright: ignore[reportOptionalSubscript]
     assert entry.options == {"cheap_until": 0.2, "standing_charge": 14}
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -635,3 +642,37 @@ async def test_options_recompute(hass: HomeAssistant) -> None:
     assert result["reason"] == "recomputing"
     assert entry.options["standing_charge"] == 14
     assert entry.options["recompute"] > 0
+
+
+def test_values_form_input_uses_the_categorys_price_fields() -> None:
+    """Stored prices are pre-filled under the names of the category's form."""
+    form = values_form_input(
+        "heat_pump", "gas", {"price": 0.1, "price_entity": "sensor.gas", "scop": 4.0}
+    )
+    assert form == {"gas_price": 0.1, "gas_price_entity": "sensor.gas", "scop": 4.0}
+
+
+async def test_scop_needed_without_heat_data(hass: HomeAssistant) -> None:
+    """Heat meters without data leave the heat to be estimated."""
+    with patch(
+        "custom_components.electricity_lens.config_flow.async_first_hour",
+        return_value=None,
+    ):
+        needed = await async_scop_needed(hass, ["sensor.heat_pump"], ["sensor.heat"])
+    assert needed == (True, None)
+
+
+async def test_add_pv_without_feed_in(hass: HomeAssistant) -> None:
+    """The PV plant is added in its own step while the feed-in is not measured."""
+    grid = {**PREFS["energy_sources"][0], "stat_energy_to": None}
+    await set_energy_prefs(hass, {"energy_sources": [grid, PREFS["energy_sources"][1]]})
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "pv"), context={"source": SOURCE_USER}
+    )
+    assert result["step_id"] == "pv_no_export"
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"investment": 12000}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY

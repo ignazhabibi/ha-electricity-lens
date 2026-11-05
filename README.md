@@ -20,8 +20,6 @@ It needs no YAML, no helpers, and no template sensors. Everything it can, it
 takes from the energy dashboard; it asks only for what Home Assistant cannot
 know, such as what the heat pump cost extra or what gas cost on average.
 
-![The card](docs/card.png)
-
 ## Use cases
 
 - See at a glance whether the PV plant, heat pump, and electric car together
@@ -508,15 +506,11 @@ actions:
 Deleting Electricity Lens removes all statistics it wrote; deleting a category
 removes that category's saving statistic.
 
-## Development
+## Contributing
 
-- Python: `uv sync --group dev`, then `uv run pytest`, `uv run mypy`, and
-  `uv run ruff check`.
-- Translations are generated: edit `scripts/translations.py` and run it.
-- Card: in `card/`, `npm ci` and `npm run build`. The built file is committed,
-  because the Marketplace installs exactly what is published.
-  `card/demo/index.html` shows the card's states with a mocked Home Assistant.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Automated coding agents also follow
+[AGENTS.md](AGENTS.md).
 
 ## License
 
-MIT
+MIT License — see [LICENSE](LICENSE).

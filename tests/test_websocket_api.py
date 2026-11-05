@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
-from homeassistant.core import HomeAssistant
 import pytest
+from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
+
+from custom_components.electricity_lens.sources import EnergyInterfaceError
 
 from .conftest import HEAT_PUMP_DATA, PV_DATA, make_entry, setup_entry
 
@@ -94,3 +97,40 @@ async def test_figures_not_loaded(
     response = await _figures(hass, hass_ws_client)
     assert not response["success"]
     assert response["error"]["code"] == "not_loaded"
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_pair_heat_meters_with_devices(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A heat meter per device gives each device its heat and saving."""
+    entry = make_entry(
+        (
+            "heat_pump",
+            {
+                **HEAT_PUMP_DATA,
+                "meters": ["sensor.heat_pump", "sensor.washer"],
+                "heat_meters": ["sensor.heating", "sensor.hot_water"],
+            },
+        )
+    )
+    await setup_entry(hass, entry)
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    assert areas["device_sensor_heat_pump"]["statistics"]["heat"] == ["sensor.heating"]
+    assert areas["device_sensor_washer"]["statistics"]["heat"] == ["sensor.hot_water"]
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_interface_error(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A changed energy interface is reported, not raised."""
+    await setup_entry(hass, make_entry(("pv", PV_DATA)))
+    with patch(
+        "custom_components.electricity_lens.websocket_api.async_figures",
+        side_effect=EnergyInterfaceError("changed"),
+    ):
+        response = await _figures(hass, hass_ws_client)
+    assert not response["success"]
+    assert response["error"]["code"] == "energy_interface"

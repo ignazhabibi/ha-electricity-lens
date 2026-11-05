@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "dependencyDashboard": true,
+  "separateMinorPatch": true,
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": [
+    "dependencies"
+  ],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "addLabels": [
+      "security"
+    ]
+  },
+  "homeassistant-manifest": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions"
+    },
+    {
+      "matchPackageNames": [
+        "pre-commit",
+        "pyright",
+        "pytest-cov",
+        "ruff"
+      ],
+      "groupName": "python dev tools"
+    },
+    {
+      "matchPackageNames": [
+        "esbuild",
+        "typescript"
+      ],
+      "groupName": "card build tools"
+    }
+  ]
+}

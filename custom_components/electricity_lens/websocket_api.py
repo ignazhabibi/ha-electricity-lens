@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from typing import Any
 
+import probatio
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
-import probatio
 
 from .calculation import (
     AREA_HOUSEHOLD,
@@ -40,13 +40,15 @@ from .sources import (
 @callback
 def async_register(hass: HomeAssistant) -> None:
     """Register the websocket command."""
-    websocket_api.async_register_command(hass, ws_figures)
+    websocket_api.async_register_command(hass, ws_figures)  # pyright: ignore[reportUnknownMemberType]
 
 
-@websocket_api.websocket_command({probatio.Required("type"): f"{DOMAIN}/figures"})
-@websocket_api.async_response
+@websocket_api.websocket_command({probatio.Required("type"): f"{DOMAIN}/figures"})  # pyright: ignore[reportPrivateImportUsage, reportUnknownMemberType]
+@websocket_api.async_response  # pyright: ignore[reportPrivateImportUsage]
 async def ws_figures(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,  # pyright: ignore[reportPrivateImportUsage]
+    msg: dict[str, Any],
 ) -> None:
     """Send the areas, their names, and the statistics of each figure."""
     entries = hass.config_entries.async_loaded_entries(DOMAIN)

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+import math
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import timedelta
-import logging
-import math
 from time import time
 from typing import Any
 
