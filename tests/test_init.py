@@ -98,6 +98,7 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert pv.attributes["category"] == "pv"
     assert pv.attributes["calculating"] is False
     assert pv.attributes["investment"] == 10000
+    assert pv.attributes["balance"] == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
     assert "price" not in pv.attributes
     heat_pump = _state(hass, "sensor.heat_pump_saving")
     assert float(heat_pump.state) == pytest.approx(COUNTED * HEAT_PUMP_PER_HOUR)
@@ -128,7 +129,6 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert balance.attributes["saved"] == pytest.approx(total)
     assert balance.attributes["invested"] == 19000
     assert balance.attributes["per_year"] is None
-    assert balance.attributes["in_the_plus_from"] is None
 
 
 @pytest.mark.usefixtures("energy")

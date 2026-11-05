@@ -17,9 +17,9 @@ registerCards([
   {
     tag: "electricity-lens-balance-card",
     card: ElectricityLensBalanceCard,
-    name: "Electricity Lens balance",
+    name: "Electricity Lens economics",
     description:
-      "What your PV plant, heat pump, and electric car have saved, and when they pay off.",
+      "What your PV plant, heat pump, and electric car have saved, against what they cost.",
   },
   {
     tag: "electricity-lens-savings-card",

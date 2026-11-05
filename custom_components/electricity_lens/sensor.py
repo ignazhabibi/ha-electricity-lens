@@ -15,9 +15,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
 
-from .calculation import in_the_plus_at
 from .coordinator import ElectricityLensConfigEntry, ElectricityLensCoordinator
 from .entity import ElectricityLensEntity
 from .models import CategoryResult
@@ -121,9 +119,7 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
     """All savings minus all investments."""
 
     # The card reads these. The recorder skips them, as the categories' attributes.
-    _unrecorded_attributes = frozenset(
-        {"saved", "invested", "per_year", "in_the_plus_from"}
-    )
+    _unrecorded_attributes = frozenset({"saved", "invested", "per_year"})
 
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
@@ -137,22 +133,12 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # pyright: ignore[reportIncompatibleVariableOverride]
-        """Return the sums behind the balance and when it reaches zero."""
+        """Return the sums behind the balance."""
         data = self.coordinator.data
-        balance = data.balance
-        per_year = data.per_year
-        in_the_plus = (
-            in_the_plus_at(balance, per_year, dt_util.utcnow().timestamp())
-            if balance is not None and per_year is not None
-            else None
-        )
         return {
             "saved": data.saved,
             "invested": data.invested,
-            "per_year": per_year,
-            "in_the_plus_from": dt_util.utc_from_timestamp(in_the_plus).isoformat()
-            if in_the_plus is not None
-            else None,
+            "per_year": data.per_year,
         }
 
 
@@ -173,6 +159,7 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
             "heating",
             "heat_estimated",
             "statistic_id",
+            "balance",
             "years_left",
             "surplus",
             "surplus_percent",
@@ -221,6 +208,7 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
                 result.counting_since.isoformat() if result.counting_since else None
             ),
             "investment": result.investment,
+            "balance": result.balance,
             "yearly_from": result.yearly_from.isoformat()
             if result.yearly_from
             else None,

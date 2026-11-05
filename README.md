@@ -68,8 +68,8 @@ differently: a device's costs count its solar power at the lost feed-in
 compensation; the savings below give the benefit of solar power to the PV
 plant. In the balance a device's electricity counts at the grid price, solar
 power or not, so nothing counts twice. On the key figures and charts of a heat
-pump or car, the saving includes its solar power, with the balance's value below
-the key figure.
+pump or car, the saving includes its solar power, with that part below the key
+figure.
 
 ### Savings
 
@@ -145,7 +145,7 @@ Home Assistant 2026.10 or newer is required.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
 6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
-   dashboard**, or add the cards **Electricity Lens balance**, **Electricity
+   dashboard**, or add the cards **Electricity Lens economics**, **Electricity
    Lens history**, **Electricity Lens key figures**, and **Electricity Lens
    breakdown** to a dashboard from the card picker. The first has no options.
    There is no dashboard resource to add: the integration serves the cards
@@ -223,11 +223,11 @@ overall balance.
 
 | Entity | Description |
 |---|---|
-| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
+| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
-| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, and roughly when it reaches zero. |
+| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, and the yearly savings. |
 
 ## Statistics
 
@@ -254,12 +254,13 @@ change are not stored; statistics cards carry the sum over them.
 
 ## The cards
 
-### Electricity Lens balance
+### Electricity Lens economics
 
-The card finds the categories by itself. Its head shows the balance, the savings
-against the investments, and roughly when the household will be in the plus. Each
-row shows what a category has saved, since when, and what that makes per year.
-Its only option is a title. The card follows light and dark themes, works on
+The card finds the categories by itself and is built like the totals table of
+Home Assistant's energy dashboard: one row per category with what it saves per
+year on average, what it has saved, its investment, and its balance, then a row
+with the sums. Without any investment only the savings appear. A row opens its sensor, which
+also says since when it counts. Its only option is a title. The card follows light and dark themes, works on
 phones and desktops, and can be used with keyboard and screen reader.
 
 ### Electricity Lens savings
@@ -410,7 +411,7 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | The balance card, which always shows the current state; costs, self-sufficiency, consumption, and solar today; solar forecast for today and tomorrow; each investment's payback, and once paid back its return |
+| Now | How is today going? | The economics card, which always shows the current state; costs, self-sufficiency, consumption, and solar today; solar forecast for today and tomorrow; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |

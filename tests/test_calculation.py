@@ -15,7 +15,6 @@ from custom_components.electricity_lens.calculation import (
     heat_pump_saving,
     heating_cost,
     household_hour,
-    in_the_plus_at,
     internal_rate_of_return,
     normal_price,
     paid_prices,
@@ -191,13 +190,6 @@ def test_internal_rate_of_return() -> None:
     assert rate(investment=1000, saving=2000, years=0.05) is None
 
 
-def test_in_the_plus_at() -> None:
-    """A negative balance reaches zero at the yearly saving."""
-    assert in_the_plus_at(-2500, 5000, 100.0) == pytest.approx(100 + YEAR / 2)
-    assert in_the_plus_at(100, 5000, 100.0) is None
-    assert in_the_plus_at(-100, 0, 100.0) is None
-
-
 def test_price_level() -> None:
     """Thresholds include their price; without them there are no levels."""
     assert price_level(0.20, 0.20, 0.35, 0.20, 0.35) == "cheap"
@@ -362,6 +354,10 @@ def test_balance_figures() -> None:
 
     young = CategoryResult(category="wallbox", calculating=False, saving=10)
     assert PaybackData({"a": paid, "c": young}).per_year is None
+
+    assert paying.balance == pytest.approx(-8000)
+    assert young.balance == pytest.approx(10)
+    assert CategoryResult(category="pv", calculating=True, saving=10).balance is None
 
     assert _surplus(paid) == {
         "surplus": pytest.approx(2000),

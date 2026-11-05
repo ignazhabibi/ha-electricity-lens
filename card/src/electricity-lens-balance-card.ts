@@ -1,7 +1,7 @@
 // Dashboard card of the Electricity Lens integration. It needs no options but a title: it
 // finds the integration's sensors by itself and renders from the states the
 // frontend already has, so it appears without loading delay. The integration
-// computes every figure; the head shows the balance, the rows what each saved.
+// computes every figure; the card lays them out as Home Assistant's totals table.
 
 import { css, html, nothing, type TemplateResult } from "lit";
 
@@ -12,10 +12,28 @@ import { LensCard } from "./lens-card";
 import { localizer, type Localize } from "./localize";
 import { noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles } from "./styles";
-import type { BalanceFigures, CategoryFigures, FiguresInfo, HomeAssistant } from "./types";
+import type { Category, FiguresInfo, HomeAssistant } from "./types";
 
 interface BalanceCardConfig {
   title?: string;
+}
+
+/** What one row shows; null is a figure not known yet, undefined one that does not apply. */
+interface RowFigures {
+  name: string;
+  entityId: string;
+  perYear: number | null;
+  saving: number | null;
+  investment?: number;
+  balance: number | null;
+  /** The category of a row with a bullet; a row without one is the sums. */
+  category?: Category;
+}
+
+/** The columns this household needs. */
+interface Columns {
+  perYear: boolean;
+  invested: boolean;
 }
 
 export class ElectricityLensBalanceCard extends LensCard {
@@ -54,24 +72,15 @@ export class ElectricityLensBalanceCard extends LensCard {
     return localizer(this.hass?.locale?.language ?? this.hass?.language ?? "en");
   }
 
-  private get _language(): string {
-    return this.hass?.locale?.language ?? "en";
-  }
-
-  private _money(value: number, signed = false): string {
+  private _money(value: number | null | undefined, signed = false): string {
+    if (value === undefined) return "";
+    if (value === null) return "–";
     return numberFormat(this.hass?.locale, {
       style: "currency",
       currency: this.hass?.config.currency ?? "EUR",
       maximumFractionDigits: 0,
       minimumFractionDigits: 0,
       signDisplay: signed ? "exceptZero" : "auto",
-    }).format(value);
-  }
-
-  private _month(value: Date): string {
-    return new Intl.DateTimeFormat(this._language, {
-      month: "long",
-      year: "numeric",
     }).format(value);
   }
 
@@ -93,92 +102,121 @@ export class ElectricityLensBalanceCard extends LensCard {
     if (!this.hass) return html``;
     const categories = readCategories(this.hass);
     const balance = readBalance(this.hass);
+    const title = html`<div class="header">
+      <h2 class="title">${this._config?.title || t("title")}</h2>
+    </div>`;
     if (!categories.length || !balance) {
       return html`<ha-card>
-        <div class="header"><h2 class="title">${this._config?.title || t("title")}</h2></div>
+        ${title}
         <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
     const known = this._info ? consumerColors(this._info, palette(this)) : undefined;
+    const calculating = categories.some((category) => category.calculating);
+    const columns: Columns = {
+      perYear: categories.some((category) => category.perYear !== null),
+      invested: balance.invested > 0,
+    };
     return html`<ha-card>
-      <div class="header">
-        <h2 class="title">${this._config?.title || t("title")}</h2>
-        ${balance.balance === null
-          ? nothing
-          : html`<span class="chip">${this._money(balance.balance, true)}</span>`}
+      ${title}
+      <div class="table">
+        <table>
+          <thead>
+            <tr>
+              <th class="bullet-cell"></th>
+              <th class="name" scope="col">${t("column_area")}</th>
+              ${columns.perYear
+                ? html`<th class="number per-year" scope="col">${t("column_per_year")}</th>`
+                : nothing}
+              <th class="number" scope="col">${t("column_saving")}</th>
+              ${columns.invested
+                ? html`<th class="number" scope="col">${t("column_investment")}</th>
+                    <th class="number" scope="col">${t("column_balance")}</th>`
+                : nothing}
+            </tr>
+          </thead>
+          <tbody>
+            ${categories.map((category) =>
+              this._row(
+                {
+                  name: t(`category.${category.category}`),
+                  entityId: category.entityId,
+                  perYear: category.perYear,
+                  saving: category.calculating ? null : category.saving,
+                  investment: category.investment ?? undefined,
+                  balance: category.balance,
+                  category: category.category,
+                },
+                columns,
+                known
+              )
+            )}
+            ${this._row(
+              {
+                name: t("total"),
+                entityId: balance.entityId,
+                perYear: balance.perYear,
+                saving: calculating ? null : balance.saved,
+                investment: balance.invested,
+                balance: balance.balance,
+              },
+              columns
+            )}
+          </tbody>
+        </table>
       </div>
-      <p class="summary">${this._summary(balance, categories)}</p>
-      <ul class="rows">
-        ${categories.map((category) =>
-          this._row(category, balance, known?.get(category.category))
-        )}
-      </ul>
+      ${calculating ? html`<p class="note">${t("calculating")}</p>` : nothing}
     </ha-card>`;
   }
 
-  private _summary(balance: BalanceFigures, categories: CategoryFigures[]): string {
-    const t = this._localize;
-    if (categories.some((category) => category.calculating)) return t("calculating");
-    const saved = this._money(balance.saved);
-    if (balance.invested <= 0) return t("saved_only", { saved });
-    const parts = [t("saved_invested", { saved, invested: this._money(balance.invested) })];
-    if (balance.balance !== null && balance.balance >= 0) parts.push(t("in_the_plus"));
-    else if (balance.inThePlusFrom)
-      parts.push(t("in_the_plus_from", { date: this._month(balance.inThePlusFrom) }));
-    return parts.join(" · ");
+  private _row(
+    figures: RowFigures,
+    columns: Columns,
+    known?: Map<string, string>
+  ): TemplateResult {
+    const { name, entityId, perYear, saving, investment, balance, category } = figures;
+    const color = category ? known?.get(category) : undefined;
+    return html`<tr
+      class=${category ?? "total"}
+      style=${color ? `--color: ${color}` : ""}
+      @click=${() => this._moreInfo(entityId)}
+    >
+      <td class="bullet-cell">
+        ${category ? html`<span class="bullet" aria-hidden="true"></span>` : nothing}
+      </td>
+      <th class="name" scope="row" title=${name}>
+        <button type="button">${name}</button>
+      </th>
+      ${columns.perYear
+        ? html`<td class="number per-year">
+            ${perYear === null
+              ? "–"
+              : this._localize("average", { amount: this._money(perYear) })}
+          </td>`
+        : nothing}
+      <td class="number">${this._money(saving)}</td>
+      ${columns.invested
+        ? html`<td class="number">${this._money(investment)}</td>
+            <td class="number">${this._money(balance, true)}</td>`
+        : nothing}
+    </tr>`;
   }
 
-  private _row(category: CategoryFigures, balance: BalanceFigures, color?: string): TemplateResult {
-    const t = this._localize;
-    const waiting = category.calculating || category.saving === null;
-    return html`<li class="row ${category.category}" style=${color ? `--color: ${color}` : ""}>
-      <span class="swatch" aria-hidden="true"></span>
-      <div class="row-body">
-        <div class="line">
-          <span>${t(`category.${category.category}`)}</span>
-          <span class="amount ${waiting ? "waiting" : ""}"
-            >${waiting ? "–" : this._money(category.saving ?? 0)}</span
-          >
-        </div>
-        <div class="sub">
-          ${category.calculating ? t("calculating") : this._details(category, balance)}
-        </div>
-      </div>
-    </li>`;
-  }
-
-  /** Since when a row counts, what that makes per year, and what to know about it. */
-  private _details(category: CategoryFigures, balance: BalanceFigures): string {
-    const t = this._localize;
-    const parts: string[] = [];
-    if (category.countingSince)
-      parts.push(t("since", { date: this._month(category.countingSince) }));
-    if (category.perYear !== null)
-      parts.push(t("per_year", { amount: this._money(category.perYear) }));
-    else if (category.yearlyFrom)
-      parts.push(t("yearly_from", { date: this._month(category.yearlyFrom) }));
-    // Only worth saying when others have an investment to compare with.
-    if (balance.invested > 0 && !category.investment) parts.push(t("no_investment"));
-    if (category.heatEstimated) parts.push(t("heat_estimated"));
-    return parts.join(" · ");
+  private _moreInfo(entityId: string): void {
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", {
+        detail: { entityId },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   static styles = [
     cardStyles,
     css`
-      .rows {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-      .row {
-        display: flex;
-        gap: 16px;
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--divider-color);
-      }
-      .row:last-child {
-        border-bottom: none;
+      ha-card {
+        container-type: inline-size;
       }
       .pv {
         --color: var(--electricity-lens-pv-color);
@@ -189,40 +227,102 @@ export class ElectricityLensBalanceCard extends LensCard {
       .wallbox {
         --color: var(--electricity-lens-wallbox-color);
       }
-      .swatch {
-        flex: none;
+      /* The table of Home Assistant's totals card. */
+      .table {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-spacing: 0;
+        white-space: nowrap;
+        font-size: var(--ha-font-size-m, 14px);
+        line-height: var(--ha-line-height-normal, 20px);
+        color: var(--primary-text-color);
+      }
+      thead tr {
+        height: 56px;
+      }
+      tbody tr {
+        height: 52px;
+        cursor: pointer;
+      }
+      tbody tr:hover {
+        background-color: rgba(var(--rgb-primary-text-color), 0.04);
+      }
+      th,
+      td {
+        box-sizing: border-box;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--divider-color);
+        font-weight: var(--ha-font-weight-normal, 400);
+        text-align: start;
+      }
+      thead th {
+        font-weight: var(--ha-font-weight-medium, 500);
+      }
+      tbody tr:last-child > * {
+        border-bottom: none;
+      }
+      .total > * {
+        font-weight: var(--ha-font-weight-medium, 500);
+      }
+      .bullet-cell {
+        width: 48px;
+        padding-inline-end: 0;
+      }
+      .bullet {
+        display: block;
+        box-sizing: border-box;
         width: 32px;
         height: 16px;
-        margin-top: 2px;
-        border-radius: 4px;
+        border-radius: var(--ha-border-radius-sm, 4px);
         border: 1px solid var(--color);
         background: color-mix(in srgb, var(--color) 50%, transparent);
       }
-      .row-body {
-        flex: 1;
-        min-width: 0;
+      .name {
+        max-width: 0;
+        min-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      .line {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        color: var(--primary-text-color);
+      /* Reaches the row by keyboard and for screen readers; the row takes the click. */
+      button {
+        all: unset;
+        cursor: pointer;
       }
-      .amount {
-        flex: none;
+      button:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+      }
+      .number {
+        width: 1%;
+        text-align: end;
         font-variant-numeric: tabular-nums;
       }
-      .amount.waiting {
-        color: var(--secondary-text-color);
-      }
-      .sub {
-        margin-top: 6px;
+      .note {
+        margin: 0;
+        padding: 0 16px 12px;
         font-size: var(--ha-font-size-s, 12px);
         line-height: 16px;
         color: var(--secondary-text-color);
       }
-      .sub:empty {
-        display: none;
+      /* A phone, or half a column: the names need the room of the yearly figure and the bullets. */
+      @container (max-width: 480px) {
+        .per-year,
+        .bullet-cell {
+          display: none;
+        }
+        th.number,
+        td.number {
+          padding: 0 8px;
+        }
+        th.number:last-child,
+        td.number:last-child {
+          padding-inline-end: 16px;
+        }
+        .name {
+          padding-inline-end: 8px;
+        }
       }
     `,
   ];

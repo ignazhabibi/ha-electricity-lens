@@ -40,8 +40,9 @@ export interface BalanceFigures {
   balance: number | null;
   saved: number;
   invested: number;
-  /** When the balance reaches zero at the yearly savings; null if not. */
-  inThePlusFrom: Date | null;
+  /** All yearly savings; null until every category has one. */
+  perYear: number | null;
+  entityId: string;
 }
 
 export interface CategoryFigures {
@@ -51,11 +52,12 @@ export interface CategoryFigures {
   calculating: boolean;
   saving: number | null;
   investment: number | null;
+  /** Saving minus investment; null while the saving is not known. */
+  balance: number | null;
   perYear: number | null;
   countingSince: Date | null;
-  yearlyFrom: Date | null;
+  entityId: string;
   heating: "gas" | "oil" | null;
-  heatEstimated: boolean;
 }
 
 /** One area of `electricity_lens/figures`: where each of its figures is kept. */

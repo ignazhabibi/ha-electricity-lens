@@ -672,6 +672,9 @@
           "investment": {
             "name": "Investment"
           },
+          "balance": {
+            "name": "Balance"
+          },
           "yearly_from": {
             "name": "Yearly figures from"
           },
@@ -726,9 +729,6 @@
           },
           "per_year": {
             "name": "Saving per year"
-          },
-          "in_the_plus_from": {
-            "name": "In the plus from"
           }
         }
       }

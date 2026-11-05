@@ -310,6 +310,13 @@ class CategoryResult:
         """Return whether this category can take part in the overall balance."""
         return not self.calculating and self.saving is not None
 
+    @property
+    def balance(self) -> float | None:
+        """Return the saving minus the investment, once the saving is known."""
+        if not self.balance_ready:
+            return None
+        return (self.saving or 0.0) - (self.investment or 0.0)
+
 
 @dataclass(frozen=True, slots=True)
 class PaybackData:
