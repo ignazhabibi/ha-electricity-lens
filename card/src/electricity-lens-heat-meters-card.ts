@@ -2,6 +2,7 @@
 // seasonal COP of each of the heat pump's meters, for example heating and hot
 // water, in the selected period. It needs no options.
 
+import { checkCollectionKey } from "./energy-date";
 import { html, type TemplateResult } from "lit";
 
 import { consumerColors, palette } from "./colors";
@@ -18,8 +19,10 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     return { schema: [] };
   }
 
-  setConfig(_config: unknown): void {
-    // The card has no options.
+  setConfig(config: { collection_key?: string } | undefined): void {
+    // Its only option belongs to the date selection, for YAML.
+    checkCollectionKey(config?.collection_key);
+    this._collectionKey = config?.collection_key;
   }
 
   private get _devices() {

@@ -9,7 +9,7 @@ import { keyed } from "lit/directives/keyed.js";
 import { shareChart, shares, watchChart } from "./chart";
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
-import { followEnergyDate } from "./energy-date";
+import { checkCollectionKey, followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
 import { fixedRange, rangeLabel, type Range } from "./history";
 import { barSeries, type BarSeries } from "./history-figures";
@@ -24,6 +24,7 @@ export { PERIODS };
 
 export interface BreakdownCardConfig {
   type: string;
+  collection_key?: string;
   title?: string;
   period?: PeriodOption;
   area?: string;
@@ -96,6 +97,7 @@ export class ElectricityLensBreakdownCard extends LensCard {
     if (config?.statistics !== undefined && !Array.isArray(config.statistics)) {
       throw new Error("statistics must be a list");
     }
+    checkCollectionKey(config?.collection_key);
     this._config = config ?? { type: "" };
   }
 
@@ -139,7 +141,7 @@ export class ElectricityLensBreakdownCard extends LensCard {
   private _follow(): void {
     if ((this._config.period ?? "energy_date") !== "energy_date") return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._config.collection_key, (range) => {
       this._selected = range;
     });
   }

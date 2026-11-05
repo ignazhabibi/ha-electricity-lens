@@ -1,17 +1,18 @@
-// Editor of the key figure card: the form fits the figure's source, so no YAML
-// is needed. Areas and figures come from the integration.
+// Editor of the key figure card: the form fits the figure's source. Areas and
+// figures come from the integration.
 
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
 import {
   PERIODS,
   figureLabel,
-  figuresConfig,
   type FiguresCardConfig,
 } from "./electricity-lens-figures-card";
 import {
   STATISTIC_VALUES,
   figuresOf,
+  isForecast,
+  isInvestment,
   sourceOf,
   type FigureConfig,
   type Source,
@@ -36,10 +37,12 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
 
   hass?: HomeAssistant;
   private _config?: FiguresCardConfig;
+  /** The integration's areas; undefined while loading, null when it is not loaded. */
   private _info?: FiguresInfo | null;
+  private _requested = false;
 
   setConfig(config: FiguresCardConfig): void {
-    this._config = figuresConfig(config);
+    this._config = config;
   }
 
   private get _localize(): Localize {
@@ -47,14 +50,16 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
   }
 
   protected willUpdate(): void {
-    if (this.hass && this._info === undefined) {
-      this._info = null;
+    if (this.hass && !this._requested) {
+      this._requested = true;
       this.hass
         .callWS<FiguresInfo>({ type: `${DOMAIN}/figures` })
         .then((info) => {
           this._info = info;
         })
-        .catch(() => undefined);
+        .catch(() => {
+          this._info = null;
+        });
     }
   }
 
@@ -113,15 +118,19 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     } else {
       schema.push({ name: "entity", selector: { entity: {} } });
     }
-    schema.push(
-      { name: "name", selector: { text: {} } },
-      {
+    schema.push({ name: "name", selector: { text: {} } });
+    // A state, a forecast, and an investment do not depend on a period.
+    if (
+      source !== "entity" &&
+      !(config.figure && (isForecast(config.figure) || isInvestment(config.figure)))
+    ) {
+      schema.push({
         name: "period",
         selector: select(
           PERIODS.map((period) => ({ value: period, label: t(`period.${period}`) }))
         ),
-      }
-    );
+      });
+    }
     return schema;
   }
 

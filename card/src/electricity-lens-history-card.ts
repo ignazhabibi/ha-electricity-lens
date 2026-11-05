@@ -16,7 +16,7 @@ import {
 
 import { barChart, watchChart, type ChartLine, type ChartSeries } from "./chart";
 import { consumerColors, palette } from "./colors";
-import { followEnergyDate } from "./energy-date";
+import { checkCollectionKey, followEnergyDate } from "./energy-date";
 import {
   PERIODS,
   figureLabel,
@@ -68,6 +68,7 @@ export interface HistoryLine {
 
 export interface HistoryCardConfig {
   type: string;
+  collection_key?: string;
   title?: string;
   /** "all" shows every year since counting began. */
   period?: PeriodOption | "all";
@@ -152,6 +153,7 @@ export class ElectricityLensHistoryCard extends LensCard {
   }
 
   setConfig(config: HistoryCardConfig | undefined): void {
+    checkCollectionKey(config?.collection_key);
     this._config = config ?? { type: "" };
   }
 
@@ -195,7 +197,7 @@ export class ElectricityLensHistoryCard extends LensCard {
   private _follow(): void {
     if ((this._config.period ?? "energy_date") !== "energy_date") return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._config.collection_key, (range) => {
       this._selected = range;
     });
   }

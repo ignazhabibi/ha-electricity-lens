@@ -110,7 +110,9 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
     if (!this._config) return;
     const value = { ...this._data(), ...event.detail.value };
     if ("breakdown_source" in event.detail.value) value.source = event.detail.value.breakdown_source;
-    const config: BreakdownCardConfig = { type: this._config.type };
+    // Only the form's own keys change; layout options and the like stay.
+    const { title, period, area: _area, by, figure, display, color_by_source, statistics, ...rest } = this._config;
+    const config: BreakdownCardConfig = rest;
     if (typeof value.title === "string" && value.title) config.title = value.title;
     config.period = (value.period as BreakdownCardConfig["period"]) ?? "energy_date";
     if (value.source === "statistics") {

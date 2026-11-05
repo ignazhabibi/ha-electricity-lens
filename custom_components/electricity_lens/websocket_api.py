@@ -21,6 +21,7 @@ from .calculation import (
     GRID_COST,
     GRID_FEED_IN,
     GRID_IMPORT_COST,
+    GRID_STANDING_CHARGE,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
     effective_meters,
@@ -82,6 +83,7 @@ async def async_figures(
             "solar": [household_statistic_id(f"{area}_solar")],
             "cost": [household_statistic_id(f"{area}_cost")],
             "solar_cost": [household_statistic_id(f"{area}_solar_cost")],
+            "grid_cost": [household_statistic_id(f"{area}_grid_cost")],
         }
         for level, threshold in levels:
             if threshold is not None:
@@ -113,6 +115,7 @@ async def async_figures(
             cost=[household_statistic_id(GRID_COST)],
             import_cost=[household_statistic_id(GRID_IMPORT_COST)],
             feed_in=[household_statistic_id(GRID_FEED_IN)],
+            standing_charge=[household_statistic_id(GRID_STANDING_CHARGE)],
             **(
                 {"cheap_saving": [household_statistic_id(GRID_CHEAP_SAVING)]}
                 if cheap_until is not None
@@ -135,6 +138,8 @@ async def async_figures(
             {
                 **area("solar", "solar", text("area_solar"), **solar),
                 "forecast": bool(setup.forecasts),
+                "investment": CATEGORY_PV in categories
+                and bool(categories[CATEGORY_PV][1].investment),
             }
         )
     parents = {device.stat: device.included_in for device in setup.devices}
@@ -144,35 +149,48 @@ async def async_figures(
         meters = effective_meters(config.meters, parents)
         devices = [device_area(meter) for meter in meters]
         areas.append(
-            area(
-                "category",
-                category,
-                coordinator.config_entry.subentries[subentry_id].title,
-                energy=meters,
-                solar=[household_statistic_id(f"{device}_solar") for device in devices],
-                cost=[household_statistic_id(f"{device}_cost") for device in devices],
-                solar_cost=[
-                    household_statistic_id(f"{device}_solar_cost") for device in devices
-                ],
-                **{
-                    key: [
-                        household_statistic_id(f"{device}_{key}") for device in devices
-                    ]
-                    for level, threshold in levels
-                    if threshold is not None
-                    for key in (level, f"{level}_cost")
-                },
-                saving=[saving_statistic_id(category)],
-                **{
-                    figure: [category_statistic_id(category, figure)]
-                    for figure in CATEGORY_FIGURES[category]
-                },
-                **(
-                    {"heat_meters": list(config.heat_meters)}
-                    if config.heat_meters
-                    else {}
+            {
+                **area(
+                    "category",
+                    category,
+                    coordinator.config_entry.subentries[subentry_id].title,
+                    energy=meters,
+                    solar=[
+                        household_statistic_id(f"{device}_solar") for device in devices
+                    ],
+                    cost=[
+                        household_statistic_id(f"{device}_cost") for device in devices
+                    ],
+                    solar_cost=[
+                        household_statistic_id(f"{device}_solar_cost")
+                        for device in devices
+                    ],
+                    grid_cost=[
+                        household_statistic_id(f"{device}_grid_cost")
+                        for device in devices
+                    ],
+                    **{
+                        key: [
+                            household_statistic_id(f"{device}_{key}")
+                            for device in devices
+                        ]
+                        for level, threshold in levels
+                        if threshold is not None
+                        for key in (level, f"{level}_cost")
+                    },
+                    saving=[saving_statistic_id(category)],
+                    **{
+                        figure: [category_statistic_id(category, figure)]
+                        for figure in CATEGORY_FIGURES[category]
+                    },
+                    **(
+                        {"heat_meters": list(config.heat_meters)}
+                        if config.heat_meters
+                        else {}
+                    ),
                 ),
-            )
+                "investment": bool(config.investment),
+            }
         )
     # Only top-level devices add up to the household, beside "Other".
     top_level = set(effective_meters(parents, parents))
@@ -202,6 +220,12 @@ async def async_figures(
                             category_statistic_id(
                                 CATEGORY_HEAT_PUMP,
                                 f"{device_area(device.stat)}_alternative_cost",
+                            )
+                        ],
+                        "solar_saving": [
+                            category_statistic_id(
+                                CATEGORY_HEAT_PUMP,
+                                f"{device_area(device.stat)}_solar_saving",
                             )
                         ],
                     }

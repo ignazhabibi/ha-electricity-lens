@@ -121,7 +121,9 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
   private _changed(event: CustomEvent<{ value: Record<string, unknown> }>): void {
     if (!this._config) return;
     const value = event.detail.value;
-    const config: HistoryCardConfig = { type: this._config.type };
+    // Only the form's own keys change; layout options and the like stay.
+    const { title, period, area: _area, figure: _figure, stack, line, lines, ...rest } = this._config;
+    const config: HistoryCardConfig = rest;
     if (typeof value.title === "string" && value.title) config.title = value.title;
     config.period = (value.period as HistoryCardConfig["period"]) ?? "energy_date";
     const areaId = value.area as string | undefined;

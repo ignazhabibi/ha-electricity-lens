@@ -41,6 +41,9 @@ Both are committed, because HACS installs exactly what is published.
 - **Translations:** edit `scripts/translations.py`, then run it.
 - **Card:** edit `card/src/`, then run `npm --prefix card run build`.
 
+The key figures' arithmetic has tests in `card/test/`, run with
+`npm --prefix card test` and by the quality gate.
+
 ## Python
 
 - Python 3.14+ is the project baseline. Follow the Ruff and Pyright

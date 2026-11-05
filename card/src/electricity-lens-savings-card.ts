@@ -7,6 +7,7 @@ import { html, nothing, type TemplateResult } from "lit";
 
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import type { Key } from "./localize";
+import { checkCollectionKey } from "./energy-date";
 import { readCategories } from "./model";
 import { PeriodSumsCard, addUp, tableStyles } from "./period-sums-card";
 import { cardStyles } from "./styles";
@@ -16,6 +17,7 @@ export interface SavingsCardConfig {
   type?: string;
   /** "heat_pump" or "wallbox"; without one the card shows all categories. */
   area?: string;
+  collection_key?: string;
 }
 
 interface Row {
@@ -86,7 +88,9 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
   }
 
   setConfig(config: SavingsCardConfig | undefined): void {
+    checkCollectionKey(config?.collection_key);
     this._config = config ?? {};
+    this._collectionKey = this._config.collection_key;
     this.requestUpdate();
   }
 
@@ -107,7 +111,12 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     if (this._config.area) {
       const statistics = this._area?.statistics;
       return statistics?.alternative_cost?.length && statistics.cost?.length && statistics.saving?.length
-        ? [...statistics.alternative_cost, ...statistics.cost, ...statistics.saving]
+        ? [
+            ...statistics.alternative_cost,
+            ...statistics.cost,
+            ...statistics.saving,
+            ...(statistics.solar_saving ?? []),
+          ]
         : [];
     }
     return this._rows().flatMap((row) => [...row.plus, ...row.minus, ...row.energy]);
@@ -135,9 +144,8 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const values = this._sums?.values ?? {};
     const alternative = addUp(values, area?.statistics.alternative_cost);
     const cost = addUp(values, area?.statistics.cost);
-    const saving = alternative - cost;
-    // The balance gives the benefit of solar power to the PV plant.
-    const solar = saving - addUp(values, area?.statistics.saving);
+    const solar = addUp(values, area?.statistics.solar_saving);
+    const saving = addUp(values, area?.statistics.saving) + solar;
     const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
     const instead: Key =
       area?.id === "wallbox" ? "savings_instead_fuel" : heating === "oil" ? "savings_instead_oil" : "savings_instead_gas";

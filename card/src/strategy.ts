@@ -6,7 +6,7 @@
 
 import { heatDevices } from "./history-figures";
 import { localizer, type Localize } from "./localize";
-import { DOMAIN } from "./model";
+import { DOMAIN, areaOfCategory, investmentSensors } from "./model";
 import type { Category, FigureArea, FiguresInfo, HomeAssistant } from "./types";
 
 type Card = Record<string, unknown>;
@@ -74,19 +74,7 @@ export function findSensors(hass: HomeAssistant): Sensors {
   const categories = savings
     .map((entry) => hass.states[entry.entity_id]?.attributes.category as Category)
     .filter((category) => order.includes(category));
-  const investments = savings.flatMap((entry) => {
-    const attributes = hass.states[entry.entity_id]?.attributes;
-    const sibling = (key: string) =>
-      entries.find((item) => item.device_id === entry.device_id && item.translation_key === key)?.entity_id;
-    const payback = sibling("payback");
-    const annualReturn = sibling("annual_return");
-    const category = attributes?.category as Category;
-    return order.includes(category) && Number(attributes?.investment) > 0 && payback && annualReturn
-      ? [{ category, payback, annualReturn }]
-      : [];
-  });
-  investments.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
-  return { categories, investments };
+  return { categories, investments: investmentSensors(hass) };
 }
 
 /** The views, one question each; every card has one home. Only the
@@ -125,16 +113,16 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   // Home Assistant shows and hides them by the sensors' states.
   const investmentTiles = sensors.investments.flatMap(({ category, payback, annualReturn }) => [
     card("electricity-lens-figures-card", {
-      entity: payback,
+      area: areaOfCategory(category),
+      figure: "payback",
       name: t(`strategy.payback_${category}`),
-      secondary: "payback",
       visibility: [{ condition: "numeric_state", entity: payback, below: 100 }],
       ...half,
     }),
     card("electricity-lens-figures-card", {
-      entity: annualReturn,
+      area: areaOfCategory(category),
+      figure: "annual_return",
       name: t(`strategy.return_${category}`),
-      secondary: "return",
       // The sensor has a number only from then on.
       visibility: [{ condition: "numeric_state", entity: annualReturn, above: -1 }],
       ...half,

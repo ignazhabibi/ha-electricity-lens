@@ -231,6 +231,7 @@ AREA_OTHER = "other"
 GRID_COST = "grid_cost"
 GRID_IMPORT_COST = "grid_import_cost"
 GRID_FEED_IN = "grid_feed_in"
+GRID_STANDING_CHARGE = "grid_standing_charge"
 GRID_CHEAP_SAVING = "grid_cheap_saving"
 LEVEL_CHEAP = "cheap"
 LEVEL_EXPENSIVE = "expensive"
@@ -297,9 +298,10 @@ def household_hour(
 
     Areas are the household, each device, and "other", what the household used
     beyond its top-level devices. devices, top_level, and tariffs name devices
-    by their area. Figures are energy, solar, cost, what the solar power and the
-    grid power's level cost, and the grid power's level, cheap or expensive, if
-    any. Devices have no energy figure: their own statistic already holds it.
+    by their area. Figures are energy, solar, cost, what the solar power, the grid
+    power, and the grid power's level cost, and the grid power's level, cheap or
+    expensive, if any. Devices have no energy figure: their own statistic already
+    holds it.
 
     Solar power used in the house is shared among the consumers in proportion
     to their consumption. It costs the feed-in compensation it did not earn;
@@ -321,6 +323,7 @@ def household_hour(
         GRID_COST: grid_import * price - export_revenue + standing_charge,
         GRID_IMPORT_COST: grid_import * price,
         GRID_FEED_IN: export_revenue,
+        GRID_STANDING_CHARGE: standing_charge,
     }
     if level == LEVEL_CHEAP and normal is not None:
         result[GRID_CHEAP_SAVING] = grid_import * max(normal - price, 0.0)
@@ -332,6 +335,7 @@ def household_hour(
             "solar": solar_part,
             "cost": grid_part * unit_price + solar_part * feed_in,
             "solar_cost": solar_part * feed_in,
+            "grid_cost": grid_part * unit_price,
         }
         if level is not None:
             figures[level] = grid_part
@@ -349,7 +353,7 @@ def household_hour(
             continue
         # An own tariff changes what the household costs, not what it used.
         gap = energy * (1 - share) * (tariffs.get(stat, price) - price)
-        for figure in ("cost", f"{level}_cost"):
+        for figure in ("cost", "grid_cost", f"{level}_cost"):
             if figure in household:
                 household[figure] += gap
                 remaining[figure] += gap
@@ -361,6 +365,7 @@ def household_hour(
         debts[figure] = max(-left, 0.0)
     result[f"{AREA_HOUSEHOLD}_energy"] = consumption
     result[f"{AREA_HOUSEHOLD}_cost"] = household["cost"]
+    result[f"{AREA_HOUSEHOLD}_grid_cost"] = household["grid_cost"]
     if level is not None:
         result[f"{AREA_HOUSEHOLD}_{level}_cost"] = household[f"{level}_cost"]
     return result

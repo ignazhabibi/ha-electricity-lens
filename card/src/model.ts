@@ -58,6 +58,31 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
   );
 }
 
+/** The categories with an investment, and the sensors about it. */
+export function investmentSensors(
+  hass: HomeAssistant
+): { category: Category; payback: string; annualReturn: string }[] {
+  const entries = Object.values(hass.entities ?? {}).filter((entry) => entry.platform === DOMAIN);
+  return entries
+    .filter((entry) => entry.translation_key === "saving")
+    .flatMap((entry) => {
+      const attributes = hass.states[entry.entity_id]?.attributes;
+      const sibling = (key: string) =>
+        entries.find((item) => item.device_id === entry.device_id && item.translation_key === key)?.entity_id;
+      const payback = sibling("payback");
+      const annualReturn = sibling("annual_return");
+      const category = attributes?.category as Category;
+      return ORDER.includes(category) && Number(attributes?.investment) > 0 && payback && annualReturn
+        ? [{ category, payback, annualReturn }]
+        : [];
+    })
+    .sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category));
+}
+
+/** The area of the figures that shows a category. */
+export const areaOfCategory = (category: Category): string =>
+  category === "pv" ? "solar" : category;
+
 /** The overall figures as the integration computed them; null when its
  * sensor has no state to read. */
 export function readBalance(hass: HomeAssistant): BalanceFigures | null {

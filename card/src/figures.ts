@@ -26,7 +26,9 @@ export type Figure =
   | "distance"
   | "cost_per_100km"
   | "forecast_today"
-  | "forecast_tomorrow";
+  | "forecast_tomorrow"
+  | "payback"
+  | "annual_return";
 
 export type Unit =
   | "energy"
@@ -42,10 +44,10 @@ const NEEDS: Record<Figure, string[]> = {
   energy: ["energy"],
   cost: ["cost"],
   // What the supplier charges: the feed-in compensation is not set off.
-  bill: ["cost", "import_cost", "feed_in"],
+  bill: ["import_cost", "standing_charge"],
   grid_price: ["import_cost", "energy"],
   // What a device's grid power cost, without its solar power.
-  device_grid_price: ["cost", "solar_cost", "energy", "solar"],
+  device_grid_price: ["grid_cost", "energy", "solar"],
   // A price per kWh consumed, so only where solar power is shared out.
   price: ["cost", "energy", "solar"],
   solar_share: ["solar", "energy"],
@@ -63,13 +65,15 @@ const NEEDS: Record<Figure, string[]> = {
   cost_per_100km: ["cost", "distance"],
   forecast_today: [],
   forecast_tomorrow: [],
+  payback: [],
+  annual_return: [],
 };
 
 /** Further statistics the line below uses, where the area has them. */
 const LINE_NEEDS: Partial<Record<Figure, string[]>> = {
   energy: ["solar", "export"],
-  cost: ["energy", "solar", "import_cost", "feed_in"],
-  saving: ["alternative_cost", "cost"],
+  cost: ["energy", "solar", "feed_in", "standing_charge"],
+  saving: ["solar_saving"],
   heat: ["energy"],
   distance: ["energy"],
 };
@@ -79,12 +83,18 @@ export const FIGURES = Object.keys(NEEDS) as Figure[];
 export const isForecast = (figure: Figure): boolean =>
   figure === "forecast_today" || figure === "forecast_tomorrow";
 
+/** A figure about an investment, read from the sensor that holds it. */
+export const isInvestment = (figure: Figure): boolean =>
+  figure === "payback" || figure === "annual_return";
+
 /** The figures an area has the statistics for. */
 export function figuresOf(area: FigureArea): Figure[] {
   return FIGURES.filter((figure) =>
     isForecast(figure)
       ? area.forecast === true
-      : NEEDS[figure].every((key) => area.statistics[key]?.length)
+      : isInvestment(figure)
+        ? area.investment === true
+        : NEEDS[figure].every((key) => area.statistics[key]?.length)
   );
 }
 
@@ -103,7 +113,7 @@ export interface Line {
 export interface FigureValue {
   value: number | null;
   unit: Unit;
-  /** The line below the value, for example "509 of 2,028 kWh from solar". */
+  /** The line below the value, for example "509 of 2,028 kWh". */
   line?: Line;
 }
 
@@ -132,7 +142,7 @@ export function valueOf(
             unit: "energy",
             line: {
               key: "line_energy_parts",
-              values: { grid: kwh(Math.max(energy - solar, 0)), solar: kwh(solar) },
+              values: { grid: plain(Math.max(energy - solar, 0)), solar: plain(solar) },
             },
           };
         }
@@ -168,21 +178,15 @@ export function valueOf(
           },
         };
       }
-      const imported = sum("import_cost");
       const feedIn = sum("feed_in");
-      if (cost !== null && imported !== null && feedIn !== null) {
-        // What the grid connection cost follows from three parts.
-        const charge = cost - imported + feedIn;
+      const charge = sum("standing_charge");
+      if (cost !== null && feedIn !== null && charge !== null) {
         return {
           value: cost,
           unit: "money",
           line: {
             key: Math.abs(charge) < 0.005 ? "line_bill_no_charge" : "line_bill",
-            values: {
-              imported: money(imported),
-              feed_in: money(feedIn),
-              charge: money(charge),
-            },
+            values: { feed_in: money(feedIn), charge: money(charge) },
           },
         };
       }
@@ -196,20 +200,16 @@ export function valueOf(
       return { value: cost, unit: "money" };
     }
     case "bill": {
-      const cost = sum("cost");
       const imported = sum("import_cost");
-      const feedIn = sum("feed_in");
-      if (cost === null || imported === null || feedIn === null) {
-        return { value: null, unit: "money" };
-      }
-      const charge = cost - imported + feedIn;
+      const charge = sum("standing_charge");
+      if (imported === null || charge === null) return { value: null, unit: "money" };
       return {
         value: imported + charge,
         unit: "money",
         line:
           Math.abs(charge) < 0.005
             ? undefined
-            : { key: "line_bill_parts", values: { imported: money(imported), charge: money(charge) } },
+            : { key: "line_bill", values: { charge: money(charge) } },
       };
     }
     case "grid_price": {
@@ -225,14 +225,12 @@ export function valueOf(
       };
     }
     case "device_grid_price": {
-      const cost = sum("cost");
-      const solarCost = sum("solar_cost");
-      if (cost === null || solarCost === null || energy === null || solar === null) {
+      const gridCost = sum("grid_cost");
+      if (gridCost === null || energy === null || solar === null) {
         return { value: null, unit: "price" };
       }
       const grid = energy - solar;
       if (grid <= 0) return { value: null, unit: "price" };
-      const gridCost = cost - solarCost;
       return {
         value: gridCost / grid,
         unit: "price",
@@ -268,7 +266,7 @@ export function valueOf(
         value: percent,
         unit: "percent",
         line: {
-          key: "line_from_solar",
+          key: "line_part_of",
           values: { part: plain(solar), whole: kwh(energy) },
         },
       };
@@ -284,7 +282,7 @@ export function valueOf(
         value: percent,
         unit: "percent",
         line: {
-          key: "line_of_grid",
+          key: "line_part_of",
           values: { part: plain(level), whole: kwh(grid) },
         },
       };
@@ -298,7 +296,7 @@ export function valueOf(
         value: percent,
         unit: "percent",
         line: {
-          key: "line_self_used",
+          key: "line_part_of",
           values: { part: plain(used), whole: kwh(energy) },
         },
       };
@@ -307,26 +305,19 @@ export function valueOf(
       return { value: sum("export"), unit: "energy" };
     case "saving": {
       const saving = sum("saving");
-      const alternative = sum("alternative_cost");
-      const cost = sum("cost");
-      if (saving === null || alternative === null || cost === null) {
-        return { value: saving, unit: "money" };
-      }
+      const solarSaving = sum("solar_saving");
+      if (saving === null || solarSaving === null) return { value: saving, unit: "money" };
       // A device shows what it saved with its solar power, at the lost feed-in
-      // compensation as in its costs. In the balance the benefit of solar power
-      // belongs to the PV plant, so that nothing counts twice.
-      const withSolar = alternative - cost;
-      // Without a part by solar power the line would only repeat the value.
-      if (Math.abs(withSolar - saving) < 0.005) return { value: withSolar, unit: "money" };
+      // compensation as in its costs. Without that part, the benefit of solar
+      // power belongs to the PV plant, so that nothing counts twice.
       return {
-        value: withSolar,
+        value: saving + solarSaving,
         unit: "money",
-        line: {
-          key: "line_saving_split",
-          values: {
-            solar: money(withSolar - saving),
-          },
-        },
+        // Without a part by solar power the line would only repeat the value.
+        line:
+          Math.abs(solarSaving) < 0.005
+            ? undefined
+            : { key: "line_saving_split", values: { solar: money(solarSaving) } },
       };
     }
     case "heat": {
@@ -348,7 +339,7 @@ export function valueOf(
         unit: "number",
         line: {
           key: "line_heat_from",
-          values: { heat: kwh(heat), energy: kwh(energy) },
+          values: { heat: plain(heat), energy: kwh(energy) },
         },
       };
     }
@@ -360,8 +351,8 @@ export function valueOf(
         value: cost / heat,
         unit: "price",
         line: {
-          key: "line_cost_for_heat",
-          values: { cost: { value: cost, unit: "money" }, heat: kwh(heat) },
+          key: "line_cost_for",
+          values: { cost: { value: cost, unit: "money" }, energy: kwh(heat) },
         },
       };
     }
@@ -395,6 +386,10 @@ export function valueOf(
     case "forecast_today":
     case "forecast_tomorrow":
       return { value: forecast, unit: "energy" };
+    case "payback":
+    case "annual_return":
+      // Read from their sensors, not from statistics.
+      return { value: null, unit: "percent" };
   }
 }
 
@@ -408,9 +403,8 @@ export interface FigureConfig {
   figure?: Figure;
   statistic?: string;
   value?: StatisticValue;
-  /** The line below the value: the range of a mean, what a payback sensor or
-   * a return sensor tells about an investment, or none. */
-  secondary?: "range" | "none" | "payback" | "return";
+  /** The line below the value: the range of a mean, or none. */
+  secondary?: "range" | "none";
   entity?: string;
   name?: string;
 }
