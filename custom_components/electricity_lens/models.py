@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-import hashlib
-import json
-from typing import Any
+from typing import Any, cast
 
 from .calculation import Timeline
 from .const import (
@@ -51,7 +51,7 @@ def _numbers(data: Any) -> dict[str, float]:
         return {}
     return {
         key: float(value)
-        for key, value in data.items()
+        for key, value in cast(Mapping[str, Any], data).items()
         if isinstance(value, int | float) and not isinstance(value, bool)
     }
 
@@ -66,8 +66,8 @@ class CategoryConfig:
     heat_meters: tuple[str, ...] = ()
     heating: str = HEATING_GAS
     setup_at: float = 0.0
-    before: Mapping[str, float] = field(default_factory=dict)
-    current: Mapping[str, float] = field(default_factory=dict)
+    before: Mapping[str, float] = field(default_factory=dict[str, float])
+    current: Mapping[str, float] = field(default_factory=dict[str, float])
     price_entity: str | None = None
     recompute: float | None = None
 
@@ -75,7 +75,7 @@ class CategoryConfig:
     def from_data(cls, category: str, data: Mapping[str, Any]) -> CategoryConfig:
         """Create from subentry data."""
         investment = data.get(CONF_INVESTMENT)
-        current = data.get(CONF_CURRENT) or {}
+        current: Mapping[str, Any] = data.get(CONF_CURRENT) or {}
         recompute = data.get(CONF_RECOMPUTE)
         return cls(
             category=category,
@@ -127,16 +127,16 @@ class CategoryState:
     next_hour: float | None = None
     """Start of the next hour to compute; None before the past is computed."""
     saving: float = 0.0
-    last_prices: dict[str, float] = field(default_factory=dict)
+    last_prices: dict[str, float] = field(default_factory=dict[str, float])
     """Last electricity price per grid import meter, to bridge gaps."""
     last_entity_price: float | None = None
     measured_heat: float = 0.0
     measured_electricity: float = 0.0
     estimated: bool = False
     """Whether some heat was estimated instead of measured."""
-    totals: dict[str, float] = field(default_factory=dict)
+    totals: dict[str, float] = field(default_factory=dict[str, float])
     """Cumulative heat, distance, and the alternative's costs."""
-    timelines: dict[str, Timeline] = field(default_factory=dict)
+    timelines: dict[str, Timeline] = field(default_factory=dict[str, Timeline])
 
     def reset(self, fingerprint: str) -> None:
         """Forget the computed past, keeping the timelines of current values."""
@@ -233,13 +233,13 @@ class HouseholdState:
     data_start: float | None = None
     next_hour: float | None = None
     """Start of the next hour to compute; None before the past is computed."""
-    totals: dict[str, float] = field(default_factory=dict)
+    totals: dict[str, float] = field(default_factory=dict[str, float])
     """Cumulative value of each figure, keyed like household_hour's result."""
-    last_prices: dict[str, float] = field(default_factory=dict)
+    last_prices: dict[str, float] = field(default_factory=dict[str, float])
     standing_charge: Timeline = field(default_factory=Timeline)
-    debts: dict[str, float] = field(default_factory=dict)
+    debts: dict[str, float] = field(default_factory=dict[str, float])
     """What meters reported beyond the household, to be paid back by "other"."""
-    recent_prices: list[list[float]] = field(default_factory=list)
+    recent_prices: list[list[float]] = field(default_factory=list[list[float]])
     """Start, lowest, and highest price of the hours of the last day."""
 
     def reset(self, fingerprint: str) -> None:
@@ -313,7 +313,9 @@ class CategoryResult:
 class PaybackData:
     """Coordinator data: one result per category, keyed by subentry id."""
 
-    categories: dict[str, CategoryResult] = field(default_factory=dict)
+    categories: dict[str, CategoryResult] = field(
+        default_factory=dict[str, CategoryResult]
+    )
 
     @property
     def balance(self) -> float | None:

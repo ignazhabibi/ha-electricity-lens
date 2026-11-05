@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from homeassistant.components import frontend
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http import StaticPathConfig  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
@@ -59,7 +59,7 @@ from .sources import (
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.SENSOR]
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

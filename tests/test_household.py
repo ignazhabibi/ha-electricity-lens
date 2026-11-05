@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.components.recorder import get_instance
+import pytest
+from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.statistics import (
     get_metadata,
     statistics_during_period,
 )
 from homeassistant.core import HomeAssistant
-import pytest
 from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
@@ -55,7 +55,7 @@ async def _total(hass: HomeAssistant, key: str, start: datetime) -> float | None
         None,
         {"sum"},
     )
-    sums = [row["sum"] for row in rows.get(statistic_id, [])]
+    sums = [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportTypedDictNotRequiredAccess]
     return sums[-1] if sums else None
 
 

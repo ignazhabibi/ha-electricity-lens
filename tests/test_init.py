@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant.components.recorder import get_instance
+import pytest
+from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -16,7 +17,6 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 from homeassistant.setup import async_setup_component
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
@@ -139,7 +139,7 @@ async def _sums(hass: HomeAssistant, statistic_id: str, start: datetime) -> list
         None,
         {"sum"},
     )
-    return [row["sum"] for row in rows.get(statistic_id, [])]
+    return [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportReturnType, reportTypedDictNotRequiredAccess]
 
 
 @pytest.mark.usefixtures("energy")

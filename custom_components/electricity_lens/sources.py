@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.components.recorder.models import (
     StatisticData,
@@ -183,6 +183,8 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
                     batteries.append(
                         Battery(source["stat_energy_from"], source["stat_energy_to"])
                     )
+                case _:
+                    pass
         devices = tuple(
             DeviceMeter(
                 stat=device["stat_consumption"],
@@ -323,11 +325,11 @@ async def async_hourly_values(
         values.update(_rows_to_series(rows, "mean"))
     for entity_id in ids - with_mean:
         states = await instance.async_add_executor_job(
-            lambda entity_id=entity_id: state_changes_during_period(
+            lambda entity_id=entity_id: state_changes_during_period(  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
                 hass,
                 dt_util.utc_from_timestamp(start),
                 dt_util.utc_from_timestamp(end),
-                entity_id,
+                entity_id,  # pyright: ignore[reportUnknownArgumentType]
                 no_attributes=True,
             )
         )
@@ -422,7 +424,7 @@ async def async_first_hour(
         None,
         {"change"},
     )
-    starts = [rows[0]["start"] for rows in months.values() if rows]
+    starts = [rows[0]["start"] for rows in months.values() if rows]  # pyright: ignore[reportTypedDictNotRequiredAccess]
     if not starts:
         return None
     month_start = dt_util.utc_from_timestamp(min(starts))
@@ -436,7 +438,7 @@ async def async_first_hour(
         None,
         {"change"},
     )
-    first = [rows[0]["start"] for rows in hours.values() if rows]
+    first = [rows[0]["start"] for rows in hours.values() if rows]  # pyright: ignore[reportTypedDictNotRequiredAccess]
     return float(min(first)) if first else float(min(starts))
 
 
@@ -447,7 +449,7 @@ async def async_end_of_data(hass: HomeAssistant, stat_id: str) -> float | None:
     )
     if not (stat_rows := rows.get(stat_id)):
         return None
-    return float(stat_rows[0]["start"]) + HOUR
+    return float(stat_rows[0]["start"]) + HOUR  # pyright: ignore[reportTypedDictNotRequiredAccess]
 
 
 async def async_last_value(hass: HomeAssistant, entity_id: str) -> float | None:

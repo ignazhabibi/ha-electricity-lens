@@ -91,7 +91,7 @@ async def async_setup_entry(
         )
 
 
-class BalanceSensor(ElectricityLensEntity, SensorEntity):
+class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """All savings minus all investments."""
 
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
@@ -100,15 +100,15 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):
         self._attr_native_unit_of_measurement = coordinator.hass.config.currency
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return the balance, unknown while it would be misleading."""
         return self.coordinator.data.balance
 
 
-class CategorySensor(ElectricityLensEntity, SensorEntity):
+class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """A figure of one category."""
 
-    entity_description: CategorySensorDescription
+    entity_description: CategorySensorDescription  # pyright: ignore[reportIncompatibleVariableOverride]
     # The card and the more-info dialog read these. They change rarely, and
     # their history is not interesting, so the recorder skips them.
     _unrecorded_attributes = frozenset(
@@ -145,14 +145,14 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):
         return self.coordinator.data.categories.get(self._subentry_id)
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return the figure."""
         if (result := self._result) is None:
             return None
         return self.entity_description.value_fn(result)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
+    def extra_state_attributes(self) -> dict[str, Any] | None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return since when the saving counts and the price it uses now."""
         if self.entity_description.key != "saving" or (result := self._result) is None:
             return None

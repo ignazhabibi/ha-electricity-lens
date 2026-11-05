@@ -33,7 +33,9 @@ class Timeline:
     The first value applies from the beginning.
     """
 
-    points: list[tuple[float, TimelineValue]] = field(default_factory=list)
+    points: list[tuple[float, TimelineValue]] = field(
+        default_factory=list[tuple[float, TimelineValue]]
+    )
 
     def value_at(self, timestamp: float) -> TimelineValue:
         """Return the value in effect at timestamp."""
@@ -372,7 +374,7 @@ def effective_meters(
     consumption is part of another device's. Counting both would count twice.
     """
     chosen = list(dict.fromkeys(selected))
-    result = []
+    result: list[str] = []
     for meter in chosen:
         parent = parents.get(meter)
         seen = {meter}

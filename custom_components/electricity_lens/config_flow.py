@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any, Literal, override
 
+import probatio
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -26,19 +27,18 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import (
-    EntitySelector,
+    EntitySelector,  # pyright: ignore[reportUnknownVariableType]
     EntitySelectorConfig,
-    NumberSelector,
+    NumberSelector,  # pyright: ignore[reportUnknownVariableType]
     NumberSelectorConfig,
     NumberSelectorMode,
     SelectOptionDict,
-    SelectSelector,
+    SelectSelector,  # pyright: ignore[reportUnknownVariableType]
     SelectSelectorConfig,
     SelectSelectorMode,
 )
 from homeassistant.helpers.translation import async_get_translations
 from homeassistant.util import dt as dt_util
-import probatio
 
 from .calculation import HOUR
 from .const import (
@@ -86,23 +86,23 @@ PRICE_FIELDS = {
     },
     CATEGORY_WALLBOX: {HEATING_GAS: ("fuel_price", "fuel_price_entity")},
 }
-PRICE_ENTITY_SELECTOR = EntitySelector(
+PRICE_ENTITY_SELECTOR = EntitySelector(  # pyright: ignore[reportUnknownVariableType]
     EntitySelectorConfig(domain=["sensor", "input_number", "number"])
 )
 
 
-def _number(
+def _number(  # pyright: ignore[reportUnknownParameterType]
     unit: str | None = None,
     *,
     maximum: float | None = None,
     step: float | Literal["any"] = "any",
-) -> NumberSelector:
+) -> NumberSelector:  # pyright: ignore[reportMissingTypeArgument]
     config = NumberSelectorConfig(min=0, step=step, mode=NumberSelectorMode.BOX)
     if maximum is not None:
         config["max"] = maximum
     if unit is not None:
         config["unit_of_measurement"] = unit
-    return NumberSelector(config)
+    return NumberSelector(config)  # pyright: ignore[reportUnknownVariableType]
 
 
 def _date(timestamp: float) -> str:
@@ -111,7 +111,7 @@ def _date(timestamp: float) -> str:
 
 def available_categories(setup: EnergySetup) -> list[str]:
     """Return the categories the energy dashboard has the data for."""
-    available = []
+    available: list[str] = []
     if setup.solar:
         available.append(CATEGORY_PV)
     if setup.devices:
@@ -152,10 +152,10 @@ def overview_placeholders(setup: EnergySetup) -> dict[str, str]:
     }
 
 
-def meter_selector(setup: EnergySetup, taken: Iterable[str]) -> SelectSelector:
+def meter_selector(setup: EnergySetup, taken: Iterable[str]) -> SelectSelector:  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
     """Offer the individual devices that no other category uses."""
     used = set(taken)
-    return SelectSelector(
+    return SelectSelector(  # pyright: ignore[reportUnknownVariableType]
         SelectSelectorConfig(
             options=[
                 SelectOptionDict(value=device.stat, label=device.name or device.stat)
