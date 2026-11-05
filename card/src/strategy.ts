@@ -62,22 +62,36 @@ const view = (
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   categories: Category[];
+  /** The categories with an investment, and the sensors about it. */
+  investments: { category: Category; payback: string; annualReturn: string }[];
 }
 
 /** Finds the categories among the entities. */
 export function findSensors(hass: HomeAssistant): Sensors {
   const entries = Object.values(hass.entities ?? {}).filter((entry) => entry.platform === DOMAIN);
   const order: Category[] = ["pv", "heat_pump", "wallbox"];
-  const categories = entries
-    .filter((entry) => entry.translation_key === "saving")
+  const savings = entries.filter((entry) => entry.translation_key === "saving");
+  const categories = savings
     .map((entry) => hass.states[entry.entity_id]?.attributes.category as Category)
     .filter((category) => order.includes(category));
-  return { categories };
+  const investments = savings.flatMap((entry) => {
+    const attributes = hass.states[entry.entity_id]?.attributes;
+    const sibling = (key: string) =>
+      entries.find((item) => item.device_id === entry.device_id && item.translation_key === key)?.entity_id;
+    const payback = sibling("payback");
+    const annualReturn = sibling("annual_return");
+    const category = attributes?.category as Category;
+    return order.includes(category) && Number(attributes?.investment) > 0 && payback && annualReturn
+      ? [{ category, payback, annualReturn }]
+      : [];
+  });
+  investments.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+  return { categories, investments };
 }
 
 /** The views, one question each; every card has one home. Only the
  * overview repeats headline figures, and only for today. */
-export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors = { categories: [] }): View[] {
+export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors = { categories: [], investments: [] }): View[] {
   type Key = Parameters<Localize>[0];
   /** A figure in the view of its own area, named without the area. */
   const own = (area: string, figure: string, options: Card = {}): Card =>
@@ -107,6 +121,25 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     card("electricity-lens-history-card", { area, figure: "energy", stack: "source", ...priceLine, ...options });
   const ring = (area: string) =>
     card("electricity-lens-breakdown-card", { area, by: "source", ...wide });
+  // Each investment shows its payback, and once it is paid back its return.
+  // Home Assistant shows and hides them by the sensors' states.
+  const investmentTiles = sensors.investments.flatMap(({ category, payback, annualReturn }) => [
+    card("electricity-lens-figures-card", {
+      entity: payback,
+      name: t(`strategy.payback_${category}`),
+      secondary: "payback",
+      visibility: [{ condition: "numeric_state", entity: payback, below: 100 }],
+      ...half,
+    }),
+    card("electricity-lens-figures-card", {
+      entity: annualReturn,
+      name: t(`strategy.return_${category}`),
+      secondary: "return",
+      // The sensor has a number only from then on.
+      visibility: [{ condition: "numeric_state", entity: annualReturn, above: -1 }],
+      ...half,
+    }),
+  ]);
   const views: View[] = [];
 
   views.push(
@@ -123,6 +156,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         named("household", "energy", "strategy.consumption_today", today),
         ...(solar ? [named("solar", "energy", "strategy.solar_today", today)] : []),
         ...(solar?.forecast ? [own("solar", "forecast_today"), own("solar", "forecast_tomorrow")] : []),
+        ...investmentTiles,
       ],
       false
     )

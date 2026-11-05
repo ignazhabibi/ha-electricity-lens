@@ -1,4 +1,4 @@
-// Styles both cards share: category colors and the header.
+// Styles the cards share: category colors and the header.
 
 import { css } from "lit";
 

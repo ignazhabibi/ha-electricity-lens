@@ -1,10 +1,9 @@
 // Reads the integration's sensors and derives what the card shows.
 
-import type { Category, CategoryFigures, HomeAssistant } from "./types";
+import type { BalanceFigures, Category, CategoryFigures, HomeAssistant } from "./types";
 
 export const DOMAIN = "electricity_lens";
 const ORDER: Category[] = ["pv", "heat_pump", "wallbox"];
-const MONTH_MS = (365.25 / 12) * 24 * 3600 * 1000;
 
 const number = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -44,7 +43,6 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       calculating: attributes.calculating === true,
       saving: number(state.state),
       investment: number(attributes.investment),
-      payback: value(siblings(entry.device_id, "payback")?.entity_id),
       perYear: value(siblings(entry.device_id, "saving_per_year")?.entity_id),
       countingSince: date(attributes.counting_since),
       yearlyFrom: date(attributes.yearly_from),
@@ -61,6 +59,22 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
   );
 }
 
+/** The overall figures as the integration computed them; null when its
+ * sensor has no state to read. */
+export function readBalance(hass: HomeAssistant): BalanceFigures | null {
+  const entry = Object.values(hass.entities ?? {}).find(
+    (item) => item.platform === DOMAIN && item.translation_key === "balance"
+  );
+  const state = entry ? hass.states[entry.entity_id] : undefined;
+  if (!state || state.state === "unavailable") return null;
+  return {
+    balance: number(state.state),
+    saved: number(state.attributes.saved) ?? 0,
+    invested: number(state.attributes.invested) ?? 0,
+    inThePlusFrom: date(state.attributes.in_the_plus_from),
+  };
+}
+
 /** What to say when no category can be read: their sensors exist but have no
  * state to read, or the integration is not set up. */
 export function noCategoriesText(hass: HomeAssistant): "integration_unavailable" | "not_set_up" {
@@ -68,64 +82,4 @@ export function noCategoriesText(hass: HomeAssistant): "integration_unavailable"
     (entry) => entry.platform === DOMAIN && entry.translation_key === "saving"
   );
   return hasSensors ? "integration_unavailable" : "not_set_up";
-}
-
-export interface Totals {
-  saved: number;
-  invested: number;
-  /** Savings minus investments; null while it is being computed. */
-  balance: number | null;
-  perYear: number | null;
-  /** When the household is roughly in the plus; null if unknown. */
-  inThePlusFrom: Date | null;
-  calculating: boolean;
-}
-
-export function totals(categories: CategoryFigures[], now = new Date()): Totals {
-  const calculating = categories.some((category) => category.calculating);
-  const saved = categories.reduce((sum, c) => sum + (c.saving ?? 0), 0);
-  const invested = categories.reduce((sum, c) => sum + (c.investment ?? 0), 0);
-  // As the balance sensor: unknown while a category has no saving yet.
-  const ready =
-    !calculating &&
-    categories.length > 0 &&
-    categories.every((category) => category.saving !== null);
-  const balance = ready ? saved - invested : null;
-  const yearly = categories.every((category) => category.perYear !== null);
-  const perYear =
-    ready && yearly
-      ? categories.reduce((sum, c) => sum + (c.perYear ?? 0), 0)
-      : null;
-  let inThePlusFrom: Date | null = null;
-  if (balance !== null && perYear !== null) {
-    if (balance >= 0) inThePlusFrom = now;
-    else if (perYear > 0)
-      inThePlusFrom = new Date(
-        now.getTime() + (-balance / perYear) * 12 * MONTH_MS
-      );
-  }
-  return {
-    saved,
-    invested,
-    balance,
-    perYear,
-    inThePlusFrom,
-    calculating,
-  };
-}
-
-/** Years until a category has paid for itself, or null if it cannot be said. */
-export function yearsToPayback(category: CategoryFigures): number | null {
-  const { investment, saving, perYear } = category;
-  if (investment === null || investment <= 0) return null;
-  if (saving === null || perYear === null || perYear <= 0) return null;
-  return Math.max(0, (investment - saving) / perYear);
-}
-
-/** Yearly return on the investment once paid off, in percent. */
-export function annualReturn(category: CategoryFigures): number | null {
-  const { investment, saving, perYear } = category;
-  if (investment === null || investment <= 0) return null;
-  if (saving === null || perYear === null || saving < investment) return null;
-  return (perYear / investment) * 100;
 }

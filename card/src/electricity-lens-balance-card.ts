@@ -1,8 +1,8 @@
 // Dashboard card of the Electricity Lens integration. It needs no options: it
 // finds the integration's sensors by itself and renders from the states the
-// frontend already has, so it appears without loading delay.
+// frontend already has, so it appears without loading delay. The integration
+// computes every figure; the head shows the balance, the rows what each saved.
 
-import { mdiCalendarMonthOutline, mdiSigma } from "@mdi/js";
 import { css, html, nothing, type TemplateResult } from "lit";
 
 import { consumerColors, palette } from "./colors";
@@ -10,39 +10,17 @@ import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
 import { localizer, type Localize } from "./localize";
-import {
-  DOMAIN,
-  annualReturn,
-  noCategoriesText,
-  readCategories,
-  totals,
-  yearsToPayback,
-} from "./model";
+import { DOMAIN, noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles } from "./styles";
-import type { CategoryFigures, FiguresInfo, HomeAssistant } from "./types";
-
-type View = "total" | "yearly";
-const VIEW_STORAGE_KEY = "electricity-lens-balance-card-view";
-
-const readView = (): View => {
-  try {
-    return localStorage.getItem(VIEW_STORAGE_KEY) === "yearly"
-      ? "yearly"
-      : "total";
-  } catch {
-    return "total";
-  }
-};
+import type { BalanceFigures, CategoryFigures, FiguresInfo, HomeAssistant } from "./types";
 
 export class ElectricityLensBalanceCard extends LensCard {
   static properties = {
     hass: { attribute: false },
-    _view: { state: true },
     _info: { state: true },
   };
 
   hass?: HomeAssistant;
-  private _view: View = readView();
   private _info?: FiguresInfo | null;
   private _infoLoading = false;
 
@@ -93,36 +71,11 @@ export class ElectricityLensBalanceCard extends LensCard {
     }).format(value);
   }
 
-  private _percent(value: number): string {
-    return numberFormat(this.hass?.locale, {
-      style: "percent",
-      maximumFractionDigits: 0,
-    }).format(value / 100);
-  }
-
   private _month(value: Date): string {
     return new Intl.DateTimeFormat(this._language, {
       month: "long",
       year: "numeric",
     }).format(value);
-  }
-
-  private _years(years: number): string {
-    const t = this._localize;
-    if (years < 1) return t("under_one_year");
-    const count = Math.round(years);
-    return count === 1
-      ? t("years_one")
-      : t("years_other", { count: String(count) });
-  }
-
-  private _toggleView(): void {
-    this._view = this._view === "total" ? "yearly" : "total";
-    try {
-      localStorage.setItem(VIEW_STORAGE_KEY, this._view);
-    } catch {
-      // Remembering the view is a convenience only.
-    }
   }
 
   private _openIntegration(): void {
@@ -147,170 +100,76 @@ export class ElectricityLensBalanceCard extends LensCard {
     const t = this._localize;
     if (!this.hass) return html``;
     const categories = readCategories(this.hass);
-    if (!categories.length) {
+    const balance = readBalance(this.hass);
+    if (!categories.length || !balance) {
       return html`<ha-card>
         <div class="header"><h2 class="title">${t("title")}</h2></div>
         <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
-    const sums = totals(categories);
-    const yearly = this._view === "yearly";
     const known = this._info ? consumerColors(this._info, palette(this)) : undefined;
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${t("title")}</h2>
-        ${this._chip(sums, yearly)}
-        <button
-          class="toggle"
-          type="button"
-          aria-label=${yearly ? t("show_total") : t("show_yearly")}
-          title=${yearly ? t("show_total") : t("show_yearly")}
-          @click=${this._toggleView}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d=${yearly ? mdiSigma : mdiCalendarMonthOutline}></path>
-          </svg>
-        </button>
+        ${balance.balance === null
+          ? nothing
+          : html`<span class="chip">${this._money(balance.balance, true)}</span>`}
       </div>
-      <p class="summary">${this._summary(sums, categories, yearly)}</p>
+      <p class="summary">${this._summary(balance, categories)}</p>
       <ul class="rows">
-        ${categories.map((category) => this._row(category, yearly, known?.get(category.category)))}
+        ${categories.map((category) =>
+          this._row(category, balance, known?.get(category.category))
+        )}
       </ul>
       ${this._footer(categories)}
     </ha-card>`;
   }
 
-  private _chip(sums: ReturnType<typeof totals>, yearly: boolean) {
+  private _summary(balance: BalanceFigures, categories: CategoryFigures[]): string {
     const t = this._localize;
-    let text: string | null = null;
-    if (yearly) {
-      if (sums.perYear !== null)
-        text = t("per_year", { amount: this._money(sums.perYear, true) });
-    } else if (sums.balance !== null) {
-      text = this._money(sums.balance, true);
-    } else if (!sums.calculating) {
-      text = this._money(sums.saved);
-    }
-    return text === null ? nothing : html`<span class="chip">${text}</span>`;
+    if (categories.some((category) => category.calculating)) return t("calculating_all");
+    const saved = this._money(balance.saved);
+    if (balance.invested <= 0) return t("saved_only", { saved });
+    const parts = [t("saved_invested", { saved, invested: this._money(balance.invested) })];
+    if (balance.balance !== null && balance.balance >= 0) parts.push(t("in_the_plus"));
+    else if (balance.inThePlusFrom)
+      parts.push(t("in_the_plus_from", { date: this._month(balance.inThePlusFrom) }));
+    return parts.join(" · ");
   }
 
-  private _summary(
-    sums: ReturnType<typeof totals>,
-    categories: CategoryFigures[],
-    yearly: boolean
-  ): string {
+  private _row(category: CategoryFigures, balance: BalanceFigures, color?: string): TemplateResult {
     const t = this._localize;
-    if (sums.calculating) return t("calculating_all");
-    if (yearly) {
-      if (sums.inThePlusFrom === null) {
-        return categories.some((c) => c.perYear === null)
-          ? t("yearly_after_twelve")
-          : "";
-      }
-      return sums.balance !== null && sums.balance >= 0
-        ? t("in_the_plus")
-        : t("in_the_plus_from", { date: this._month(sums.inThePlusFrom) });
-    }
-    return sums.invested > 0
-      ? t("saved_invested", {
-          saved: this._money(sums.saved),
-          invested: this._money(sums.invested),
-        })
-      : t("saved_only", { saved: this._money(sums.saved) });
-  }
-
-  private _row(category: CategoryFigures, yearly: boolean, color?: string): TemplateResult {
-    const t = this._localize;
-    const name = t(`category.${category.category}`);
-    let amount = "–";
-    if (!category.calculating) {
-      if (yearly && category.perYear !== null)
-        amount = t("per_year", { amount: this._money(category.perYear) });
-      else if (!yearly && category.saving !== null)
-        amount = this._money(category.saving);
-    }
+    const waiting = category.calculating || category.saving === null;
     return html`<li class="row ${category.category}" style=${color ? `--color: ${color}` : ""}>
       <span class="swatch" aria-hidden="true"></span>
       <div class="row-body">
         <div class="line">
-          <span>${name}</span>
-          <span class="amount ${amount === "–" ? "waiting" : ""}">${amount}</span>
+          <span>${t(`category.${category.category}`)}</span>
+          <span class="amount ${waiting ? "waiting" : ""}"
+            >${waiting ? "–" : this._money(category.saving ?? 0)}</span
+          >
         </div>
         <div class="sub">
-          ${category.calculating
-            ? t("calculating")
-            : yearly
-              ? this._yearlyDetail(category)
-              : this._totalDetail(category, name)}
+          ${category.calculating ? t("calculating") : this._details(category, balance)}
         </div>
-        ${category.calculating ? nothing : this._since(category, yearly)}
       </div>
     </li>`;
   }
 
-  /** Since when a row counts, what that makes per year, and whether heat was
-   * partly estimated. */
-  private _since(category: CategoryFigures, yearly: boolean) {
+  /** Since when a row counts, what that makes per year, and what to know about it. */
+  private _details(category: CategoryFigures, balance: BalanceFigures): string {
     const t = this._localize;
     const parts: string[] = [];
     if (category.countingSince)
       parts.push(t("since", { date: this._month(category.countingSince) }));
-    if (!yearly && category.perYear !== null)
+    if (category.perYear !== null)
       parts.push(t("per_year", { amount: this._money(category.perYear) }));
+    else if (category.yearlyFrom)
+      parts.push(t("yearly_from", { date: this._month(category.yearlyFrom) }));
+    // Only worth saying when others have an investment to compare with.
+    if (balance.invested > 0 && !category.investment) parts.push(t("no_investment"));
     if (category.heatEstimated) parts.push(t("heat_estimated"));
-    return parts.length
-      ? html`<div class="sub since">${parts.join(" · ")}</div>`
-      : nothing;
-  }
-
-  private _totalDetail(
-    category: CategoryFigures,
-    name: string
-  ): TemplateResult | string {
-    const t = this._localize;
-    if (category.investment && category.payback !== null) {
-      const percent = Math.max(0, category.payback);
-      const shown = this._percent(category.payback);
-      return html`<div class="meter">
-        <div
-          class="bar"
-          role="progressbar"
-          aria-label=${t("progress", { name, percent: shown })}
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow=${Math.min(100, Math.round(percent))}
-        >
-          <i style="width:${Math.min(100, percent)}%"></i>
-        </div>
-        <span
-          >${percent >= 100
-            ? t("paid_off")
-            : t("of_investment", {
-                percent: shown,
-                investment: this._money(category.investment),
-              })}</span
-        >
-      </div>`;
-    }
-    return t(`instead_${category.category}`);
-  }
-
-  private _yearlyDetail(category: CategoryFigures): string {
-    const t = this._localize;
-    if (category.perYear === null) {
-      return category.yearlyFrom
-        ? t("yearly_from", { date: this._month(category.yearlyFrom) })
-        : "";
-    }
-    const returnRate = annualReturn(category);
-    if (returnRate !== null)
-      return t("return_per_year", { percent: this._percent(returnRate) });
-    const years = yearsToPayback(category);
-    if (years !== null) return t("pays_off_in", { years: this._years(years) });
-    if (category.category === "heat_pump")
-      return t(category.heating === "oil" ? "instead_of_oil" : "instead_of_gas");
-    if (category.category === "wallbox") return t("instead_of_fuel");
-    return "";
+    return parts.join(" · ");
   }
 
   private _footer(categories: CategoryFigures[]) {
@@ -340,31 +199,9 @@ export class ElectricityLensBalanceCard extends LensCard {
   static styles = [
     cardStyles,
     css`
-      .toggle {
-        flex: none;
-        width: 40px;
-        height: 40px;
-        border: none;
-        border-radius: 50%;
-        background: none;
-        color: var(--secondary-text-color);
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        padding: 0;
-      }
-      .toggle:hover {
-        background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-      }
-      .toggle:focus-visible,
       .prices:focus-visible {
         outline: 2px solid var(--primary-color);
         outline-offset: 2px;
-      }
-      .toggle svg {
-        width: 24px;
-        height: 24px;
-        fill: currentColor;
       }
       .rows {
         list-style: none;
@@ -423,40 +260,6 @@ export class ElectricityLensBalanceCard extends LensCard {
       }
       .sub:empty {
         display: none;
-      }
-      .sub.since {
-        margin-top: 2px;
-      }
-      .meter {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 6px;
-      }
-      .bar {
-        flex: 1;
-        height: 12px;
-        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
-        background-color: var(
-          --ha-bar-background-color,
-          var(--secondary-background-color)
-        );
-        overflow: hidden;
-      }
-      .bar i {
-        display: block;
-        height: 100%;
-        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
-        /* HA's energy look, as the swatch: half strength, framed by the full color. */
-        background: color-mix(in srgb, var(--color) 50%, transparent);
-        box-shadow: inset 0 0 0 1px var(--color);
-      }
-      .meter span {
-        flex: none;
-        white-space: nowrap;
-        font-size: 12px;
-        line-height: 16px;
-        color: var(--secondary-text-color);
       }
       .footer {
         padding: 4px 8px 8px;

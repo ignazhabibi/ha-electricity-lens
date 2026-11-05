@@ -224,9 +224,10 @@ overall balance.
 | Entity | Description |
 |---|---|
 | Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
-| Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. |
+| Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
-| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. |
+| Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
+| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, and roughly when it reaches zero. |
 
 ## Statistics
 
@@ -255,14 +256,10 @@ change are not stored; statistics cards carry the sum over them.
 
 ### Electricity Lens balance
 
-The card finds the categories by itself. The button in its header switches
-between two views:
-
-- **Total**: savings so far against the investments, with the progress of each.
-- **Per year**: yearly averages, the years still to go, and roughly when the
-  household will be in the plus.
-
-Each row says since when it counts. The gas, oil, and fuel prices in use are
+The card finds the categories by itself. Its head shows the balance, the savings
+against the investments, and roughly when the household will be in the plus. Each
+row shows what a category has saved, since when, and what that makes per year.
+The gas, oil, and fuel prices in use are
 shown at the bottom; selecting them opens the integration page, where they are
 changed. The card follows light and dark themes, works on phones and desktops,
 and can be used with keyboard and screen reader.
@@ -332,7 +329,7 @@ A card has one of three sources:
 |---|---|
 | Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
 | Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
-| Entity | Any entity's current state |
+| Entity | Any entity's current state; `secondary: payback` on a *Paid back* sensor or `secondary: return` on a *Return per year* sensor in YAML adds the line about the investment |
 
 Areas and their figures:
 
@@ -415,7 +412,7 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | The balance card, which always shows the current state; costs, self-sufficiency, consumption, and solar today; solar forecast for today and tomorrow |
+| Now | How is today going? | The balance card, which always shows the current state; costs, self-sufficiency, consumption, and solar today; solar forecast for today and tomorrow; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
