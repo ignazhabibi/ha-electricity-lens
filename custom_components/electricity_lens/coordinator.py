@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
@@ -220,6 +220,13 @@ def coordinator_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str
     return Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
 
 
+def async_remove_issues(hass: HomeAssistant, *, keep: Collection[str] = ()) -> None:
+    """Remove the integration's repair issues, except those in keep."""
+    for domain, issue_id in list(ir.async_get(hass).issues):
+        if domain == DOMAIN and issue_id not in keep:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
+
+
 class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
     """Compute each category's saving from the energy dashboard's statistics.
 
@@ -271,16 +278,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             fingerprint = f"{config.fingerprint}:{CALCULATION_VERSION}"
             if self.household.recompute is not None:
                 fingerprint += f":{self.household.recompute}"
-            if (
-                state.fingerprint != fingerprint
-                or moving_statistics
-                or (
-                    config.category == CATEGORY_HEAT_PUMP
-                    and len(config.heat_meters) == len(config.meters) > 1
-                    and state.next_hour is not None
-                    and f"{device_area(config.meters[0])}_saving" not in state.totals
-                )
-            ):
+            if state.fingerprint != fingerprint or moving_statistics:
                 state.reset(fingerprint)
             for key in config.values:
                 state.timeline(key).set(config.current.get(key), valid_from)
@@ -288,6 +286,19 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 state.timeline(VALUE_PRICE_ENTITY).set(config.price_entity, valid_from)
             self.configs[subentry_id] = config
             self.states[subentry_id] = state
+        # A removed category can no longer clear its own issues.
+        async_remove_issues(
+            self.hass,
+            keep={
+                ISSUE_ENERGY_INTERFACE,
+                ISSUE_NO_GRID_PRICE,
+                *(
+                    f"{issue}_{subentry_id}"
+                    for issue in (ISSUE_MISSING_METER, ISSUE_MISSING_PRICE_ENTITY)
+                    for subentry_id in self.configs
+                ),
+            },
+        )
         configured = {config.category for config in self.configs.values()}
         stale = [
             statistic_id

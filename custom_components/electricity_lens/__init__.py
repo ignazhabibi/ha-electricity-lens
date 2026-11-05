@@ -44,6 +44,7 @@ from .const import (
 from .coordinator import (
     ElectricityLensConfigEntry,
     ElectricityLensCoordinator,
+    async_remove_issues,
     coordinator_store,
     next_full_hour,
 )
@@ -208,6 +209,7 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> None:
-    """Remove the statistics the integration wrote, and its progress."""
+    """Remove the statistics the integration wrote, its progress, and its issues."""
+    async_remove_issues(hass)
     async_remove_statistics(hass, await async_statistic_ids(hass))
     await coordinator_store(hass, entry).async_remove()
