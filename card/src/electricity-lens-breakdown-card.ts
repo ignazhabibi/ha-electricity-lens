@@ -499,7 +499,7 @@ export class ElectricityLensBreakdownCard extends LensCard {
     const followsDate = (this._config.period ?? "energy_date") === "energy_date";
     const chip = range && !(display === "bars" && followsDate) ? rangeLabel(range, this._language) : "";
     let body: TemplateResult;
-    if (calculating) body = html`<p class="summary">${t("calculating_all")}</p>`;
+    if (calculating) body = html`<p class="summary">${t("calculating")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
     else if (this._sums?.failed) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;

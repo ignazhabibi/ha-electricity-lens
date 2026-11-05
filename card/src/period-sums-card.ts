@@ -131,7 +131,7 @@ export abstract class PeriodSumsCard extends LensCard {
     const categories = readCategories(this.hass);
     if (!categories.length) return noCategoriesText(this.hass);
     if (categories.some((category) => category.calculating) || this._info?.calculating) {
-      return "calculating_all";
+      return "calculating";
     }
     if (this._info === null) return "editor_not_loaded";
     if (this._info === undefined) return "loading";

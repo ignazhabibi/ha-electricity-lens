@@ -46,7 +46,6 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       perYear: value(siblings(entry.device_id, "saving_per_year")?.entity_id),
       countingSince: date(attributes.counting_since),
       yearlyFrom: date(attributes.yearly_from),
-      price: number(attributes.price),
       heating:
         attributes.heating === "gas" || attributes.heating === "oil"
           ? attributes.heating
