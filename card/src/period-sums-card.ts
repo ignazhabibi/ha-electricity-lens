@@ -76,9 +76,12 @@ export abstract class PeriodSumsCard extends LensCard {
     return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
   }
 
+  /** The date selection's collection, if it has a key of its own. */
+  protected _collectionKey?: string;
+
   private _follow(): void {
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._collectionKey, (range) => {
       this._selected = range;
     });
   }

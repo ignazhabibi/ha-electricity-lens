@@ -788,10 +788,12 @@
         "grid_cost": "Netzkosten",
         "grid_import_cost": "Kosten Netzbezug",
         "grid_feed_in": "Einspeisevergütung",
+        "grid_standing_charge": "Grundpreis",
         "grid_cheap_saving": "Ersparnis durch günstige Zeiten",
         "heat": "Wärme",
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten",
+        "solar_saving": "Ersparnis durch PV-Strom",
         "saving": "Ersparnis"
       }
     }

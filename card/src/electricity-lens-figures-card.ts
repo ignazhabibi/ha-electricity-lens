@@ -12,11 +12,12 @@ import {
   type TemplateResult,
 } from "lit";
 
-import { followEnergyDate } from "./energy-date";
+import { checkCollectionKey, followEnergyDate } from "./energy-date";
 import { formatter, numberFormat, splitUnit, type Format } from "./format";
 import {
   figuresOf,
   isForecast,
+  isInvestment,
   sourceOf,
   statisticsOf,
   valueOf,
@@ -35,6 +36,7 @@ import {
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
 import { hasText, localizer, type Localize } from "./localize";
+import { areaOfCategory, investmentSensors } from "./model";
 import { cardStyles } from "./styles";
 import type {
   FigureArea,
@@ -58,21 +60,7 @@ export const PERIODS: PeriodOption[] = [
 export interface FiguresCardConfig extends FigureConfig {
   type: string;
   period?: PeriodOption;
-}
-
-/** The card's config. Before each figure was its own card, a card held a list
- * of tiles: one still works, several have to become one card each. */
-export function figuresConfig(
-  config: FiguresCardConfig & { tiles?: FigureConfig[]; title?: string; columns?: number }
-): FiguresCardConfig {
-  if (!config) throw new Error("Invalid configuration");
-  const { tiles, title, columns: _columns, ...rest } = config;
-  if (tiles === undefined) return rest;
-  if (!Array.isArray(tiles) || tiles.length > 1) {
-    throw new Error("Each key figure is its own card now: use one card per entry in tiles");
-  }
-  const tile = tiles[0] ?? {};
-  return { ...rest, ...tile, ...(title && !tile.name ? { name: title } : {}) };
+  collection_key?: string;
 }
 
 /** A figure's name; devices and the like are named with their area. */
@@ -159,7 +147,8 @@ export class ElectricityLensFiguresCard extends LensCard {
   }
 
   setConfig(config: FiguresCardConfig): void {
-    this._config = figuresConfig(config);
+    checkCollectionKey(config?.collection_key);
+    this._config = config;
   }
 
   getCardSize(): number {
@@ -201,10 +190,20 @@ export class ElectricityLensFiguresCard extends LensCard {
     return this._config?.period ?? "energy_date";
   }
 
+  /** Whether the card shows a sum over its period, not a current state or a forecast. */
+  private get _hasPeriod(): boolean {
+    const { figure } = this._config ?? {};
+    return (
+      !!this._config &&
+      sourceOf(this._config) !== "entity" &&
+      !(figure && (isForecast(figure) || isInvestment(figure)))
+    );
+  }
+
   private _follow(): void {
-    if (this._period !== "energy_date") return;
+    if (this._period !== "energy_date" || !this._hasPeriod) return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._config?.collection_key, (range) => {
       this._selected = range;
     });
   }
@@ -212,6 +211,7 @@ export class ElectricityLensFiguresCard extends LensCard {
   /** The period shown; undefined until the date selection is known. */
   private _range(): Range | undefined {
     const period = this._period;
+    if (!this._hasPeriod) return fixedRange("today");
     if (period !== "energy_date") return fixedRange(period);
     if (this._selected === undefined) return undefined;
     return this._selected ?? fixedRange("this_month");
@@ -247,6 +247,7 @@ export class ElectricityLensFiguresCard extends LensCard {
     const config = this._config;
     if (!range || !config) return undefined;
     const source = sourceOf(config);
+    if (source === "entity" || (config.figure && isInvestment(config.figure))) return undefined;
     if (source === "energy" && !this._info) return undefined;
     const ids = new Set<string>();
     const statistics = new Set<string>();
@@ -296,7 +297,8 @@ export class ElectricityLensFiguresCard extends LensCard {
               end_time: new Date(request.range.end + 1).toISOString(),
               statistic_ids: request.ids,
               period,
-              types: ["change", "mean", "min", "max"],
+              // Only a statistic of its own can show more than its total.
+              types: request.statistics.length ? ["change", "mean", "min", "max"] : ["change"],
               units: { energy: "kWh" },
             })
           : Promise.resolve({}),
@@ -394,11 +396,12 @@ export class ElectricityLensFiguresCard extends LensCard {
     }
     const { area, figure } = found;
     const label = config.name ?? figureLabel(this._localize, figure, area);
+    if (isInvestment(figure)) return this._investmentCard(label, figure, area);
     if (this._info?.calculating && !isForecast(figure)) {
       return this._card(label, "…", t("calculating"));
     }
     if (!this._loaded) return this._card(label, "…");
-    if (this._loaded.failed) return this._card(label, "–", t("figures_failed"));
+    if (this._loaded.failed) return this._card(label, "–", t("figures_not_loaded"));
     const forecast =
       figure === "forecast_today"
         ? this._loaded.forecast.today
@@ -433,11 +436,13 @@ export class ElectricityLensFiguresCard extends LensCard {
     const t = this._localize;
     const id = config.statistic ?? "";
     const metadata = this._loaded?.metadata[id];
-    const label =
+    const known =
       config.name ??
       metadata?.name ??
-      (this.hass?.states[id]?.attributes.friendly_name as string | undefined) ??
-      id;
+      (this.hass?.states[id]?.attributes.friendly_name as string | undefined);
+    // Until the statistic's name is known, a blank keeps the card's height.
+    if (!this._loaded) return this._card(known ?? "\u00a0", "…");
+    const label = known ?? id;
     const rows = this._rows(id);
     const unit =
       metadata?.unit_class === "energy"
@@ -472,7 +477,7 @@ export class ElectricityLensFiguresCard extends LensCard {
         });
       }
     }
-    if (this._loaded?.failed) return this._card(label, "–", t("figures_failed"));
+    if (this._loaded.failed) return this._card(label, "–", t("figures_not_loaded"));
     return this._card(label, show(value), config.secondary === "none" ? undefined : line);
   }
 
@@ -486,16 +491,6 @@ export class ElectricityLensFiguresCard extends LensCard {
       "";
     if (!state) return this._card(label, "–", t("figures_unavailable"));
     const number = Number(state.state);
-    if (Number.isFinite(number) && config.secondary === "payback") {
-      return this._card(label, this._format(number, "percent"), this._paybackLine(state.attributes));
-    }
-    if (Number.isFinite(number) && config.secondary === "return") {
-      const rate = numberFormat(this.hass?.locale, {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(number);
-      return this._card(label, t("return_value", { rate }), this._returnLine(state.attributes));
-    }
     const currency = this.hass?.config.currency ?? "";
     // Units such as "EUR/a" show the currency's symbol, as amounts do.
     const unit = (state.attributes.unit_of_measurement as string | undefined)?.replace(
@@ -512,10 +507,32 @@ export class ElectricityLensFiguresCard extends LensCard {
       : unit && unit === symbol
         ? this._format(number, "money")
         : `${this._number(number)}${unit ? ` ${unit}` : ""}`;
-    return this._card(label, value);
+    return this._card(label, value, undefined, config.entity);
   }
 
-  /** What a payback sensor tells: the investment and the time still to go. */
+  /** What the integration's sensors tell about an investment. */
+  private _investmentCard(label: string, figure: Figure, area: FigureArea): TemplateResult {
+    const t = this._localize;
+    const sensors = investmentSensors(this.hass!).find(
+      (item) => areaOfCategory(item.category) === area.id
+    );
+    const entity = figure === "payback" ? sensors?.payback : sensors?.annualReturn;
+    const state = entity ? this.hass?.states[entity] : undefined;
+    const number = Number(state?.state);
+    if (!state || !Number.isFinite(number)) return this._card(label, "–", undefined, entity);
+    if (figure === "payback") {
+      // Not yet paid back does not round up to 100 %.
+      const paid = number < 100 ? Math.floor(number) : number;
+      return this._card(label, this._format(paid, "percent"), this._paybackLine(state.attributes), entity);
+    }
+    const rate = numberFormat(this.hass?.locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(number);
+    return this._card(label, t("return_value", { rate }), this._returnLine(state.attributes), entity);
+  }
+
+  /** What a payback sensor tells: the time still to go, else the investment. */
   private _paybackLine(attributes: Record<string, unknown>): string | undefined {
     const t = this._localize;
     if (typeof attributes.investment !== "number") return undefined;
@@ -527,21 +544,15 @@ export class ElectricityLensFiguresCard extends LensCard {
       years < 1
         ? t(count === 1 ? "months_one" : "months_other", { count: String(count) })
         : t(count === 1 ? "years_one" : "years_other", { count: String(count) });
-    return t("line_payback_left", { investment, time });
+    return t("line_payback_left", { time });
   }
 
   /** What a return sensor tells: how far the saving has gone beyond the investment. */
   private _returnLine(attributes: Record<string, unknown>): string | undefined {
-    const { surplus, surplus_percent: percent } = attributes;
-    if (typeof surplus !== "number" || typeof percent !== "number") return undefined;
-    const locale = this.hass?.locale;
+    const { surplus } = attributes;
+    if (typeof surplus !== "number") return undefined;
     return this._localize("line_return", {
-      percent: numberFormat(locale, {
-        style: "percent",
-        maximumFractionDigits: 0,
-        signDisplay: "exceptZero",
-      }).format(percent / 100),
-      amount: numberFormat(locale, {
+      amount: numberFormat(this.hass?.locale, {
         style: "currency",
         currency: this.hass?.config.currency ?? "EUR",
         maximumFractionDigits: 0,
@@ -551,16 +562,39 @@ export class ElectricityLensFiguresCard extends LensCard {
   }
 
   /** The stat card of the energy dashboards: the name as its header, the
-   * value with its unit, and the line that explains it. */
-  private _card(label: string, value: string, line?: string): TemplateResult {
+   * value with its unit, and the line that explains it. Nothing wraps; what
+   * does not fit ends in an ellipsis and shows whole as a tooltip. An entity's
+   * card opens its dialog, as Home Assistant's cards do. */
+  private _card(label: string, value: string, line?: string, entity?: string): TemplateResult {
     const [number, unit] = splitUnit(value);
-    return html`<ha-card lang=${this._language}>
-      <div class="header"><h2 class="title">${label}</h2></div>
+    const open = () => {
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          detail: { entityId: entity },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
+    };
+    return html`<ha-card
+      lang=${this._language}
+      class=${entity ? "clickable" : ""}
+      role=${entity ? "button" : nothing}
+      tabindex=${entity ? "0" : nothing}
+      @click=${entity ? open : nothing}
+      @keydown=${entity ? key : nothing}
+    >
+      <div class="header"><h2 class="title" title=${label}>${label}</h2></div>
       <div class="stat">
         <div class="value">
-          <span class="number">${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
+          <span class="number" title=${value}>${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
         </div>
-        ${line ? html`<div class="line">${line}</div>` : nothing}
+        ${line ? html`<div class="line" title=${line}>${line}</div>` : nothing}
       </div>
     </ha-card>`;
   }
@@ -583,10 +617,25 @@ export class ElectricityLensFiguresCard extends LensCard {
       ha-card {
         box-sizing: border-box;
       }
+      .clickable {
+        cursor: pointer;
+      }
+      .clickable:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: -2px;
+      }
       .title {
         font-size: var(--ha-font-size-l, 16px);
+        font-weight: var(--ha-font-weight-medium, 500);
         line-height: var(--ha-line-height-normal, 24px);
         color: var(--secondary-text-color);
+      }
+      .title,
+      .number,
+      .line {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .stat {
         display: flex;
@@ -605,13 +654,15 @@ export class ElectricityLensFiguresCard extends LensCard {
         color: var(--primary-text-color);
       }
       .number {
+        min-width: 0;
         font-size: var(--ha-font-size-3xl, 28px);
         font-weight: var(--ha-font-weight-medium, 500);
         line-height: 36px;
         letter-spacing: -0.02em;
       }
       .unit {
-        font-size: var(--ha-font-size-m, 14px);
+        flex: none;
+        font-size: var(--ha-font-size-l, 16px);
         color: var(--secondary-text-color);
       }
       .line {

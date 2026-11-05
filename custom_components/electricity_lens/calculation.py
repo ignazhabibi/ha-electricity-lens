@@ -231,6 +231,7 @@ AREA_OTHER = "other"
 GRID_COST = "grid_cost"
 GRID_IMPORT_COST = "grid_import_cost"
 GRID_FEED_IN = "grid_feed_in"
+GRID_STANDING_CHARGE = "grid_standing_charge"
 GRID_CHEAP_SAVING = "grid_cheap_saving"
 LEVEL_CHEAP = "cheap"
 LEVEL_EXPENSIVE = "expensive"
@@ -321,6 +322,7 @@ def household_hour(
         GRID_COST: grid_import * price - export_revenue + standing_charge,
         GRID_IMPORT_COST: grid_import * price,
         GRID_FEED_IN: export_revenue,
+        GRID_STANDING_CHARGE: standing_charge,
     }
     if level == LEVEL_CHEAP and normal is not None:
         result[GRID_CHEAP_SAVING] = grid_import * max(normal - price, 0.0)

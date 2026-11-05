@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "build": "esbuild src/index.ts --bundle --minify --format=esm --target=es2021 --outfile=../custom_components/electricity_lens/frontend/electricity-lens.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild test/figures.test.ts --bundle --platform=node --format=esm --outfile=.test/figures.test.mjs --log-level=warning && node --test .test/figures.test.mjs"
   },
   "dependencies": {
     "@mdi/js": "7.4.47",

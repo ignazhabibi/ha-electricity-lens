@@ -238,6 +238,15 @@ async def test_prices_paid(hass: HomeAssistant, data_start: datetime) -> None:
     assert await _total(hass, "wallbox_saving", data_start) == pytest.approx(
         COUNTED * 1.0 / 20 * 7 * 1.80 - paid
     )
+    saving = await _total(hass, "wallbox_saving", data_start)
+    by_solar = await _total(hass, "wallbox_solar_saving", data_start)
+    alternative = await _total(hass, "wallbox_alternative_cost", data_start)
+    cost = await _total(hass, "device_sensor_wallbox_cost", data_start)
+    assert saving is not None
+    assert by_solar is not None
+    assert alternative is not None
+    assert cost is not None
+    assert saving + by_solar == pytest.approx(alternative - cost)
 
 
 @pytest.mark.usefixtures("energy")
@@ -259,6 +268,18 @@ async def test_each_heat_meter_has_comparison_costs(
         assert await _total(hass, key, data_start) == pytest.approx(
             COUNTED * heat / 0.92 * HEAT_PUMP_DATA["current"]["price"]
         )
+        # What the alternative cost less what the device cost is its saving,
+        # with the part by solar power.
+        area = f"heat_pump_device_sensor_{device}"
+        saving = await _total(hass, f"{area}_saving", data_start)
+        by_solar = await _total(hass, f"{area}_solar_saving", data_start)
+        alternative = await _total(hass, f"{area}_alternative_cost", data_start)
+        cost = await _total(hass, f"device_sensor_{device}_cost", data_start)
+        assert saving is not None
+        assert by_solar is not None
+        assert alternative is not None
+        assert cost is not None
+        assert saving + by_solar == pytest.approx(alternative - cost)
 
 
 @pytest.mark.usefixtures("energy")
@@ -291,6 +312,9 @@ async def test_standing_charge(hass: HomeAssistant, data_start: datetime) -> Non
         for index in range(HOURS)
     )
     assert 30 / 31 / 24 * HOURS <= charge <= 30 / 28 / 24 * HOURS
+    assert await _total(hass, "grid_standing_charge", data_start) == pytest.approx(
+        charge
+    )
     assert await _total(hass, "grid_cost", data_start) == pytest.approx(
         COUNTED * (1.0 * GRID_PRICE - 0.5 * FEED_IN_PRICE) + charge
     )

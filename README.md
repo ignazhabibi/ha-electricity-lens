@@ -243,16 +243,20 @@ example in the *Statistics graph* card, under their names such as
 | `electricity_lens:other_…` | The same for "Other" |
 | `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost`, `…_solar_cost`, `…_cheap_cost`, `…_expensive_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
 | `electricity_lens:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
-| `electricity_lens:grid_import_cost`, `…grid_feed_in` | What the imports cost and what the feed-in earned |
+| `electricity_lens:grid_import_cost`, `…grid_feed_in`, `…grid_standing_charge` | What the imports cost, what the feed-in earned, and the standing charge |
 | `electricity_lens:grid_cheap_saving` | What cheap grid power saved against the normal price (with a cheap level only) |
 | `electricity_lens:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
-| `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost` | The heat pump's heat (measured or estimated) and what the former heating would have cost for it |
-| `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost` | The distance charged and what a combustion car would have paid for fuel |
+| `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost`, `…heat_pump_solar_saving` | The heat pump's heat (measured or estimated), what the former heating would have cost for it, and what its solar power adds to its saving |
+| `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost`, `…wallbox_solar_saving` | The distance charged, what a combustion car would have paid for fuel, and what its solar power adds to its saving |
 
 Energy is in kWh, money in your currency. Hours in which a figure did not
 change are not stored; statistics cards carry the sum over them.
 
 ## The cards
+
+Like Home Assistant's energy cards, the cards that follow the energy date
+selection take `collection_key` in YAML, for a date selection with a key of its
+own. Without one they follow the dashboard's.
 
 ### Electricity Lens economics
 
@@ -328,7 +332,7 @@ A card has one of three sources:
 |---|---|
 | Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
 | Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
-| Entity | Any entity's current state; `secondary: payback` on a *Paid back* sensor or `secondary: return` on a *Return per year* sensor in YAML adds the line about the investment |
+| Entity | Any entity's current state |
 
 Areas and their figures:
 
@@ -336,13 +340,13 @@ Areas and their figures:
 |---|---|
 | Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
 | Grid | Grid import, feed-in, the electricity bill (what the supplier charges, without the feed-in), grid costs with their parts, average grid price, saving from cheap hours (with a cheap level) |
-| Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard) |
-| Heat pump | Consumption, costs, average price, average grid price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power |
-| Electric car | Consumption, costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power |
+| Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard), payback and return (with an investment) |
+| Heat pump | Consumption, costs, average price, average grid price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power, payback and return (with an investment) |
+| Electric car | Consumption, costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power, payback and return (with an investment) |
 | Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
 
-The card computes nothing beyond adding up the hours of the period and
-dividing two such sums, for example costs by consumption; every cost and
+The card computes nothing beyond adding up the hours of the period, taking one
+such sum from another, and dividing two of them, for example costs by consumption; every cost and
 share per hour comes from the integration. In YAML:
 
 ```yaml
@@ -364,9 +368,6 @@ type: custom:electricity-lens-figures-card
 entity: sensor.electricity_price
 name: Price now
 ```
-
-A card with a list of `tiles` from an earlier version still works if the list
-has one entry. With several it shows an error: make one card of each entry.
 
 ### Electricity Lens breakdown
 

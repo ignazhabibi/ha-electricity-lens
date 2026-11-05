@@ -22,12 +22,19 @@ const ASSUME_NONE_AFTER = 2;
 const isCollection = (value: unknown): value is Collection =>
   !!value && typeof (value as Collection).subscribe === "function";
 
-/** The date selection's collection: the one of this dashboard (HA keys it by
- * the dashboard path), else the plain one. */
-function findCollection(connection: object): Collection | undefined {
+/** Throws for a collection key Home Assistant's energy cards would refuse. */
+export function checkCollectionKey(key: string | undefined): void {
+  if (key !== undefined && !key.startsWith("energy_")) {
+    throw new Error("Collection keys must start with energy_.");
+  }
+}
+
+/** The date selection's collection: the one of the card's collection key, else
+ * the one of this dashboard (HA keys it by the dashboard path), else the plain one. */
+function findCollection(connection: object, collectionKey?: string): Collection | undefined {
   const path = location.pathname.split("/")[1] ?? "";
   const keys = connection as Record<string, unknown>;
-  for (const key of [`_energy_${path}`, "_energy"]) {
+  for (const key of collectionKey ? [`_${collectionKey}`] : [`_energy_${path}`, "_energy"]) {
     if (isCollection(keys[key])) return keys[key];
   }
   return undefined;
@@ -40,13 +47,14 @@ const endOfToday = (): number => new Date().setHours(24, 0, 0, 0) - 1;
  * no date selection. Returns a function that stops following. */
 export function followEnergyDate(
   connection: object,
+  collectionKey: string | undefined,
   callback: (range: Range | null) => void
 ): () => void {
   let unsubscribe: (() => void) | undefined;
   let timer: number | undefined;
   let tries = 0;
   const attach = () => {
-    const collection = findCollection(connection);
+    const collection = findCollection(connection, collectionKey);
     if (collection) {
       unsubscribe = collection.subscribe((data) =>
         callback({

@@ -28,6 +28,7 @@ from .calculation import (
     GRID_COST,
     GRID_FEED_IN,
     GRID_IMPORT_COST,
+    GRID_STANDING_CHARGE,
     HOUR,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
@@ -106,8 +107,9 @@ STATISTICS_VERSION = 3
 # Raised when a rule changes what the computed past looks like: everything is
 # then computed again. Version 2: prices paid, price levels that need a contrast,
 # consumers that add up to the household, and meters that run back. Version 3:
-# no hour counted twice after a failed update.
-CALCULATION_VERSION = 3
+# no hour counted twice after a failed update. Version 4: the standing charge and
+# the saving by solar power per category.
+CALCULATION_VERSION = 4
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
@@ -139,8 +141,8 @@ def next_full_hour() -> float:
 
 # The figures each category keeps besides its saving.
 CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
-    CATEGORY_HEAT_PUMP: ("heat", "alternative_cost"),
-    CATEGORY_WALLBOX: ("distance", "alternative_cost"),
+    CATEGORY_HEAT_PUMP: ("heat", "alternative_cost", "solar_saving"),
+    CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving"),
 }
 
 
@@ -187,27 +189,28 @@ def _heat_meter_figures(
     *,
     fuel_price: float,
     electricity_price: float,
+    device_costs: dict[str, float],
 ) -> Iterator[tuple[str, float]]:
     """Yield what each device with its own heat meter saved in an hour.
 
-    Also what the former heating would have cost for its heat, from which the
-    device's saving including its solar power follows.
+    Also what the former heating would have cost for its heat, and what the
+    device's solar power adds to its saving.
     """
     for meter, heat_meter in zip(meters, config.heat_meters, strict=True):
         heat = changes[heat_meter][hour]
-        yield (
-            f"{device_area(meter)}_saving",
-            heat_pump_saving(
-                electricity=changes.get(meter, {}).get(hour, 0.0),
-                heat=heat,
-                heating=config.heating,
-                fuel_price=fuel_price,
-                electricity_price=electricity_price,
-            ),
+        saving = heat_pump_saving(
+            electricity=changes.get(meter, {}).get(hour, 0.0),
+            heat=heat,
+            heating=config.heating,
+            fuel_price=fuel_price,
+            electricity_price=electricity_price,
         )
+        alternative = heating_cost(heat, config.heating, fuel_price)
+        yield f"{device_area(meter)}_saving", saving
+        yield f"{device_area(meter)}_alternative_cost", alternative
         yield (
-            f"{device_area(meter)}_alternative_cost",
-            heating_cost(heat, config.heating, fuel_price),
+            f"{device_area(meter)}_solar_saving",
+            alternative - device_costs[meter] - saving,
         )
 
 
@@ -473,6 +476,36 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         progress.next_hour = max(start, counting_since)
         self.states[subentry_id] = progress
 
+    def _category_sources(
+        self,
+        config: CategoryConfig,
+        setup: EnergySetup,
+        state: CategoryState,
+        meters: list[str],
+        end: float,
+    ) -> tuple[set[str], set[str]]:
+        """Return the sum statistics and the value entities a category reads."""
+        sums: set[str] = set(meters) | set(config.heat_meters)
+        values: set[str] = set()
+        for source in setup.grids:
+            sums |= _grid_sums(self.hass, source)
+            values |= {
+                entity
+                for entity in (source.price_entity, source.export_price_entity)
+                if entity is not None
+            }
+        if config.category == CATEGORY_PV:
+            for battery in setup.batteries:
+                sums |= {battery.discharge_stat, battery.charge_stat}
+        elif end > config.setup_at:
+            # Price sensors count only after the setup.
+            values |= {
+                entity
+                for _, entity in state.timeline(VALUE_PRICE_ENTITY).points
+                if isinstance(entity, str)
+            }
+        return sums, values
+
     async def _async_compute(
         self,
         config: CategoryConfig,
@@ -491,25 +524,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         meters = self._key_stats(config, setup)
         is_pv = config.category == CATEGORY_PV
 
-        sums: set[str] = set(meters) | set(config.heat_meters)
-        values: set[str] = set()
-        for source in setup.grids:
-            sums |= _grid_sums(self.hass, source)
-            values |= {
-                entity
-                for entity in (source.price_entity, source.export_price_entity)
-                if entity is not None
-            }
-        if is_pv:
-            for battery in setup.batteries:
-                sums |= {battery.discharge_stat, battery.charge_stat}
-        elif end > config.setup_at:
-            # Price sensors count only after the setup.
-            values |= {
-                entity
-                for _, entity in state.timeline(VALUE_PRICE_ENTITY).points
-                if isinstance(entity, str)
-            }
+        sums, values = self._category_sources(config, setup, state, meters, end)
         changes = _without_resets(
             self.hass, setup, await async_hourly_changes(self.hass, sums, start, end)
         )
@@ -538,39 +553,36 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 figures.setdefault(figure, []).append((hour, total))
 
         if is_pv:
-            exporting = [source for source in setup.grids if source.export_stat]
-            export_prices = {
-                source.export_stat: _export_prices(
-                    self.hass, source, hours, changes, entity_values
-                )
-                for source in exporting
-                if source.export_stat is not None
-            }
-            for index, hour in enumerate(hours):
-                if saving := pv_saving(
-                    solar=sum(change(stat, hour) for stat in setup.solar),
-                    export=sum(change(stat, hour) for stat in export_prices),
-                    battery_out=sum(
-                        change(b.discharge_stat, hour) for b in setup.batteries
-                    ),
-                    battery_in=sum(
-                        change(b.charge_stat, hour) for b in setup.batteries
-                    ),
-                    price=prices.mean[index] or 0.0,
-                    export_revenue=sum(
-                        change(stat, hour) * (rates[index] or 0.0)
-                        for stat, rates in export_prices.items()
-                    ),
-                ):
-                    state.saving += saving
-                    history.append((hour, state.saving))
+            self._add_pv_hours(
+                setup=setup,
+                state=state,
+                hours=hours,
+                changes=changes,
+                entity_values=entity_values,
+                prices=prices,
+                history=history,
+            )
             return figures
 
         def value(key: str, hour: float) -> float | None:
             return value_at(config, state, key, hour)
 
+        # The household is computed first. Costs can be negative, so no floor here.
+        cost_ids = {
+            meter: household_statistic_id(f"{device_area(meter)}_cost")
+            for meter in meters
+        }
+        costs = await async_hourly_changes(
+            self.hass, set(cost_ids.values()), start, end
+        )
+
         for index, hour in enumerate(hours):
             electricity = sum(change(meter, hour) for meter in meters)
+
+            device_costs = {
+                meter: costs.get(statistic, {}).get(hour, 0.0)
+                for meter, statistic in cost_ids.items()
+            }
             tariff = value(VALUE_TARIFF, hour)
             electricity_price = (
                 tariff if tariff is not None else prices.paid[index] or 0.0
@@ -586,11 +598,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     fuel_price=fuel_price,
                     electricity_price=electricity_price,
                 )
+                alternative = heating_cost(heat, config.heating, fuel_price)
                 add("heat", hour, heat)
+                add("alternative_cost", hour, alternative)
                 add(
-                    "alternative_cost",
+                    "solar_saving",
                     hour,
-                    heating_cost(heat, config.heating, fuel_price),
+                    alternative - sum(device_costs.values()) - saving,
                 )
                 if len(config.heat_meters) == len(meters) > 1 and all(
                     hour in changes.get(m, {}) for m in config.heat_meters
@@ -602,6 +616,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                         hour,
                         fuel_price=fuel_price,
                         electricity_price=electricity_price,
+                        device_costs=device_costs,
                     ):
                         add(figure, hour, amount)
             elif (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
@@ -615,16 +630,58 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     electricity_price=electricity_price,
                 )
                 distance = wallbox_distance(electricity, ev)
+                alternative = fuel_cost(distance, combustion, fuel_price)
                 add("distance", hour, distance)
+                add("alternative_cost", hour, alternative)
                 add(
-                    "alternative_cost",
+                    "solar_saving",
                     hour,
-                    fuel_cost(distance, combustion, fuel_price),
+                    alternative - sum(device_costs.values()) - saving,
                 )
             if saving:
                 state.saving += saving
                 history.append((hour, state.saving))
         return figures
+
+    def _add_pv_hours(
+        self,
+        *,
+        setup: EnergySetup,
+        state: CategoryState,
+        hours: list[float],
+        changes: dict[str, dict[float, float]],
+        entity_values: dict[str, dict[float, float]],
+        prices: GridPrices,
+        history: list[tuple[float, float]],
+    ) -> None:
+        """Add what the PV plant saved in each hour to state and history."""
+
+        def change(stat: str, hour: float) -> float:
+            return changes.get(stat, {}).get(hour, 0.0)
+
+        export_prices = {
+            source.export_stat: _export_prices(
+                self.hass, source, hours, changes, entity_values
+            )
+            for source in setup.grids
+            if source.export_stat is not None
+        }
+        for index, hour in enumerate(hours):
+            if saving := pv_saving(
+                solar=sum(change(stat, hour) for stat in setup.solar),
+                export=sum(change(stat, hour) for stat in export_prices),
+                battery_out=sum(
+                    change(b.discharge_stat, hour) for b in setup.batteries
+                ),
+                battery_in=sum(change(b.charge_stat, hour) for b in setup.batteries),
+                price=prices.mean[index] or 0.0,
+                export_revenue=sum(
+                    change(stat, hour) * (rates[index] or 0.0)
+                    for stat, rates in export_prices.items()
+                ),
+            ):
+                state.saving += saving
+                history.append((hour, state.saving))
 
     def _fuel_price(
         self,
@@ -849,7 +906,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 household_statistic_id(key),
                 names.get(key, key),
                 currency
-                if key.endswith("_cost") or key in (GRID_FEED_IN, GRID_CHEAP_SAVING)
+                if key.endswith("_cost")
+                or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
                 else "kWh",
                 series,
                 replace=False,
@@ -884,7 +942,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             areas[device_area(device.stat)] = self.device_name(device)
         names = {
             key: text(key)
-            for key in (GRID_COST, GRID_IMPORT_COST, GRID_FEED_IN, GRID_CHEAP_SAVING)
+            for key in (
+                GRID_COST,
+                GRID_IMPORT_COST,
+                GRID_FEED_IN,
+                GRID_STANDING_CHARGE,
+                GRID_CHEAP_SAVING,
+            )
         }
         for area, area_name in areas.items():
             for figure in (
@@ -1050,7 +1114,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             for meter in meters:
                 dev = self.setup.device(meter)
                 dev_name = self.device_name(dev) if dev else meter
-                for name in ("saving", "alternative_cost"):
+                for name in ("saving", "alternative_cost", "solar_saving"):
                     figure = f"{device_area(meter)}_{name}"
                     async_write_statistics(
                         self.hass,

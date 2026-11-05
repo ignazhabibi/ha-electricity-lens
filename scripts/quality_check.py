@@ -31,6 +31,7 @@ COMMANDS = (
         f"--cov-report=json:{COVERAGE_REPORT}",
     ),
     (NPM, "--prefix", "card", "run", "typecheck"),
+    (NPM, "--prefix", "card", "run", "test"),
     # Translations and the card are generated, and published as committed.
     (sys.executable, "scripts/translations.py"),
     (NPM, "--prefix", "card", "run", "build"),

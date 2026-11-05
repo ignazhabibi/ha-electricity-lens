@@ -9,6 +9,7 @@ __pycache__/
 .coverage-report.json
 htmlcov/
 node_modules/
+card/.test/
 .claude/
 coverage.xml
 build/

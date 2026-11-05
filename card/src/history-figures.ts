@@ -99,12 +99,10 @@ export interface BarSeries {
 
 /** What a figure of an area adds up. A device's saving includes its solar
  * power, at the lost feed-in compensation as in its costs, as the key figures
- * show it; only the balance gives that benefit to the PV plant. */
+ * show it. */
 function sums(area: FigureArea, figure: BarFigure): { plus: string[]; minus: string[] } {
-  const { alternative_cost: alternative, cost } = area.statistics;
-  return figure === "saving" && alternative?.length && cost?.length
-    ? { plus: alternative, minus: cost }
-    : { plus: area.statistics[figure] ?? [], minus: [] };
+  const plus = area.statistics[figure] ?? [];
+  return { plus: figure === "saving" ? [...plus, ...(area.statistics.solar_saving ?? [])] : plus, minus: [] };
 }
 
 /** The heat pump's devices with a heat meter of their own, if it has several. */
@@ -125,7 +123,6 @@ export function heatDevices(info: FiguresInfo): FigureArea[] {
 function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): BarSeries[] {
   const grid = info.areas.find((item) => item.kind === "grid")?.statistics ?? {};
   const imported = grid.import_cost ?? [];
-  const feedIn = grid.feed_in ?? [];
   const cheap = household.statistics.cheap_cost ?? [];
   const expensive = household.statistics.expensive_cost ?? [];
   const series: BarSeries[] = [
@@ -133,9 +130,8 @@ function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
       id: "standing_charge",
       name: { key: "source.standing_charge" },
       color: colors.standing,
-      plus: [...(grid.cost ?? []), ...feedIn],
-      minus: imported,
-      floor: true,
+      plus: grid.standing_charge ?? [],
+      minus: [],
     },
   ];
   if (cheap.length) {

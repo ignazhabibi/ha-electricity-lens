@@ -69,6 +69,8 @@ export interface FigureArea {
   statistics: Record<string, string[] | undefined>;
   /** Whether the energy dashboard has a solar forecast. */
   forecast?: boolean;
+  /** Whether its category has an investment. */
+  investment?: boolean;
   /** For devices: whether it is not part of another device. */
   top_level?: boolean;
 }

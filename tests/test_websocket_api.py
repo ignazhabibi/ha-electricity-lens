@@ -60,10 +60,13 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "cost": ["electricity_lens:grid_cost"],
         "import_cost": ["electricity_lens:grid_import_cost"],
         "feed_in": ["electricity_lens:grid_feed_in"],
+        "standing_charge": ["electricity_lens:grid_standing_charge"],
         "cheap_saving": ["electricity_lens:grid_cheap_saving"],
     }
     assert areas["solar"]["statistics"]["saving"] == ["electricity_lens:pv_saving"]
     assert areas["solar"]["forecast"] is False
+    assert areas["solar"]["investment"] is True
+    assert areas["heat_pump"]["investment"] is True
     assert areas["heat_pump"]["statistics"] == {
         "energy": ["sensor.heat_pump"],
         "solar": ["electricity_lens:device_sensor_heat_pump_solar"],
@@ -74,6 +77,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "saving": ["electricity_lens:heat_pump_saving"],
         "heat": ["electricity_lens:heat_pump_heat"],
         "alternative_cost": ["electricity_lens:heat_pump_alternative_cost"],
+        "solar_saving": ["electricity_lens:heat_pump_solar_saving"],
         "heat_meters": ["sensor.heat"],
     }
     washer = areas["device_sensor_washer"]

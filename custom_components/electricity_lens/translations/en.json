@@ -788,10 +788,12 @@
         "grid_cost": "Grid costs",
         "grid_import_cost": "Grid import costs",
         "grid_feed_in": "Feed-in compensation",
+        "grid_standing_charge": "Standing charge",
         "grid_cheap_saving": "Saving from cheap hours",
         "heat": "heat",
         "distance": "distance",
         "alternative_cost": "comparison costs",
+        "solar_saving": "saving by solar power",
         "saving": "saving"
       }
     }
