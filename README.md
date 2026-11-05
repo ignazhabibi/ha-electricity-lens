@@ -415,7 +415,7 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | Power flow; consumption by source with the price; the balance card, which always shows the current state; costs, self-sufficiency, and solar today; solar forecast for today and tomorrow |
+| Now | How is today going? | The balance card, which always shows the current state; costs, self-sufficiency, consumption, and solar today; solar forecast for today and tomorrow |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |

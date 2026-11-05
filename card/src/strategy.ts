@@ -113,17 +113,15 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     view(
       t("strategy.overview"),
       "now",
-      [
-        card("energy-distribution"),
-        sourceHistory("household", today),
-        ...(savings ? [card("electricity-lens-balance-card")] : []),
-      ],
+      // Without savings there is no balance; the day's curve keeps the column filled.
+      [savings ? card("electricity-lens-balance-card") : sourceHistory("household", today)],
       [
         named("household", "cost", "strategy.cost_today", today),
-        named("household", "solar_share", "strategy.self_sufficiency_today", today),
         solar
-          ? named("solar", "energy", "strategy.solar_today", today)
-          : named("household", "energy", "strategy.consumption_today", today),
+          ? named("household", "solar_share", "strategy.self_sufficiency_today", today)
+          : named("household", "price", "strategy.price_today", today),
+        named("household", "energy", "strategy.consumption_today", today),
+        ...(solar ? [named("solar", "energy", "strategy.solar_today", today)] : []),
         ...(solar?.forecast ? [own("solar", "forecast_today"), own("solar", "forecast_tomorrow")] : []),
       ],
       false
