@@ -16,8 +16,10 @@ export interface HassEntityRegistryEntry {
 export interface HomeAssistant {
   states: Record<string, HassEntityState>;
   entities: Record<string, HassEntityRegistryEntry>;
-  locale: { language: string };
+  locale: { language: string; number_format?: string; time_format?: string };
   language?: string;
+  themes?: unknown;
+  selectedTheme?: unknown;
   config: { currency: string; state?: string };
   /** The websocket connection; the energy date selection keeps its period here. */
   connection?: object;

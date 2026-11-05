@@ -9,6 +9,8 @@ const en = {
   show_total: "Show totals",
   not_set_up:
     "Set up the Electricity Lens integration to see what your PV plant, heat pump, and electric car have saved.",
+  integration_unavailable:
+    "The figures aren't available right now. Check Electricity Lens under Settings > Devices & services.",
   calculating_all: "The past is being computed …",
   calculating: "Being computed …",
   loading: "Loading …",
@@ -221,6 +223,8 @@ const de: Record<Key, string> = {
   show_total: "Gesamtwerte zeigen",
   not_set_up:
     "Richte die Integration Electricity Lens ein, um zu sehen, was PV-Anlage, Wärmepumpe und E-Auto gespart haben.",
+  integration_unavailable:
+    "Die Zahlen sind gerade nicht verfügbar. Prüfe Electricity Lens unter Einstellungen > Geräte & Dienste.",
   calculating_all: "Die Vergangenheit wird nachgerechnet …",
   calculating: "Wird berechnet …",
   loading: "Wird geladen …",

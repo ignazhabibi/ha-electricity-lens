@@ -2,11 +2,56 @@
 
 import type { Unit } from "./figures";
 
+/** The user's profile settings for numbers and times. */
+export interface LocaleSettings {
+  language: string;
+  number_format?: string;
+  time_format?: string;
+}
+
+/** A locale for each number format of the user's profile, as Home Assistant's own. */
+const NUMBER_LOCALES: Record<string, string> = {
+  comma_decimal: "en-US",
+  decimal_comma: "de",
+  space_comma: "fr",
+  quote_decimal: "de-CH",
+};
+
+/** A number format that follows the user's profile. */
+export function numberFormat(
+  locale: LocaleSettings | undefined,
+  options: Intl.NumberFormatOptions
+): Intl.NumberFormat {
+  const setting = locale?.number_format;
+  const name =
+    setting === "system"
+      ? undefined
+      : (NUMBER_LOCALES[setting ?? ""] ?? locale?.language ?? "en");
+  return new Intl.NumberFormat(name, {
+    ...options,
+    ...(setting === "none" ? { useGrouping: false } : {}),
+  });
+}
+
+/** Whether times use AM and PM by the user's profile; undefined leaves it to the language. */
+export function hour12(locale: LocaleSettings | undefined): boolean | undefined {
+  switch (locale?.time_format) {
+    case "am_pm":
+      return true;
+    case "24":
+      return false;
+    case "system":
+      return new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
+    default:
+      return undefined;
+  }
+}
+
 /** A formatted value split into its number and its unit, so the unit can be
  * shown smaller, as Home Assistant's energy cards do. Values whose unit
  * comes first, such as "€437", stay whole. */
 export function splitUnit(text: string): [string, string] {
-  const match = /^([-−+]?[\d.,\u00a0\u202f ]*\d)[\u00a0\u202f ](.+)$/.exec(text);
+  const match = /^([-−+]?[\d.,'’\u00a0\u202f ]*\d)[\u00a0\u202f ](.+)$/.exec(text);
   return match ? [match[1], match[2]] : [text, ""];
 }
 
@@ -17,11 +62,11 @@ export interface Format {
   currencySymbol(): string;
 }
 
-export function formatter(language: string, currency: string): Format {
+export function formatter(locale: LocaleSettings | undefined, currency: string): Format {
   const number = (value: number, digits?: number): string => {
     const abs = Math.abs(value);
     const fraction = digits ?? (abs < 10 ? 2 : abs < 100 ? 1 : 0);
-    return new Intl.NumberFormat(language, {
+    return numberFormat(locale, {
       maximumFractionDigits: fraction,
       minimumFractionDigits: digits ?? 0,
     }).format(value);
@@ -32,7 +77,7 @@ export function formatter(language: string, currency: string): Format {
         return `${number(amount, Math.abs(amount) < 100 ? 1 : 0)} kWh`;
       case "money": {
         const cents = Math.abs(amount) < 100;
-        return new Intl.NumberFormat(language, {
+        return numberFormat(locale, {
           style: "currency",
           currency,
           maximumFractionDigits: cents ? 2 : 0,
@@ -41,13 +86,13 @@ export function formatter(language: string, currency: string): Format {
       }
       case "price":
         if (currency === "EUR") return `${number(amount * 100, 1)} ct/kWh`;
-        return `${new Intl.NumberFormat(language, {
+        return `${numberFormat(locale, {
           style: "currency",
           currency,
           maximumFractionDigits: 3,
         }).format(amount)}/kWh`;
       case "percent":
-        return new Intl.NumberFormat(language, {
+        return numberFormat(locale, {
           style: "percent",
           maximumFractionDigits: 0,
         }).format(amount / 100);
@@ -56,7 +101,7 @@ export function formatter(language: string, currency: string): Format {
       case "distance":
         return `${number(amount, Math.abs(amount) < 100 ? 1 : 0)} km`;
       case "per_100km":
-        return `${new Intl.NumberFormat(language, {
+        return `${numberFormat(locale, {
           style: "currency",
           currency,
           maximumFractionDigits: 2,
@@ -65,7 +110,7 @@ export function formatter(language: string, currency: string): Format {
     }
   };
   const currencySymbol = (): string =>
-    new Intl.NumberFormat(language, { style: "currency", currency })
+    numberFormat(locale, { style: "currency", currency })
       .formatToParts(0)
       .find((part) => part.type === "currency")?.value ?? "";
   return { number, value, currencySymbol };

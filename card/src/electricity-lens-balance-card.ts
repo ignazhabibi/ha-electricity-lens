@@ -3,14 +3,17 @@
 // frontend already has, so it appears without loading delay.
 
 import { mdiCalendarMonthOutline, mdiSigma } from "@mdi/js";
-import { LitElement, css, html, nothing, type TemplateResult } from "lit";
+import { css, html, nothing, type TemplateResult } from "lit";
 
 import { consumerColors, palette } from "./colors";
+import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
+import { LensCard } from "./lens-card";
 import { localizer, type Localize } from "./localize";
 import {
   DOMAIN,
   annualReturn,
+  noCategoriesText,
   readCategories,
   totals,
   yearsToPayback,
@@ -31,7 +34,7 @@ const readView = (): View => {
   }
 };
 
-export class ElectricityLensBalanceCard extends LitElement {
+export class ElectricityLensBalanceCard extends LensCard {
   static properties = {
     hass: { attribute: false },
     _view: { state: true },
@@ -72,7 +75,7 @@ export class ElectricityLensBalanceCard extends LitElement {
   }
 
   private _money(value: number, signed = false): string {
-    return new Intl.NumberFormat(this._language, {
+    return numberFormat(this.hass?.locale, {
       style: "currency",
       currency: this.hass?.config.currency ?? "EUR",
       maximumFractionDigits: 0,
@@ -82,7 +85,7 @@ export class ElectricityLensBalanceCard extends LitElement {
   }
 
   private _price(value: number): string {
-    return new Intl.NumberFormat(this._language, {
+    return numberFormat(this.hass?.locale, {
       style: "currency",
       currency: this.hass?.config.currency ?? "EUR",
       maximumFractionDigits: 4,
@@ -91,7 +94,7 @@ export class ElectricityLensBalanceCard extends LitElement {
   }
 
   private _percent(value: number): string {
-    return new Intl.NumberFormat(this._language, {
+    return numberFormat(this.hass?.locale, {
       style: "percent",
       maximumFractionDigits: 0,
     }).format(value / 100);
@@ -147,7 +150,7 @@ export class ElectricityLensBalanceCard extends LitElement {
     if (!categories.length) {
       return html`<ha-card>
         <div class="header"><h2 class="title">${t("title")}</h2></div>
-        <p class="summary">${t("not_set_up")}</p>
+        <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
     const sums = totals(categories);

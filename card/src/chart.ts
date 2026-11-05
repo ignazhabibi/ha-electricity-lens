@@ -36,6 +36,12 @@ export function chartReady(): Promise<boolean> {
   return ready;
 }
 
+/** Tells whether `ha-chart-base` is there, and again if it comes after the wait. */
+export function watchChart(callback: (available: boolean) => void): void {
+  void chartReady().then(callback);
+  void customElements.whenDefined("ha-chart-base").then(() => callback(true));
+}
+
 export interface ChartSeries {
   id: string;
   name: string;

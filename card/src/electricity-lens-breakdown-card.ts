@@ -3,10 +3,10 @@
 // by price level) or by consumer (top-level devices and Other), in energy or
 // costs; or the shares of any statistics, shown as they are.
 
-import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 
-import { chartReady, shareChart, shares } from "./chart";
+import { shareChart, shares, watchChart } from "./chart";
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
 import { followEnergyDate } from "./energy-date";
@@ -14,6 +14,7 @@ import { formatter, type Format } from "./format";
 import { fixedRange, rangeLabel, type Range } from "./history";
 import { barSeries, type BarSeries } from "./history-figures";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
+import { LensCard } from "./lens-card";
 import { hasText, localizer, type Localize } from "./localize";
 import { cardStyles } from "./styles";
 import { loadSums } from "./sums";
@@ -55,7 +56,7 @@ interface Part {
   energy?: number;
 }
 
-export class ElectricityLensBreakdownCard extends LitElement {
+export class ElectricityLensBreakdownCard extends LensCard {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -75,7 +76,11 @@ export class ElectricityLensBreakdownCard extends LitElement {
   private _loading?: string;
   private _unfollow?: () => void;
   private _retryTimer?: ReturnType<typeof setTimeout>;
+  /** Whether HA's chart element is there; undefined while it may still load. */
   private _hasChart?: boolean;
+  private _watchingChart = false;
+  /** The ring's chart, kept until what it shows changes. */
+  private _ringChart?: { key: string; chart: ReturnType<typeof shareChart> };
   /** Parts hidden in the ring's legend. */
   private _hidden = new Set<string>();
 
@@ -124,7 +129,7 @@ export class ElectricityLensBreakdownCard extends LitElement {
   }
 
   private get _fmt(): Format {
-    return formatter(this._language, this.hass?.config.currency ?? "EUR");
+    return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
   }
 
   private get _byStatistics(): boolean {
@@ -246,9 +251,9 @@ export class ElectricityLensBreakdownCard extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hass) return;
     if (changed.has("hass") || changed.has("_config")) this._follow();
-    if (this._hasChart === undefined) {
-      this._hasChart = false;
-      chartReady().then((ok) => {
+    if (!this._watchingChart) {
+      this._watchingChart = true;
+      watchChart((ok) => {
         this._hasChart = ok;
       });
     }
@@ -361,18 +366,27 @@ export class ElectricityLensBreakdownCard extends LitElement {
    * HA's chart legend below: a tap hides a part and the ring closes up. */
   private _ring(parts: Part[]): TemplateResult {
     const t = this._localize;
+    if (this._hasChart === undefined) return html`<p class="summary">${t("loading")}</p>`;
     if (!this._hasChart) return html`<p class="summary">${t("history_no_chart")}</p>`;
-    const style = getComputedStyle(this);
     const money = this._figure === "cost" && !this._byStatistics;
-    const chart = shareChart({
-      items: parts,
-      total: t("breakdown_total"),
-      format: (value) => this._value(value),
-      percent: (value) => this._fmt.value(value, "percent"),
-      centerColor: palette(this).line,
-      labelColor: style.getPropertyValue("--primary-text-color").trim() || "#212121",
-      hidden: this._hidden,
-    });
+    const centerColor = palette(this).line;
+    const labelColor = getComputedStyle(this).getPropertyValue("--primary-text-color").trim() || "#212121";
+    const key = JSON.stringify([parts, [...this._hidden], money, centerColor, labelColor, this.hass?.locale]);
+    if (this._ringChart?.key !== key) {
+      this._ringChart = {
+        key,
+        chart: shareChart({
+          items: parts,
+          total: t("breakdown_total"),
+          format: (value) => this._value(value),
+          percent: (value) => this._fmt.value(value, "percent"),
+          centerColor,
+          labelColor,
+          hidden: this._hidden,
+        }),
+      };
+    }
+    const { chart } = this._ringChart;
     const percents = shares(parts.map((part) => (this._hidden.has(part.id) ? 0 : part.value)));
     const toggle = (id: string) => {
       const hidden = new Set(this._hidden);
