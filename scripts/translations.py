@@ -66,6 +66,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "heat": "heat",
             "distance": "distance",
             "alternative_cost": "comparison costs",
+            "saving": "saving",
         },
         "pv": {
             "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
@@ -305,6 +306,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "heat": "Wärme",
             "distance": "Strecke",
             "alternative_cost": "Vergleichskosten",
+            "saving": "Ersparnis",
         },
         "pv": {
             "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",

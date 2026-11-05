@@ -758,7 +758,8 @@
         "grid_cheap_saving": "Ersparnis durch günstige Zeiten",
         "heat": "Wärme",
         "distance": "Strecke",
-        "alternative_cost": "Vergleichskosten"
+        "alternative_cost": "Vergleichskosten",
+        "saving": "Ersparnis"
       }
     }
   }

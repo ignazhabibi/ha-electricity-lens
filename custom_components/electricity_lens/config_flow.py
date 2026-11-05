@@ -86,6 +86,9 @@ PRICE_FIELDS = {
     },
     CATEGORY_WALLBOX: {HEATING_GAS: ("fuel_price", "fuel_price_entity")},
 }
+# Without a format of its own, a language gets the date no one can misread.
+DEFAULT_DATE_FORMAT = "%Y-%m-%d"
+DATE_FORMATS = {"de": "%d.%m.%Y"}
 PRICE_ENTITY_SELECTOR = EntitySelector(  # pyright: ignore[reportUnknownVariableType]
     EntitySelectorConfig(domain=["sensor", "input_number", "number"])
 )
@@ -105,8 +108,11 @@ def _number(  # pyright: ignore[reportUnknownParameterType]
     return NumberSelector(config)  # pyright: ignore[reportUnknownVariableType]
 
 
-def _date(timestamp: float) -> str:
-    return dt_util.as_local(dt_util.utc_from_timestamp(timestamp)).strftime("%d.%m.%Y")
+def format_date(hass: HomeAssistant, timestamp: float) -> str:
+    """Return a date for a form's text, as the system language writes it."""
+    language = hass.config.language.split("-")[0]
+    date_format = DATE_FORMATS.get(language, DEFAULT_DATE_FORMAT)
+    return dt_util.as_local(dt_util.utc_from_timestamp(timestamp)).strftime(date_format)
 
 
 def available_categories(setup: EnergySetup) -> list[str]:
@@ -488,8 +494,9 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id=_pv_step(self._setup),
             data_schema=investment_schema(self.hass),
             description_placeholders={
-                "since": _date(
-                    await async_data_since(self.hass, list(self._setup.solar))
+                "since": format_date(
+                    self.hass,
+                    await async_data_since(self.hass, list(self._setup.solar)),
                 )
             },
             last_step=len(self._pending) == 1,
@@ -581,8 +588,10 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "since": _date(self._since),
-                "heat_until": _date(self._heat_start) if self._heat_start else "",
+                "since": format_date(self.hass, self._since),
+                "heat_until": format_date(self.hass, self._heat_start)
+                if self._heat_start
+                else "",
             },
             last_step=len(self._pending) == 1,
         )
@@ -675,8 +684,9 @@ class CategorySubentryFlow(ConfigSubentryFlow):
                 step_id=_pv_step(self._setup),
                 data_schema=investment_schema(self.hass),
                 description_placeholders={
-                    "since": _date(
-                        await async_data_since(self.hass, list(self._setup.solar))
+                    "since": format_date(
+                        self.hass,
+                        await async_data_since(self.hass, list(self._setup.solar)),
                     )
                 },
             )
@@ -752,8 +762,10 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "since": _date(self._since),
-                "heat_until": _date(self._heat_start) if self._heat_start else "",
+                "since": format_date(self.hass, self._since),
+                "heat_until": format_date(self.hass, self._heat_start)
+                if self._heat_start
+                else "",
             },
         )
 
@@ -921,8 +933,10 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "since": _date(since),
-                "until": _date(subentry.data.get(CONF_SETUP_AT, next_full_hour())),
+                "since": format_date(self.hass, since),
+                "until": format_date(
+                    self.hass, subentry.data.get(CONF_SETUP_AT, next_full_hour())
+                ),
             },
         )
 

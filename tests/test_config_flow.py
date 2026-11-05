@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import patch
 
@@ -21,6 +21,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
 
 from custom_components.electricity_lens.config_flow import (
     async_scop_needed,
+    format_date,
     values_form_input,
 )
 from custom_components.electricity_lens.const import DOMAIN
@@ -676,3 +677,16 @@ async def test_add_pv_without_feed_in(hass: HomeAssistant) -> None:
         result["flow_id"], {"investment": 12000}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [("de", "05.03.2026"), ("de-CH", "05.03.2026"), ("en", "2026-03-05")],
+)
+async def test_dates_follow_the_system_language(
+    hass: HomeAssistant, language: str, expected: str
+) -> None:
+    """A date in a form's text is written as the language writes it."""
+    hass.config.language = language
+    timestamp = datetime(2026, 3, 5, 12, tzinfo=UTC).timestamp()
+    assert format_date(hass, timestamp) == expected

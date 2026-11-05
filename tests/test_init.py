@@ -8,7 +8,10 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
-from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.components.recorder.statistics import (
+    get_metadata,
+    statistics_during_period,
+)
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
@@ -706,6 +709,107 @@ async def test_migration(hass: HomeAssistant, data_start: datetime) -> None:
     wallbox = _subentry(entry, "wallbox").data
     assert wallbox["before"]["price"] == 1.65
     assert wallbox["before"]["ev_consumption"] == 20.0
+
+
+def _paired_heat_pump() -> tuple[str, dict[str, Any]]:
+    return _heat_pump(
+        meters=["sensor.heat_pump", "sensor.washer"],
+        heat_meters=["sensor.heating", "sensor.hot_water"],
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_reload_keeps_figures_of_meters_without_heat_data(
+    hass: HomeAssistant,
+) -> None:
+    """Heat meters that have no statistics yet are no reason to compute again."""
+    entry = make_entry(_paired_heat_pump())
+    await setup_entry(hass, entry)
+
+    with patch.object(CategoryState, "reset", autospec=True) as reset:
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    reset.assert_not_called()
+
+
+@pytest.mark.usefixtures("energy")
+async def test_device_statistics_are_named_in_the_system_language(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A device's saving and comparison costs have translated names."""
+    # Arrange
+    hass.config.language = "de"
+    for statistic_id in ("sensor.heating", "sensor.hot_water"):
+        import_hourly(hass, statistic_id, data_start, [0.0] + [1.0] * (HOURS - 1))
+    await async_wait_recording_done(hass)
+
+    # Act
+    await setup_entry(hass, make_entry(_paired_heat_pump()))
+
+    # Assert
+    metadata = await get_instance(hass).async_add_executor_job(
+        lambda: get_metadata(hass, statistic_source=DOMAIN)
+    )
+    prefix = "electricity_lens:heat_pump_device_sensor_heat_pump"
+    assert metadata[f"{prefix}_saving"][1]["name"] == "Heat pump Ersparnis"
+    assert (
+        metadata[f"{prefix}_alternative_cost"][1]["name"]
+        == "Heat pump Vergleichskosten"
+    )
+
+
+async def _break_wallbox_meter(hass: HomeAssistant) -> None:
+    await set_energy_prefs(
+        hass,
+        {
+            "device_consumption": [
+                device
+                for device in PREFS["device_consumption"]
+                if device["stat_consumption"] != "sensor.wallbox"
+            ]
+        },
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+
+@pytest.mark.usefixtures("energy")
+async def test_removing_a_category_removes_its_issue(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """No repair issue stays behind for a category that no longer exists."""
+    # Arrange
+    await setup_entry(hass, config_entry)
+    await _break_wallbox_meter(hass)
+    subentry_id = _subentry(config_entry, "wallbox").subentry_id
+    issue_id = f"missing_meter_{subentry_id}"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is not None
+
+    # Act
+    hass.config_entries.async_remove_subentry(config_entry, subentry_id=subentry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    # Assert
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_removing_the_entry_removes_all_issues(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Removing the integration leaves no repair issue behind."""
+    # Arrange
+    await setup_entry(hass, config_entry)
+    await _break_wallbox_meter(hass)
+    registry = ir.async_get(hass)
+    assert any(domain == DOMAIN for domain, _ in registry.issues)
+
+    # Act
+    await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Assert
+    assert not any(domain == DOMAIN for domain, _ in registry.issues)
 
 
 async def test_migration_from_future_version(hass: HomeAssistant) -> None:

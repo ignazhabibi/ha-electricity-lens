@@ -758,7 +758,8 @@
         "grid_cheap_saving": "Saving from cheap hours",
         "heat": "heat",
         "distance": "distance",
-        "alternative_cost": "comparison costs"
+        "alternative_cost": "comparison costs",
+        "saving": "saving"
       }
     }
   }
