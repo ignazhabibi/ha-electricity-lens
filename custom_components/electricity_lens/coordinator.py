@@ -105,8 +105,9 @@ STORAGE_VERSION = 1
 STATISTICS_VERSION = 3
 # Raised when a rule changes what the computed past looks like: everything is
 # then computed again. Version 2: prices paid, price levels that need a contrast,
-# consumers that add up to the household, and meters that run back.
-CALCULATION_VERSION = 2
+# consumers that add up to the household, and meters that run back. Version 3:
+# no hour counted twice after a failed update.
+CALCULATION_VERSION = 3
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
