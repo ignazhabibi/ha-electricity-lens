@@ -636,7 +636,7 @@ export class ElectricityLensHistoryCard extends LensCard {
       </div>
       ${note ? html`<p class="note">${note}</p>` : nothing}
       ${calculating
-        ? html`<p class="summary">${t("calculating_all")}</p>`
+        ? html`<p class="summary">${t("calculating")}</p>`
         : missing
           ? html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`
           : this._body(loaded, hasData)}

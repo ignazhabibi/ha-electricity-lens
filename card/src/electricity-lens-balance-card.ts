@@ -1,4 +1,4 @@
-// Dashboard card of the Electricity Lens integration. It needs no options: it
+// Dashboard card of the Electricity Lens integration. It needs no options but a title: it
 // finds the integration's sensors by itself and renders from the states the
 // frontend already has, so it appears without loading delay. The integration
 // computes every figure; the head shows the balance, the rows what each saved.
@@ -10,17 +10,23 @@ import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
 import { localizer, type Localize } from "./localize";
-import { DOMAIN, noCategoriesText, readBalance, readCategories } from "./model";
+import { noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles } from "./styles";
 import type { BalanceFigures, CategoryFigures, FiguresInfo, HomeAssistant } from "./types";
+
+interface BalanceCardConfig {
+  title?: string;
+}
 
 export class ElectricityLensBalanceCard extends LensCard {
   static properties = {
     hass: { attribute: false },
+    _config: { state: true },
     _info: { state: true },
   };
 
   hass?: HomeAssistant;
+  private _config?: BalanceCardConfig;
   private _info?: FiguresInfo | null;
   private _infoLoading = false;
 
@@ -28,12 +34,12 @@ export class ElectricityLensBalanceCard extends LensCard {
     return {};
   }
 
-  static getConfigForm(): { schema: never[] } {
-    return { schema: [] };
+  static getConfigForm(): { schema: { name: string; selector: { text: object } }[] } {
+    return { schema: [{ name: "title", selector: { text: {} } }] };
   }
 
-  setConfig(_config: unknown): void {
-    // The card has no options.
+  setConfig(config: BalanceCardConfig): void {
+    this._config = config;
   }
 
   getCardSize(): number {
@@ -62,25 +68,11 @@ export class ElectricityLensBalanceCard extends LensCard {
     }).format(value);
   }
 
-  private _price(value: number): string {
-    return numberFormat(this.hass?.locale, {
-      style: "currency",
-      currency: this.hass?.config.currency ?? "EUR",
-      maximumFractionDigits: 4,
-      minimumFractionDigits: 2,
-    }).format(value);
-  }
-
   private _month(value: Date): string {
     return new Intl.DateTimeFormat(this._language, {
       month: "long",
       year: "numeric",
     }).format(value);
-  }
-
-  private _openIntegration(): void {
-    history.pushState(null, "", `/config/integrations/integration/${DOMAIN}`);
-    window.dispatchEvent(new CustomEvent("location-changed"));
   }
 
   protected willUpdate(): void {
@@ -103,14 +95,14 @@ export class ElectricityLensBalanceCard extends LensCard {
     const balance = readBalance(this.hass);
     if (!categories.length || !balance) {
       return html`<ha-card>
-        <div class="header"><h2 class="title">${t("title")}</h2></div>
+        <div class="header"><h2 class="title">${this._config?.title || t("title")}</h2></div>
         <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
     const known = this._info ? consumerColors(this._info, palette(this)) : undefined;
     return html`<ha-card>
       <div class="header">
-        <h2 class="title">${t("title")}</h2>
+        <h2 class="title">${this._config?.title || t("title")}</h2>
         ${balance.balance === null
           ? nothing
           : html`<span class="chip">${this._money(balance.balance, true)}</span>`}
@@ -121,13 +113,12 @@ export class ElectricityLensBalanceCard extends LensCard {
           this._row(category, balance, known?.get(category.category))
         )}
       </ul>
-      ${this._footer(categories)}
     </ha-card>`;
   }
 
   private _summary(balance: BalanceFigures, categories: CategoryFigures[]): string {
     const t = this._localize;
-    if (categories.some((category) => category.calculating)) return t("calculating_all");
+    if (categories.some((category) => category.calculating)) return t("calculating");
     const saved = this._money(balance.saved);
     if (balance.invested <= 0) return t("saved_only", { saved });
     const parts = [t("saved_invested", { saved, invested: this._money(balance.invested) })];
@@ -172,37 +163,9 @@ export class ElectricityLensBalanceCard extends LensCard {
     return parts.join(" · ");
   }
 
-  private _footer(categories: CategoryFigures[]) {
-    const t = this._localize;
-    const prices: string[] = [];
-    for (const category of categories) {
-      if (category.price === null) continue;
-      const price = this._price(category.price);
-      if (category.category === "heat_pump")
-        prices.push(t(category.heating === "oil" ? "oil" : "gas", { price }));
-      if (category.category === "wallbox") prices.push(t("fuel", { price }));
-    }
-    if (!prices.length) return nothing;
-    return html`<div class="footer">
-      <button
-        class="prices"
-        type="button"
-        title=${t("prices_link")}
-        aria-label=${`${t("prices_link")}: ${prices.join(", ")}`}
-        @click=${this._openIntegration}
-      >
-        ${prices.join(" · ")}
-      </button>
-    </div>`;
-  }
-
   static styles = [
     cardStyles,
     css`
-      .prices:focus-visible {
-        outline: 2px solid var(--primary-color);
-        outline-offset: 2px;
-      }
       .rows {
         list-style: none;
         margin: 0;
@@ -254,33 +217,12 @@ export class ElectricityLensBalanceCard extends LensCard {
       }
       .sub {
         margin-top: 6px;
-        font-size: 12px;
+        font-size: var(--ha-font-size-s, 12px);
         line-height: 16px;
         color: var(--secondary-text-color);
       }
       .sub:empty {
         display: none;
-      }
-      .footer {
-        padding: 4px 8px 8px;
-        border-top: 1px solid var(--divider-color);
-      }
-      .prices {
-        font: inherit;
-        font-size: 12px;
-        line-height: 16px;
-        color: var(--secondary-text-color);
-        background: none;
-        border: none;
-        padding: 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: underline dotted;
-        text-underline-offset: 3px;
-        text-align: start;
-      }
-      .prices:hover {
-        color: var(--primary-text-color);
       }
     `,
   ];

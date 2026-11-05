@@ -259,10 +259,8 @@ change are not stored; statistics cards carry the sum over them.
 The card finds the categories by itself. Its head shows the balance, the savings
 against the investments, and roughly when the household will be in the plus. Each
 row shows what a category has saved, since when, and what that makes per year.
-The gas, oil, and fuel prices in use are
-shown at the bottom; selecting them opens the integration page, where they are
-changed. The card follows light and dark themes, works on phones and desktops,
-and can be used with keyboard and screen reader.
+Its only option is a title. The card follows light and dark themes, works on
+phones and desktops, and can be used with keyboard and screen reader.
 
 ### Electricity Lens savings
 
