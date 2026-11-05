@@ -11,6 +11,7 @@ from homeassistant.components.recorder import get_instance  # pyright: ignore[re
 from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
@@ -35,6 +36,7 @@ from .conftest import (
     HEAT_PUMP_PER_HOUR,
     HOURS,
     PREFS,
+    PV_DATA,
     PV_PER_HOUR,
     WALLBOX_DATA,
     WALLBOX_PER_HOUR,
@@ -706,6 +708,62 @@ async def test_migration(hass: HomeAssistant, data_start: datetime) -> None:
     wallbox = _subentry(entry, "wallbox").data
     assert wallbox["before"]["price"] == 1.65
     assert wallbox["before"]["ev_consumption"] == 20.0
+
+
+def _fails_once(function: Any, on_call: int) -> Any:
+    calls = 0
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == on_call:
+            raise HomeAssistantError("Database gone for a moment")
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+@pytest.mark.usefixtures("energy")
+@pytest.mark.parametrize(
+    ("function", "on_call"),
+    [
+        pytest.param("async_hourly_changes", 3, id="household_query"),
+        pytest.param("async_write_statistics", 1, id="household_write"),
+        pytest.param("async_hourly_changes", 6, id="category_query"),
+    ],
+)
+async def test_failed_update_counts_no_hour_twice(
+    hass: HomeAssistant, data_start: datetime, function: str, on_call: int
+) -> None:
+    """An update that fails halfway leaves no trace in the next one's figures."""
+    # Arrange: the past takes several chunks, and one step fails once.
+    entry = make_entry(("pv", PV_DATA))
+    flaky = _fails_once(getattr(coordinator_module, function), on_call)
+    with (
+        patch.object(coordinator_module, "CHUNK", 12 * HOUR),
+        patch.object(coordinator_module, function, flaky),
+    ):
+        await setup_entry(hass, entry)
+        coordinator = entry.runtime_data
+        assert not coordinator.last_update_success
+
+        # Act
+        await coordinator.async_refresh()
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+
+    # Assert: each hour counts once, in the state and in the statistics.
+    assert coordinator.last_update_success
+    saving = COUNTED * PV_PER_HOUR
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
+    pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    assert pv_sums[-1] == pytest.approx(saving)
+    consumption = COUNTED * (1.0 - 0.5 + 2.0)
+    assert coordinator.household_state.totals["household_energy"] == pytest.approx(
+        consumption
+    )
+    household_sums = await _sums(hass, "electricity_lens:household_energy", data_start)
+    assert household_sums[-1] == pytest.approx(consumption)
 
 
 async def test_migration_from_future_version(hass: HomeAssistant) -> None:
