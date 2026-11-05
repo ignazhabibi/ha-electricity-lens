@@ -18,11 +18,10 @@ affect the solution.
   `tests/`; card and strategy sources are in `card/src/`.
 - **The integration computes, the cards show.** Every figure is computed once,
   hour by hour, and kept as a statistic (`coordinator.py`, `calculation.py`).
-  Cards and strategy only add up statistics over a period and divide two sums
-  (`card/src/figures.ts`, tested in `card/test/`). A card never computes a price,
-  cost, or saving, so two cards always agree. Charts may subtract parts from a
-  sum to show what is left, such as normal grid power. What changes a number
-  belongs to the integration.
+  Cards and strategy only add up statistics over a period, take one sum from
+  another, and divide two sums (`card/src/figures.ts`, tested in `card/test/`),
+  so two cards always agree. Rules and valuations, such as what a kWh costs or
+  what counts as a saving, belong to the integration.
 - **Two questions, two numbers.** Costs count a device's solar power at the lost
   feed-in compensation. Savings give the benefit of solar power to the PV plant
   alone and count a device's electricity at the hour's price, so that the three

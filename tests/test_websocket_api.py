@@ -51,7 +51,6 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "solar": ["electricity_lens:household_solar"],
         "cost": ["electricity_lens:household_cost"],
         "solar_cost": ["electricity_lens:household_solar_cost"],
-        "grid_cost": ["electricity_lens:household_grid_cost"],
         "cheap": ["electricity_lens:household_cheap"],
         "cheap_cost": ["electricity_lens:household_cheap_cost"],
     }
@@ -73,7 +72,6 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "solar": ["electricity_lens:device_sensor_heat_pump_solar"],
         "cost": ["electricity_lens:device_sensor_heat_pump_cost"],
         "solar_cost": ["electricity_lens:device_sensor_heat_pump_solar_cost"],
-        "grid_cost": ["electricity_lens:device_sensor_heat_pump_grid_cost"],
         "cheap": ["electricity_lens:device_sensor_heat_pump_cheap"],
         "cheap_cost": ["electricity_lens:device_sensor_heat_pump_cheap_cost"],
         "saving": ["electricity_lens:heat_pump_saving"],

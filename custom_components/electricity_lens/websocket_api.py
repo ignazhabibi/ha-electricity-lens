@@ -83,7 +83,6 @@ async def async_figures(
             "solar": [household_statistic_id(f"{area}_solar")],
             "cost": [household_statistic_id(f"{area}_cost")],
             "solar_cost": [household_statistic_id(f"{area}_solar_cost")],
-            "grid_cost": [household_statistic_id(f"{area}_grid_cost")],
         }
         for level, threshold in levels:
             if threshold is not None:
@@ -163,10 +162,6 @@ async def async_figures(
                     ],
                     solar_cost=[
                         household_statistic_id(f"{device}_solar_cost")
-                        for device in devices
-                    ],
-                    grid_cost=[
-                        household_statistic_id(f"{device}_grid_cost")
                         for device in devices
                     ],
                     **{

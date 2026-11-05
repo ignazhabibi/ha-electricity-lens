@@ -107,8 +107,8 @@ STATISTICS_VERSION = 3
 # Raised when a rule changes what the computed past looks like: everything is
 # then computed again. Version 2: prices paid, price levels that need a contrast,
 # consumers that add up to the household, and meters that run back. Version 3:
-# no hour counted twice after a failed update. Version 4: the standing charge, the
-# cost of grid power per consumer, and the saving by solar power per category.
+# no hour counted twice after a failed update. Version 4: the standing charge and
+# the saving by solar power per category.
 CALCULATION_VERSION = 4
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
@@ -956,7 +956,6 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 "solar",
                 "cost",
                 "solar_cost",
-                "grid_cost",
                 LEVEL_CHEAP,
                 f"{LEVEL_CHEAP}_cost",
                 LEVEL_EXPENSIVE,

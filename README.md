@@ -239,9 +239,9 @@ example in the *Statistics graph* card, under their names such as
 | Statistic | Content |
 |---|---|
 | `electricity_lens:household_energy`, `…_solar`, `…_cheap`, `…_expensive`, `…_cost` | The household's consumption, its solar power, its cheap and expensive grid power (with price levels only), and its costs |
-| `electricity_lens:household_solar_cost`, `…_grid_cost`, `…_cheap_cost`, `…_expensive_cost` | What of the household's costs falls on its solar power, its grid power, and its cheap and expensive grid power |
+| `electricity_lens:household_solar_cost`, `…_cheap_cost`, `…_expensive_cost` | What of the household's costs falls on its solar power and on its cheap and expensive grid power |
 | `electricity_lens:other_…` | The same for "Other" |
-| `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost`, `…_solar_cost`, `…_grid_cost`, `…_cheap_cost`, `…_expensive_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
+| `electricity_lens:device_<meter>_solar`, `…_cheap`, `…_expensive`, `…_cost`, `…_solar_cost`, `…_cheap_cost`, `…_expensive_cost` | The same for each individual device, without its consumption, which the device's own statistic already holds; `<meter>` is the device's statistic id as a slug, for example `device_sensor_washer_cost` for `sensor.washer` |
 | `electricity_lens:grid_cost` | Grid costs: imports minus feed-in compensation plus standing charge |
 | `electricity_lens:grid_import_cost`, `…grid_feed_in`, `…grid_standing_charge` | What the imports cost, what the feed-in earned, and the standing charge |
 | `electricity_lens:grid_cheap_saving` | What cheap grid power saved against the normal price (with a cheap level only) |
@@ -345,9 +345,8 @@ Areas and their figures:
 | Electric car | Consumption, costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power, payback and return (with an investment) |
 | Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
 
-The card computes nothing beyond adding up the hours of the period and
-dividing two such sums, and taking the solar power from the consumption for the
-grid power, for example costs by consumption; every cost and
+The card computes nothing beyond adding up the hours of the period, taking one
+such sum from another, and dividing two of them, for example costs by consumption; every cost and
 share per hour comes from the integration. In YAML:
 
 ```yaml

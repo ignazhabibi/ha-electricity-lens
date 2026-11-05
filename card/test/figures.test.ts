@@ -79,10 +79,10 @@ test("the household's costs show the average price", () => {
 });
 
 test("a device's grid price divides its grid costs by its grid power", () => {
-  const of = area("device", ["grid_cost", "energy", "solar"]);
-  const result = value("device_grid_price", of, { grid_cost: 30, energy: 200, solar: 100 });
+  const of = area("device", ["cost", "solar_cost", "energy", "solar"]);
+  const result = value("device_grid_price", of, { cost: 40, solar_cost: 10, energy: 200, solar: 100 });
   assert.equal(result.value, 0.3);
-  assert.equal(value("device_grid_price", of, { grid_cost: 0, energy: 100, solar: 100 }).value, null);
+  assert.equal(value("device_grid_price", of, { cost: 5, solar_cost: 5, energy: 100, solar: 100 }).value, null);
 });
 
 test("consumption shows its parts for the household, its solar share for a device", () => {

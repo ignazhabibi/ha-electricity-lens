@@ -1,7 +1,7 @@
 // The figures of the key figure card: which statistics of an area each
 // needs, and how its value and the line below follow from their sums. The
 // integration computes every cost and share per hour; the card only adds up
-// the hours of the period and divides one sum by another.
+// the hours of the period, takes one sum from another, and divides.
 
 import type { FigureArea } from "./types";
 
@@ -47,7 +47,7 @@ const NEEDS: Record<Figure, string[]> = {
   bill: ["import_cost", "standing_charge"],
   grid_price: ["import_cost", "energy"],
   // What a device's grid power cost, without its solar power.
-  device_grid_price: ["grid_cost", "energy", "solar"],
+  device_grid_price: ["cost", "solar_cost", "energy", "solar"],
   // A price per kWh consumed, so only where solar power is shared out.
   price: ["cost", "energy", "solar"],
   solar_share: ["solar", "energy"],
@@ -225,12 +225,14 @@ export function valueOf(
       };
     }
     case "device_grid_price": {
-      const gridCost = sum("grid_cost");
-      if (gridCost === null || energy === null || solar === null) {
+      const cost = sum("cost");
+      const solarCost = sum("solar_cost");
+      if (cost === null || solarCost === null || energy === null || solar === null) {
         return { value: null, unit: "price" };
       }
       const grid = energy - solar;
       if (grid <= 0) return { value: null, unit: "price" };
+      const gridCost = cost - solarCost;
       return {
         value: gridCost / grid,
         unit: "price",
