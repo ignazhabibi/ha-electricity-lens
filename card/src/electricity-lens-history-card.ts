@@ -582,9 +582,6 @@ export class ElectricityLensHistoryCard extends LensCard {
         : "";
     }
     const area = this._info?.areas.find((item) => item.id === this._config.area);
-    if (this._config.figure === "saving" && area?.statistics.alternative_cost?.length) {
-      return t("history_saving_note");
-    }
     if (!loaded || loaded.failed || this._config.figure !== "cost") return "";
     if (this._config.stack === "bill") return t("history_bill_note");
     const total = (ids: string[] | undefined) =>

@@ -672,6 +672,9 @@
           "investment": {
             "name": "Investition"
           },
+          "balance": {
+            "name": "Bilanz"
+          },
           "yearly_from": {
             "name": "Jahreswerte ab"
           },
@@ -726,9 +729,6 @@
           },
           "per_year": {
             "name": "Ersparnis pro Jahr"
-          },
-          "in_the_plus_from": {
-            "name": "Im Plus ab"
           }
         }
       }

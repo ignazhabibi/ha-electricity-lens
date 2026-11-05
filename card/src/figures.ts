@@ -325,7 +325,6 @@ export function valueOf(
           key: "line_saving_split",
           values: {
             solar: money(withSolar - saving),
-            saving: money(saving),
           },
         },
       };

@@ -431,13 +431,6 @@ def internal_rate_of_return(
     return (low + high) / 2 * 100
 
 
-def in_the_plus_at(balance: float, per_year: float, now: float) -> float | None:
-    """Return when a negative balance reaches zero at the yearly saving."""
-    if balance >= 0 or per_year <= 0:
-        return None
-    return now + -balance / per_year * YEAR
-
-
 def summarize(
     *,
     saving: float,

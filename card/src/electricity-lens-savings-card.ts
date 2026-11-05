@@ -142,8 +142,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const instead: Key =
       area?.id === "wallbox" ? "savings_instead_fuel" : heating === "oil" ? "savings_instead_oil" : "savings_instead_gas";
     const hasSolar = Math.abs(solar) >= 0.005;
-    return html`${hasSolar ? html`<p class="note">${t("savings_area_note")}</p>` : nothing}
-      <table>
+    return html`<table>
         <tbody>
           <tr>
             <td class="name">${t(instead)}</td>
@@ -180,11 +179,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const values = this._sums?.values ?? {};
     const amount = (row: Row) => addUp(values, row.plus) - addUp(values, row.minus);
     const total = rows.reduce((sum, row) => sum + amount(row), 0);
-    const categories = readCategories(this.hass!);
-    return html`${rows.length > 1 && categories.some((c) => c.category === "pv")
-        ? html`<p class="note">${t("savings_note")}</p>`
-        : nothing}
-      <table>
+    return html`<table>
         <thead>
           <tr>
             <th scope="col" colspan="2" class="name">${t("savings_source")}</th>

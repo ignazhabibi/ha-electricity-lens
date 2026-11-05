@@ -231,6 +231,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "calculating": "Calculating",
             "counting_since": "Counted since",
             "investment": "Investment",
+            "balance": "Balance",
             "yearly_from": "Yearly figures from",
             "price": "Price",
             "heating": "Former heating",
@@ -246,7 +247,6 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "saved": "Saved",
                 "invested": "Invested",
                 "per_year": "Saving per year",
-                "in_the_plus_from": "In the plus from",
             },
         },
         "exceptions": {
@@ -485,6 +485,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "calculating": "Wird berechnet",
             "counting_since": "Gezählt seit",
             "investment": "Investition",
+            "balance": "Bilanz",
             "yearly_from": "Jahreswerte ab",
             "price": "Preis",
             "heating": "Frühere Heizung",
@@ -500,7 +501,6 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "saved": "Gespart",
                 "invested": "Investiert",
                 "per_year": "Ersparnis pro Jahr",
-                "in_the_plus_from": "Im Plus ab",
             },
         },
         "exceptions": {

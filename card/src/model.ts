@@ -43,14 +43,14 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       calculating: attributes.calculating === true,
       saving: number(state.state),
       investment: number(attributes.investment),
+      balance: number(attributes.balance),
       perYear: value(siblings(entry.device_id, "saving_per_year")?.entity_id),
       countingSince: date(attributes.counting_since),
-      yearlyFrom: date(attributes.yearly_from),
+      entityId: entry.entity_id,
       heating:
         attributes.heating === "gas" || attributes.heating === "oil"
           ? attributes.heating
           : null,
-      heatEstimated: attributes.heat_estimated === true,
     });
   }
   return figures.sort(
@@ -70,7 +70,8 @@ export function readBalance(hass: HomeAssistant): BalanceFigures | null {
     balance: number(state.state),
     saved: number(state.attributes.saved) ?? 0,
     invested: number(state.attributes.invested) ?? 0,
-    inThePlusFrom: date(state.attributes.in_the_plus_from),
+    perYear: number(state.attributes.per_year),
+    entityId: entry!.entity_id,
   };
 }
 
