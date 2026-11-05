@@ -6,7 +6,6 @@
 // date selection on the same dashboard, or shows a fixed period.
 
 import {
-  LitElement,
   css,
   html,
   nothing,
@@ -15,7 +14,7 @@ import {
   type TemplateResult,
 } from "lit";
 
-import { barChart, chartReady, type ChartLine, type ChartSeries } from "./chart";
+import { barChart, watchChart, type ChartLine, type ChartSeries } from "./chart";
 import { consumerColors, palette } from "./colors";
 import { followEnergyDate } from "./energy-date";
 import {
@@ -24,7 +23,7 @@ import {
   type PeriodOption,
 } from "./electricity-lens-figures-card";
 import { valueOf, type Unit } from "./figures";
-import { formatter, type Format } from "./format";
+import { formatter, hour12, type Format } from "./format";
 import {
   fixedRange,
   meansPerSlot,
@@ -46,8 +45,9 @@ import {
   type Stack,
 } from "./history-figures";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
+import { LensCard } from "./lens-card";
 import { hasText, localizer, type Localize } from "./localize";
-import { readCategories } from "./model";
+import { noCategoriesText, readCategories } from "./model";
 import { cardStyles } from "./styles";
 import type {
   Category,
@@ -118,7 +118,7 @@ interface Loaded {
   failed: boolean;
 }
 
-export class ElectricityLensHistoryCard extends LitElement {
+export class ElectricityLensHistoryCard extends LensCard {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -135,7 +135,9 @@ export class ElectricityLensHistoryCard extends LitElement {
   /** The date selection's period; null without one, undefined until known. */
   private _selected?: Range | null;
   private _loaded?: Loaded;
+  /** Whether HA's chart element is there; undefined while it may still load. */
   private _hasChart?: boolean;
+  private _watchingChart = false;
   private _loading?: string;
   private _unfollow?: () => void;
   private _retryTimer?: ReturnType<typeof setTimeout>;
@@ -183,7 +185,7 @@ export class ElectricityLensHistoryCard extends LitElement {
   }
 
   private get _fmt(): Format {
-    return formatter(this._language, this.hass?.config.currency ?? "EUR");
+    return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
   }
 
   private get _savings(): boolean {
@@ -368,9 +370,9 @@ export class ElectricityLensHistoryCard extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hass) return;
     if (changed.has("hass") || changed.has("_config")) this._follow();
-    if (this._hasChart === undefined) {
-      this._hasChart = false;
-      chartReady().then((ok) => {
+    if (!this._watchingChart) {
+      this._watchingChart = true;
+      watchChart((ok) => {
         this._hasChart = ok;
       });
     }
@@ -521,7 +523,7 @@ export class ElectricityLensHistoryCard extends LitElement {
   private _labels(slots: number[], period: Period): Array<{ axis: string; tooltip: string }> {
     const format = (options: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(this._language, options);
-    const hour = format({ hour: "2-digit", minute: "2-digit" });
+    const hour = format({ hour: "2-digit", minute: "2-digit", hour12: hour12(this.hass?.locale) });
     const severalYears =
       slots.length > 0 &&
       new Date(slots[0]).getFullYear() !== new Date(slots[slots.length - 1]).getFullYear();
@@ -602,7 +604,7 @@ export class ElectricityLensHistoryCard extends LitElement {
     if (this._savings && !readCategories(this.hass).length) {
       return html`<ha-card>
         <div class="header"><h2 class="title">${title}</h2></div>
-        <p class="summary">${t("not_set_up")}</p>
+        <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
     const calculating = this._savings
@@ -643,14 +645,14 @@ export class ElectricityLensHistoryCard extends LitElement {
 
   private _body(loaded: Loaded | undefined, hasData: boolean) {
     const t = this._localize;
-    if (!this._hasChart) {
+    if (this._hasChart === false) {
       return html`<p class="summary">${t("history_no_chart")}</p>`;
     }
     if (loaded?.failed) {
       return html`<p class="summary">${t("history_failed")}</p>`;
     }
     return html`<div class="chart">
-      ${this._chart
+      ${this._chart && this._hasChart
         ? html`<ha-chart-base
             .hass=${this.hass}
             .data=${this._chart.data}

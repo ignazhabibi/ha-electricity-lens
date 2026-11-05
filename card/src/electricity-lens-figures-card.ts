@@ -5,7 +5,6 @@
 // date selection on the same dashboard, or shows a fixed period.
 
 import {
-  LitElement,
   css,
   html,
   nothing,
@@ -34,6 +33,7 @@ import {
   type Range,
 } from "./history";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
+import { LensCard } from "./lens-card";
 import { hasText, localizer, type Localize } from "./localize";
 import { cardStyles } from "./styles";
 import type {
@@ -126,7 +126,7 @@ function forecastSums(
   return sums;
 }
 
-export class ElectricityLensFiguresCard extends LitElement {
+export class ElectricityLensFiguresCard extends LensCard {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -181,6 +181,12 @@ export class ElectricityLensFiguresCard extends LitElement {
     this._unfollow = undefined;
     clearTimeout(this._retryTimer);
     this._retryTimer = undefined;
+  }
+
+  protected _watched(): string[] {
+    return [this._config?.entity, this._config?.statistic].filter(
+      (entity): entity is string => entity !== undefined
+    );
   }
 
   private get _localize(): Localize {
@@ -339,7 +345,7 @@ export class ElectricityLensFiguresCard extends LitElement {
   }
 
   private get _fmt(): Format {
-    return formatter(this._language, this.hass?.config.currency ?? "EUR");
+    return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
   }
 
   private _number(value: number, digits?: number): string {

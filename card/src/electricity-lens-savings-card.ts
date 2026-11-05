@@ -81,27 +81,13 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     return {};
   }
 
-  static getConfigForm(): { schema: unknown[] } {
-    return {
-      schema: [
-        {
-          name: "area",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "heat_pump", label: "Heat pump" },
-                { value: "wallbox", label: "Electric car" },
-              ],
-            },
-          },
-        },
-      ],
-    };
+  static getConfigElement(): HTMLElement {
+    return document.createElement("electricity-lens-savings-card-editor");
   }
 
   setConfig(config: SavingsCardConfig | undefined): void {
     this._config = config ?? {};
+    this.requestUpdate();
   }
 
   private get _area(): FigureArea | undefined {

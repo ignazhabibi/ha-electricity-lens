@@ -2,14 +2,15 @@
 // energy date selection on the same dashboard, this month without one. Rows
 // follow from the sums in each card.
 
-import { LitElement, css, type TemplateResult } from "lit";
+import { css, type TemplateResult } from "lit";
 
 import { followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
 import { fixedRange, type Range } from "./history";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
+import { LensCard } from "./lens-card";
 import { localizer, type Key, type Localize } from "./localize";
-import { readCategories } from "./model";
+import { noCategoriesText, readCategories } from "./model";
 import { loadSums } from "./sums";
 import type { FiguresInfo, HomeAssistant } from "./types";
 
@@ -25,7 +26,7 @@ interface Sums {
 export const addUp = (values: Record<string, number>, ids: string[] | undefined): number =>
   (ids ?? []).reduce((total, id) => total + (values[id] ?? 0), 0);
 
-export abstract class PeriodSumsCard extends LitElement {
+export abstract class PeriodSumsCard extends LensCard {
   static properties = {
     hass: { attribute: false },
     _info: { state: true },
@@ -72,7 +73,7 @@ export abstract class PeriodSumsCard extends LitElement {
   }
 
   protected get _fmt(): Format {
-    return formatter(this.hass?.locale?.language ?? "en", this.hass?.config.currency ?? "EUR");
+    return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
   }
 
   private _follow(): void {
@@ -128,7 +129,7 @@ export abstract class PeriodSumsCard extends LitElement {
   protected _waiting(): Key | undefined {
     if (!this.hass) return undefined;
     const categories = readCategories(this.hass);
-    if (!categories.length) return "not_set_up";
+    if (!categories.length) return noCategoriesText(this.hass);
     if (categories.some((category) => category.calculating) || this._info?.calculating) {
       return "calculating_all";
     }

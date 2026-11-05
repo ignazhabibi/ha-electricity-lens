@@ -10,6 +10,7 @@ import { ElectricityLensSavingsCard } from "./electricity-lens-savings-card";
 import { ElectricityLensFiguresCardEditor } from "./figures-editor";
 import { ElectricityLensHistoryCardEditor } from "./history-editor";
 import { registerCards } from "./register";
+import { ElectricityLensSavingsCardEditor } from "./savings-editor";
 import { ElectricityLensDashboardStrategy } from "./strategy";
 
 registerCards([
@@ -26,6 +27,10 @@ registerCards([
     name: "Electricity Lens savings",
     description:
       "What solar power, the heat pump, and the electric car saved in the selected period, as a table, or one area's saving reckoned up. Follows the energy date selection.",
+    editor: {
+      tag: "electricity-lens-savings-card-editor",
+      element: ElectricityLensSavingsCardEditor,
+    },
   },
   {
     tag: "electricity-lens-heat-meters-card",

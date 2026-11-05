@@ -61,6 +61,15 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
   );
 }
 
+/** What to say when no category can be read: their sensors exist but have no
+ * state to read, or the integration is not set up. */
+export function noCategoriesText(hass: HomeAssistant): "integration_unavailable" | "not_set_up" {
+  const hasSensors = Object.values(hass.entities ?? {}).some(
+    (entry) => entry.platform === DOMAIN && entry.translation_key === "saving"
+  );
+  return hasSensors ? "integration_unavailable" : "not_set_up";
+}
+
 export interface Totals {
   saved: number;
   invested: number;
@@ -76,7 +85,11 @@ export function totals(categories: CategoryFigures[], now = new Date()): Totals 
   const calculating = categories.some((category) => category.calculating);
   const saved = categories.reduce((sum, c) => sum + (c.saving ?? 0), 0);
   const invested = categories.reduce((sum, c) => sum + (c.investment ?? 0), 0);
-  const ready = !calculating && categories.length > 0;
+  // As the balance sensor: unknown while a category has no saving yet.
+  const ready =
+    !calculating &&
+    categories.length > 0 &&
+    categories.every((category) => category.saving !== null);
   const balance = ready ? saved - invested : null;
   const yearly = categories.every((category) => category.perYear !== null);
   const perYear =
