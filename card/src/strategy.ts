@@ -229,7 +229,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       [
         own("grid", "grid_price", quiet),
         price("household", quiet),
-        titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
+        card("electricity-lens-breakdown-card", {
           area: "household",
           by: "consumer",
           figure: "cost",
