@@ -1,7 +1,7 @@
 // Editor of the history card: what to show as bars, how they stack, and the
 // lines. Areas and their figures come from the integration.
 
-import { LitElement, html, type TemplateResult } from "lit";
+import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
 import { PERIODS, figureLabel } from "./electricity-lens-figures-card";
 import type { HistoryCardConfig, HistoryLine } from "./electricity-lens-history-card";
@@ -25,7 +25,9 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
 
   hass?: HomeAssistant;
   private _config?: HistoryCardConfig;
+  /** The integration's areas; undefined while loading, null when it is not loaded. */
   private _info?: FiguresInfo | null;
+  private _requested = false;
 
   setConfig(config: HistoryCardConfig): void {
     this._config = config;
@@ -36,14 +38,16 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
   }
 
   protected willUpdate(): void {
-    if (this.hass && this._info === undefined) {
-      this._info = null;
+    if (this.hass && !this._requested) {
+      this._requested = true;
       this.hass
         .callWS<FiguresInfo>({ type: `${DOMAIN}/figures` })
         .then((info) => {
           this._info = info;
         })
-        .catch(() => undefined);
+        .catch(() => {
+          this._info = null;
+        });
     }
   }
 
@@ -153,14 +157,39 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
   private _label = (schema: { name: string }): string =>
     this._localize(`editor_${schema.name}` as Parameters<Localize>[0]);
 
+  /** What the card shows without a date selection: an area this month, the
+   * savings all years. */
+  private _helper = (schema: { name: string }): string | undefined =>
+    schema.name === "period"
+      ? this._localize(this._config?.area ? "editor_period_hint" : "editor_period_hint_years")
+      : undefined;
+
   protected render(): TemplateResult {
     if (!this.hass || !this._config) return html``;
-    return html`<ha-form
-      .hass=${this.hass}
-      .data=${this._data()}
-      .schema=${this._schema()}
-      .computeLabel=${this._label}
-      @value-changed=${this._changed}
-    ></ha-form>`;
+    return html`<div class="editor">
+      ${this._info === null
+        ? html`<p class="hint">${this._localize("editor_not_loaded")}</p>`
+        : nothing}
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._data()}
+        .schema=${this._schema()}
+        .computeLabel=${this._label}
+        .computeHelper=${this._helper}
+        @value-changed=${this._changed}
+      ></ha-form>
+    </div>`;
   }
+
+  static styles = css`
+    .editor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hint {
+      margin: 0;
+      color: var(--secondary-text-color);
+    }
+  `;
 }

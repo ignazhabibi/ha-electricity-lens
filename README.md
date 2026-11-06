@@ -298,16 +298,18 @@ than it saved shows below the line.
 
 | Option | Choices |
 |---|---|
-| Period | *Follow the date selection*, or a fixed period such as last month or this year |
+| Period | *Follow the date selection*, a fixed period such as last month or this year, or all years from the first one with a value |
 | Area and figure | The savings of all categories, or an area's consumption, costs, savings, or feed-in |
-| Stacking | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also as the electricity bill (standing charge and grid power by price level, without the feed-in); by consumer (top-level devices and Other) for the household's consumption and costs; or not stacked |
+| Split | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also by bill item (standing charge and grid power by price level, without the feed-in); by consumer (top-level devices and Other) for the household's consumption and costs; or none |
 | Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency; for the household also the grid price |
 | Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
 
 With an *Energy date selection* card on the same dashboard it follows the
-selected period: hours for a day, days for a week or month, months for a
-year. Without one it shows the savings per year since counting began, other
-figures for this month. In YAML:
+selected period as the energy dashboard does: hours for a day, days for a week
+or month, months for a year. When the date selection compares with an earlier
+period, its bars stand paler next to the selected ones. Without a date
+selection it shows the savings per year since counting began, other figures
+for this month. The chip at the top shows the total of the bars. In YAML:
 
 ```yaml
 type: custom:electricity-lens-history-card

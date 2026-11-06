@@ -65,6 +65,9 @@ export interface ChartInput {
   /** Axis label and tooltip heading of each slot. */
   labels: Array<{ axis: string; tooltip: string }>;
   series: ChartSeries[];
+  /** The same bars for the period compared with, slot by slot, as HA's energy
+   * graphs show them: paler, next to the bars of the selection. */
+  compare?: { series: ChartSeries[]; labels: string[] };
   /** The bars' unit, as the axis name. */
   unit: string;
   total: string;
@@ -78,6 +81,8 @@ export interface ChartInput {
   lines?: ChartLine[];
   lineUnit?: string;
 }
+
+const COMPARE = "compare-";
 
 const hex2 = (alpha: number) =>
   Math.round(alpha * 255)
@@ -109,6 +114,7 @@ const marker = (color: string) =>
 
 interface TooltipParam {
   dataIndex: number;
+  seriesId?: string;
   seriesName?: string;
   color?: string;
   value?: number | null;
@@ -150,23 +156,20 @@ export function alignedAxes(
   };
 }
 
-/** The data and options for `ha-chart-base`. Values can be negative, for
- * example a heat pump's saving in a month of cheap gas: those bars stack
- * downwards. */
-export function barChart(input: ChartInput) {
-  const lines = input.lines ?? [];
-  const bars = input.series.map((series, k) => ({
-    id: series.id,
+/** Bars of one stack. The outermost bar of each side gets the rounded cap. */
+function stackedBars(series: ChartSeries[], stack: string, compare: boolean) {
+  return series.map((item, k) => ({
+    id: compare ? COMPARE + item.id : item.id,
     type: "bar",
-    name: series.name,
-    stack: "savings",
+    name: item.name,
+    stack,
     cursor: "default",
     barMaxWidth: 50,
-    color: withAlpha(series.color, 0.5),
-    itemStyle: { borderColor: series.color },
-    data: series.values.map((value, i) => {
-      // The outermost bar of each side gets the rounded cap.
-      const outer = input.series
+    // As HA's energy graphs: the compared period paler, with a paler edge.
+    color: withAlpha(item.color, compare ? 0x32 / 255 : 0x7f / 255),
+    itemStyle: { borderColor: compare ? withAlpha(item.color, 0x7f / 255) : item.color },
+    data: item.values.map((value, i) => {
+      const outer = series
         .slice(k + 1)
         .every((other) => Math.sign(other.values[i] ?? 0) !== Math.sign(value ?? 0));
       return {
@@ -179,6 +182,31 @@ export function barChart(input: ChartInput) {
       };
     }),
   }));
+}
+
+/** The extent of stacked bars: per slot the sum of each side. */
+function stackedExtent(series: ChartSeries[], slots: number): { min: number; max: number } {
+  let min = 0;
+  let max = 0;
+  for (let i = 0; i < slots; i += 1) {
+    const values = series.map((item) => item.values[i] ?? 0);
+    max = Math.max(max, values.filter((value) => value > 0).reduce((sum, value) => sum + value, 0));
+    min = Math.min(min, values.filter((value) => value < 0).reduce((sum, value) => sum + value, 0));
+  }
+  return { min, max };
+}
+
+/** The data and options for `ha-chart-base`. Values can be negative, for
+ * example a heat pump's saving in a month of cheap gas: those bars stack
+ * downwards. Series are told apart by their ids, never by their names. */
+export function barChart(input: ChartInput) {
+  const lines = input.lines ?? [];
+  const compare = input.compare;
+  // Compared bars come first, so they stand left of the selection's.
+  const bars = [
+    ...(compare ? stackedBars(compare.series, "compare", true) : []),
+    ...stackedBars(input.series, "main", false),
+  ];
   // Lines explain the bars and stay behind them: thin, dashed, no symbols.
   const lineData = lines.map((line) => ({
     id: line.id,
@@ -195,36 +223,51 @@ export function barChart(input: ChartInput) {
     data: line.values,
   }));
   const data = [...bars, ...lineData];
-  const lineFormat = new Map(lines.map((line) => [line.name, line.format]));
+  const lineFormat = new Map(lines.map((line) => [line.id, line.format]));
+  const excluded = new Set(
+    input.series
+      .filter((series) => series.inTotal === false)
+      .flatMap((series) => [series.id, COMPARE + series.id])
+  );
+
+  /** The bars of one period in the tooltip, with their total. */
+  const section = (heading: string, params: TooltipParam[]): string => {
+    const shown = params.filter((p) => p.value);
+    if (!shown.length) return "";
+    const rows = shown.map(
+      (p) => `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.format(p.value ?? 0)}`
+    );
+    const sum = shown
+      .filter((p) => !excluded.has(p.seriesId ?? ""))
+      .reduce((total, p) => total + (p.value ?? 0), 0);
+    return (
+      `<b>${escape(heading)}</b><br>${rows.join("<br>")}` +
+      (shown.length > 1 ? `<br><b>${escape(input.total)}: ${input.format(sum)}</b>` : "")
+    );
+  };
 
   const tooltip = (params: unknown): Node => {
     const list = (Array.isArray(params) ? params : [params]) as TooltipParam[];
     const element = document.createElement("div");
     if (!list.length) return element;
-    const isLine = (p: TooltipParam) => lineFormat.has(p.seriesName ?? "");
-    const shown = list.filter((p) => p.value && !isLine(p));
-    const shownLines = list.filter(
-      (p) => isLine(p) && p.value !== null && p.value !== undefined
-    );
-    const rows = shown.map(
-      (p) =>
-        `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.format(p.value ?? 0)}`
-    );
-    const lineRows = shownLines.map(
-      (p) =>
-        `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesName ?? "")?.(p.value ?? 0) ?? ""}`
-    );
-    const excluded = new Set(
-      input.series.filter((series) => series.inTotal === false).map((series) => series.name)
-    );
-    const sum = shown
-      .filter((p) => !excluded.has(p.seriesName ?? ""))
-      .reduce((total, p) => total + (p.value ?? 0), 0);
-    element.innerHTML =
-      `<b>${escape(input.labels[list[0].dataIndex]?.tooltip ?? "")}</b>` +
-      (rows.length ? `<br>${rows.join("<br>")}` : "") +
-      (shown.length > 1 ? `<br><b>${escape(input.total)}: ${input.format(sum)}</b>` : "") +
-      (lineRows.length ? `<br>${lineRows.join("<br>")}` : "");
+    const index = list[0].dataIndex;
+    const isLine = (p: TooltipParam) => lineFormat.has(p.seriesId ?? "");
+    const isCompared = (p: TooltipParam) => (p.seriesId ?? "").startsWith(COMPARE);
+    const lineRows = list
+      .filter((p) => isLine(p) && p.value !== null && p.value !== undefined)
+      .map(
+        (p) =>
+          `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesId ?? "")?.(p.value ?? 0) ?? ""}`
+      );
+    const heading = input.labels[index]?.tooltip ?? "";
+    const main = section(heading, list.filter((p) => !isLine(p) && !isCompared(p)));
+    const compared = compare
+      ? section(compare.labels[index] ?? "", list.filter((p) => isCompared(p)))
+      : "";
+    const parts = [main || `<b>${escape(heading)}</b>`];
+    if (lineRows.length) parts[0] += `<br>${lineRows.join("<br>")}`;
+    if (compared) parts.push(compared);
+    element.innerHTML = parts.join("<br><br>");
     return element;
   };
 
@@ -246,22 +289,15 @@ export function barChart(input: ChartInput) {
   };
   if (lines.length) {
     // Bars stack, so each side's extent is the sum of a slot.
-    const stacked = input.labels.map((_, i) => {
-      const values = input.series.map((series) => series.values[i] ?? 0);
-      return {
-        up: values.filter((value) => value > 0).reduce((sum, value) => sum + value, 0),
-        down: values.filter((value) => value < 0).reduce((sum, value) => sum + value, 0),
-      };
-    });
+    const slots = input.labels.length;
+    const own = stackedExtent(input.series, slots);
+    const other = compare ? stackedExtent(compare.series, slots) : own;
     const lineValues = lines.flatMap((line) =>
       line.values.filter((value): value is number => value !== null)
     );
     const lineMin = Math.min(0, ...lineValues);
     const aligned = alignedAxes(
-      {
-        min: Math.min(0, ...stacked.map((slot) => slot.down)),
-        max: Math.max(0, ...stacked.map((slot) => slot.up)),
-      },
+      { min: Math.min(own.min, other.min), max: Math.max(own.max, other.max) },
       { min: lineMin, max: Math.max(0, ...lineValues) }
     );
     if (aligned) {
@@ -286,13 +322,16 @@ export function barChart(input: ChartInput) {
     legend: {
       show: true,
       type: "custom",
+      // A legend entry shows and hides the compared bars along with its own.
       data: [...input.series, ...lines].map((series) => ({
         id: series.id,
+        secondaryIds: compare?.series.some((item) => item.id === series.id) ? [COMPARE + series.id] : [],
         name: series.name,
       })),
     },
-    // HA renders the tooltip with lit, which shows a string as text.
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, formatter: tooltip },
+    // HA renders the tooltip with lit, which shows a string as text. The axis
+    // pointer stays ECharts' dashed line, which HA's chart theme colors.
+    tooltip: { trigger: "axis", formatter: tooltip },
   };
   return { data, options };
 }
