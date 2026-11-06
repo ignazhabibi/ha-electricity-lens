@@ -259,7 +259,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         """The energy dashboard as of the last update."""
         self._without_data: set[str] = set()
         self.forecast: tuple[float, float] | None = None
-        """Today's and tomorrow's solar forecast in kWh, as of the last update."""
+        """The solar forecast in kWh for the rest of today and for tomorrow."""
 
     async def async_load(self) -> None:
         """Restore progress and record changed current values."""

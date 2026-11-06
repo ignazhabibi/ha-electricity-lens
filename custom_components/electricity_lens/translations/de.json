@@ -696,8 +696,8 @@
       "saving_per_year": {
         "name": "Ersparnis pro Jahr"
       },
-      "forecast_today": {
-        "name": "PV-Prognose heute"
+      "forecast_rest_today": {
+        "name": "PV-Rest heute"
       },
       "forecast_tomorrow": {
         "name": "PV-Prognose morgen"

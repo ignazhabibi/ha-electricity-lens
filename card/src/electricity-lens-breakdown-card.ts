@@ -3,8 +3,10 @@
 // by price level) or by device (top-level devices and Other), in energy or
 // costs; or the shares of any statistics, shown as they are, in their unit.
 // With the date selection's comparison the compared period shows inside the
-// ring, or as a thin bar under each bar.
+// ring, or as a paler bar under each bar. Split by device or by statistics,
+// a button switches between bars and ring, as in HA's devices graph.
 
+import { mdiChartBar, mdiChartDonut } from "@mdi/js";
 import { css, html, nothing, type TemplateResult } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 
@@ -43,6 +45,18 @@ const CHECK =
 const BLANK =
   "M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z";
 
+/** Where the browser keeps the chosen display, as HA's devices graph does. */
+const DISPLAY_KEY = "electricity-lens-breakdown-display";
+
+type Source = "solar" | "cheap" | "grid" | "expensive";
+
+/** A source's share of a bar. */
+interface MixItem {
+  source: Source;
+  color: string;
+  value: number;
+}
+
 interface Part {
   id: string;
   name: string;
@@ -53,7 +67,11 @@ interface Part {
   /** The entity whose dialog a tap opens, if the part is one. */
   entity?: string;
   /** For consumers: the value per source, to split the bar. */
-  mix?: Array<{ color: string; value: number }>;
+  mix?: MixItem[];
+  /** The same in the compared period. */
+  compareMix?: MixItem[];
+  /** Untracked consumption, which comes last. */
+  other?: boolean;
   /** For consumers by costs: their energy, for the average price. */
   energy?: number;
 }
@@ -64,6 +82,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     _config: { state: true },
     _hasChart: { state: true },
     _hidden: { state: true },
+    _chosen: { state: true },
   };
 
   private _config: BreakdownCardConfig = { type: "" };
@@ -74,6 +93,8 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
   private _ringChart?: { key: string; chart: ReturnType<typeof shareChart> };
   /** Parts hidden in the ring's legend. */
   private _hidden = new Set<string>();
+  /** The display chosen with the button, kept in the browser. */
+  private _chosen?: "ring" | "bars" = readDisplay();
 
   static getStubConfig(): Partial<BreakdownCardConfig> {
     return { area: "household", by: "source", figure: "energy", display: "ring" };
@@ -255,40 +276,50 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
         compare: this._compared ? floor(compared) : undefined,
       };
       if (this._by === "consumer" && this._info) {
-        const colors = palette(this);
         const area = this._info.areas.find((item) => item.id === series.id);
         if (area) {
           part.entity = this._entityOf(area.statistics.energy);
-          const of = (key: string) => this._sum(area.statistics[key] ?? []);
-          const energy = of("energy");
-          const solar = of("solar");
-          const cheap = of("cheap");
-          const expensive = of("expensive");
-          part.energy = energy;
-          // A bar of money splits by money: a kWh of solar power costs far less.
-          const money = this._figure === "cost";
-          const sources = {
-            solar: money ? of("solar_cost") : solar,
-            cheap: money ? of("cheap_cost") : cheap,
-            expensive: money ? of("expensive_cost") : expensive,
-          };
-          part.mix = [
-            { color: colors.solar, value: sources.solar },
-            { color: colors.cheap, value: sources.cheap },
-            {
-              color: colors.grid,
-              value: Math.max(
-                (money ? of("cost") : energy) - sources.solar - sources.cheap - sources.expensive,
-                0
-              ),
-            },
-            { color: colors.expensive, value: sources.expensive },
-          ];
+          part.energy = this._sum(area.statistics.energy ?? []);
+          part.mix = this._mix(area);
+          if (this._compared) part.compareMix = this._mix(area, true);
         }
+        part.other = area?.kind === "other";
       }
       return part;
     });
-    return this._by === "consumer" ? parts.sort((a, b) => b.value - a.value) : parts;
+    // Untracked consumption is no device: it comes after them.
+    return this._by === "consumer"
+      ? parts.sort((a, b) => Number(a.other ?? false) - Number(b.other ?? false) || b.value - a.value)
+      : parts;
+  }
+
+  /** A consumer's value per source; a bar of money splits by money, since a
+   * kWh of solar power costs far less. */
+  private _mix(area: FigureArea, compared = false): MixItem[] {
+    const colors = palette(this);
+    const of = (key: string) => this._sum(area.statistics[key] ?? [], compared);
+    const money = this._figure === "cost";
+    const solar = of(money ? "solar_cost" : "solar");
+    const cheap = of(money ? "cheap_cost" : "cheap");
+    const expensive = of(money ? "expensive_cost" : "expensive");
+    return [
+      { source: "solar", color: colors.solar, value: solar },
+      { source: "cheap", color: colors.cheap, value: cheap },
+      {
+        source: "grid",
+        color: colors.grid,
+        value: Math.max(of(money ? "cost" : "energy") - solar - cheap - expensive, 0),
+      },
+      { source: "expensive", color: colors.expensive, value: expensive },
+    ];
+  }
+
+  /** A source's name; grid power is "normal" next to a cheap or expensive level. */
+  private _sourceName(source: Source): string {
+    const t = this._localize;
+    if (source !== "grid") return t(`source.${source}`);
+    const levels = this._info?.levels;
+    return t(levels?.cheap_until != null || levels?.expensive_from != null ? "source.normal" : "source.grid");
   }
 
   private _value(value: number): string {
@@ -388,7 +419,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     </div>`;
   }
 
-  private _bars(parts: Part[]): TemplateResult {
+  private _bars(parts: Part[], total: number): TemplateResult {
     // A consumer that would read as zero only pushes the others apart.
     const zero = this._value(0);
     const shown = parts.filter(
@@ -398,10 +429,26 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     const widthOf = (value: number) => (max > 0 ? Math.max((value / max) * 100, 0) : 0);
     const split = this._config.color_by_source === true && this._by === "consumer";
     const t = this._localize;
-    return html`<div class="bars">
+    const compared = this._compared;
+    // A bar as in HA's devices graph; split, each source a part of its own
+    // that names its amount on hover.
+    const bar = (value: number, color: string, mix: MixItem[] | undefined, compare: boolean) => {
+      const mixTotal = mix?.reduce((sum, item) => sum + item.value, 0) ?? 0;
+      const parts = split && mix && mixTotal > 0 ? mix.filter((item) => item.value > 0) : [];
+      return html`<div class="track ${compare ? "compare" : ""}">
+        <div class="fill" style="width: ${widthOf(value)}%; ${parts.length ? "" : `--c: ${color}`}">
+          ${parts.map(
+            (item) => html`<span
+              title="${this._sourceName(item.source)}: ${this._value(item.value)}"
+              style="width: ${(item.value / mixTotal) * 100}%; --c: ${item.color}"
+            ></span>`
+          )}
+        </div>
+      </div>`;
+    };
+    const compareTotal = parts.reduce((sum, part) => sum + Math.max(part.compare ?? 0, 0), 0);
+    return html`<div class="bars ${compared ? "compared" : ""}">
       ${shown.map((part) => {
-        const width = widthOf(part.value);
-        const mixTotal = part.mix?.reduce((sum, item) => sum + item.value, 0) ?? 0;
         let line = "";
         if (this._figure === "cost" && part.energy !== undefined) {
           line = this._fmt.value(part.energy, "energy");
@@ -410,8 +457,8 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
           }
         }
         if (part.compare !== undefined) {
-          const compared = t("breakdown_compared", { amount: this._value(part.compare) });
-          line = line ? `${line} · ${compared}` : compared;
+          const amount = t("breakdown_compared", { amount: this._value(part.compare) });
+          line = line ? `${line} · ${amount}` : amount;
         }
         // A part with an entity of its own opens its dialog, as in HA's devices graph.
         const open = part.entity
@@ -438,20 +485,19 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
             <span class="amount">${this._value(part.value)}</span>
           </div>
           ${line ? html`<div class="bar-line">${line}</div>` : nothing}
-          <div class="track">
-            <div class="fill" style="width: ${width}%; ${split ? "" : `--c: ${part.color}`}">
-              ${split && part.mix && mixTotal > 0
-                ? part.mix.map((item) => html`<span style="width: ${(item.value / mixTotal) * 100}%; --c: ${item.color}"></span>`)
-                : nothing}
-            </div>
-          </div>
-          ${part.compare !== undefined
-            ? html`<div class="track compare">
-                <div class="fill" style="width: ${widthOf(part.compare)}%; --c: ${part.color}"></div>
-              </div>`
-            : nothing}
+          ${bar(part.value, part.color, part.mix, false)}
+          ${part.compare !== undefined ? bar(part.compare, part.color, part.compareMix, true) : nothing}
         </div>`;
       })}
+      <div class="total">
+        <div class="bar-text">
+          <span class="name">${t("breakdown_total")}</span>
+          <span class="amount">${this._value(total)}</span>
+        </div>
+        ${compared
+          ? html`<div class="bar-line">${t("breakdown_compared", { amount: this._value(compareTotal) })}</div>`
+          : nothing}
+      </div>
       ${split
         ? html`<div class="key">
             ${(["solar", "cheap", "grid", "expensive"] as const)
@@ -461,17 +507,32 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
                   (key !== "expensive" || this._info?.levels.expensive_from != null)
               )
               .map(
-              (key) => html`<span><span class="dot" style="--c: ${CSS_COLORS[key]}"></span>${t(
-                key === "grid"
-                  ? this._info?.levels.cheap_until != null || this._info?.levels.expensive_from != null
-                    ? "source.normal"
-                    : "source.grid"
-                  : `source.${key}`
-              )}</span>`
-            )}
+                (key) =>
+                  html`<span><span class="dot" style="--c: ${CSS_COLORS[key]}"></span>${this._sourceName(key)}</span>`
+              )}
           </div>`
         : nothing}
     </div>`;
+  }
+
+  /** Whether the button switches between bars and ring: not for the mix,
+   * whose parts are few and short. */
+  private get _switchable(): boolean {
+    return this._byStatistics || (this._area() !== undefined && this._by === "consumer");
+  }
+
+  private get _display(): "ring" | "bars" {
+    if (this._switchable && this._chosen) return this._chosen;
+    return this._config.display ?? (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
+  }
+
+  private _switch(): void {
+    this._chosen = this._display === "ring" ? "bars" : "ring";
+    try {
+      localStorage.setItem(DISPLAY_KEY, JSON.stringify(this._chosen));
+    } catch {
+      // Without storage the choice holds until the page reloads.
+    }
   }
 
   protected render(): TemplateResult {
@@ -481,8 +542,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     const total = parts.reduce((sum, part) => sum + Math.max(part.value, 0), 0);
     const calculating = !this._byStatistics && this._info?.calculating === true;
     const missing = !this._byStatistics && this._info !== undefined && !this._area();
-    const display =
-      this._config.display ?? (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
+    const display = this._display;
     // No chip: the ring holds the total in its middle, the bars name each
     // amount, and the date selection or the title says the period.
     let body: TemplateResult;
@@ -491,10 +551,17 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     else if (this._sums && !this._sums.values) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
-    else body = display === "bars" ? this._bars(parts) : this._ring(parts);
+    else body = display === "bars" ? this._bars(parts, total) : this._ring(parts);
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${this._title()}</h2>
+        ${this._switchable
+          ? html`<ha-icon-button
+              .path=${display === "ring" ? mdiChartBar : mdiChartDonut}
+              .label=${t("breakdown_switch_display")}
+              @click=${() => this._switch()}
+            ></ha-icon-button>`
+          : nothing}
       </div>
       ${body}
     </ha-card>`;
@@ -505,6 +572,13 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     css`
       .header {
         min-height: 32px;
+        align-items: center;
+      }
+      /* HA's devices graph turns the icon so its bars lie as the card's. */
+      .header ha-icon-button {
+        margin: -8px -12px -8px 0;
+        transform: rotate(90deg);
+        color: var(--secondary-text-color);
       }
       /* The ring with HA's chart legend centered below it, as in the
          share cards of the energy cards. */
@@ -608,34 +682,34 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
       .bar-line {
         font-size: 12px;
       }
+      /* The bars of HA's devices graph: 20 px, or 10 px each next to the
+         compared period, rounded at their end only. */
       .track {
-        height: 12px;
+        height: 20px;
         margin-top: 6px;
-        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
-        overflow: hidden;
-        background-color: var(
-          --ha-bar-background-color,
-          var(--secondary-background-color)
-        );
+      }
+      .compared .track {
+        height: 10px;
+      }
+      .track.compare {
+        margin-top: 2px;
       }
       .fill {
         display: flex;
         height: 100%;
-        border-radius: var(--ha-bar-border-radius, var(--ha-border-radius-sm, 4px));
+        border-start-end-radius: 4px;
+        border-end-end-radius: 4px;
         overflow: hidden;
       }
       .fill span {
         height: 100%;
       }
-      /* The compared period: thin and paler, as in HA's energy graphs. */
-      .track.compare {
-        height: 4px;
-        margin-top: 2px;
-        background: none;
+      .total {
+        padding-top: 12px;
+        border-top: 1px solid var(--divider-color);
       }
-      .track.compare .fill {
-        background: color-mix(in srgb, var(--c, transparent) 20%, transparent);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, transparent) 50%, transparent);
+      .total .bar-text {
+        font-weight: var(--ha-font-weight-medium, 500);
       }
       .bar-row.clickable {
         cursor: pointer;
@@ -652,6 +726,12 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
         background: color-mix(in srgb, var(--c, transparent) 50%, transparent);
         box-shadow: inset 0 0 0 1px var(--c, transparent);
       }
+      /* The compared period: paler, as in HA's energy graphs. */
+      .compare .fill,
+      .compare .fill span {
+        background: color-mix(in srgb, var(--c, transparent) 20%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, transparent) 50%, transparent);
+      }
       .key {
         display: flex;
         flex-wrap: wrap;
@@ -661,4 +741,14 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
       }
     `,
   ];
+}
+
+/** The display chosen in this browser, if any. */
+function readDisplay(): "ring" | "bars" | undefined {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(DISPLAY_KEY) ?? "null");
+    return value === "ring" || value === "bars" ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }

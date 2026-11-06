@@ -198,11 +198,20 @@ async def test_history_values_step(hass: HomeAssistant) -> None:
 
 
 async def test_solar_forecast_adds_up_all_forecasts(hass: HomeAssistant) -> None:
-    """Each forecast's energy platform answers; the days add up over all of them."""
-    now = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    """Each forecast's energy platform answers; the days add up over all of them.
+
+    Of today only the rest counts: none of the past hour, a quarter of the
+    current one at a quarter to one.
+    """
+    noon = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
     hours = {
-        "a": {now.isoformat(): 2000, (now + timedelta(days=1)).isoformat(): 1000},
-        "b": {now.isoformat(): 500, (now + timedelta(days=2)).isoformat(): 9000},
+        "a": {
+            (noon - timedelta(hours=1)).isoformat(): 4000,
+            noon.isoformat(): 2000,
+            (noon + timedelta(hours=1)).isoformat(): 1000,
+            (noon + timedelta(days=1)).isoformat(): 1000,
+        },
+        "b": {noon.isoformat(): 500, (noon + timedelta(days=2)).isoformat(): 9000},
     }
 
     async def forecast(_hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
@@ -212,12 +221,18 @@ async def test_solar_forecast_adds_up_all_forecasts(hass: HomeAssistant) -> None
     integration = SimpleNamespace(async_get_platform=AsyncMock(return_value=platform))
     for entry_id in ("a", "b", "silent"):
         MockConfigEntry(domain="forecast_solar", entry_id=entry_id).add_to_hass(hass)
-    with patch(
-        "custom_components.electricity_lens.sources.async_get_integration",
-        AsyncMock(return_value=integration),
+    with (
+        patch(
+            "custom_components.electricity_lens.sources.async_get_integration",
+            AsyncMock(return_value=integration),
+        ),
+        patch(
+            "custom_components.electricity_lens.sources.dt_util.now",
+            return_value=noon + timedelta(minutes=45),
+        ),
     ):
         assert await async_solar_forecast(hass, ["a", "b", "silent", "gone"]) == (
-            pytest.approx(2.5),
+            pytest.approx(0.25 * 2.5 + 1.0),
             pytest.approx(1.0),
         )
         assert await async_solar_forecast(hass, ["silent"]) is None

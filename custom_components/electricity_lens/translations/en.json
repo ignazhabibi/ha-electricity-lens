@@ -696,8 +696,8 @@
       "saving_per_year": {
         "name": "Saving per year"
       },
-      "forecast_today": {
-        "name": "Solar forecast today"
+      "forecast_rest_today": {
+        "name": "Solar remaining today"
       },
       "forecast_tomorrow": {
         "name": "Solar forecast tomorrow"
