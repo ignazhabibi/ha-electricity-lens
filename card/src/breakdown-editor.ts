@@ -1,7 +1,7 @@
 // Editor of the breakdown card: an area split by source or consumer, or the
 // shares of any statistics, as a ring or as bars.
 
-import { LitElement, html, type TemplateResult } from "lit";
+import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
 import { PERIODS, type BreakdownCardConfig } from "./electricity-lens-breakdown-card";
 import { localizer, type Localize } from "./localize";
@@ -12,10 +12,13 @@ const select = (options: Array<{ value: string; label: string }>) => ({
   select: { mode: "dropdown", options },
 });
 
-/** Areas that can be split: by source where solar power is shared out,
- * by consumer for the household. */
-const splittable = (area: FigureArea): boolean =>
-  area.kind === "household" || !!area.statistics.solar?.length;
+/** Whether an area splits by device: the household, and a category with
+ * several meters, as the heat pump with heating and hot water. */
+const byDevice = (area: FigureArea | undefined): boolean =>
+  area?.kind === "household" || (area?.kind === "category" && (area.statistics.energy?.length ?? 0) > 1);
+
+/** Areas that can be split: by source where solar power is shared out, or by device. */
+const splittable = (area: FigureArea): boolean => byDevice(area) || !!area.statistics.solar?.length;
 
 export class ElectricityLensBreakdownCardEditor extends LitElement {
   static properties = {
@@ -26,7 +29,9 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
 
   hass?: HomeAssistant;
   private _config?: BreakdownCardConfig;
+  /** The integration's areas; undefined while loading, null when it is not loaded. */
   private _info?: FiguresInfo | null;
+  private _requested = false;
 
   setConfig(config: BreakdownCardConfig): void {
     this._config = config;
@@ -37,14 +42,16 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
   }
 
   protected willUpdate(): void {
-    if (this.hass && this._info === undefined) {
-      this._info = null;
+    if (this.hass && !this._requested) {
+      this._requested = true;
       this.hass
         .callWS<FiguresInfo>({ type: `${DOMAIN}/figures` })
         .then((info) => {
           this._info = info;
         })
-        .catch(() => undefined);
+        .catch(() => {
+          this._info = null;
+        });
     }
   }
 
@@ -83,7 +90,7 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
       const area = areas.find((item) => item.id === data.area);
       const bys = [
         ...(area?.statistics.solar?.length ? ["source"] : []),
-        ...(area?.kind === "household" ? ["consumer"] : []),
+        ...(byDevice(area) ? ["consumer"] : []),
       ];
       schema.push(
         { name: "area", selector: select(areas.map((item) => ({ value: item.id, label: item.name }))) },
@@ -122,7 +129,7 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
     } else {
       config.area = (value.area as string) ?? "household";
       const area = this._info?.areas.find((item) => item.id === config.area);
-      const canConsumer = area?.kind === "household";
+      const canConsumer = byDevice(area);
       const canSource = !!area?.statistics.solar?.length;
       config.by = value.by === "consumer" && canConsumer ? "consumer" : canSource ? "source" : "consumer";
       if (config.by === "consumer" && value.figure === "cost") config.figure = "cost";
@@ -139,15 +146,36 @@ export class ElectricityLensBreakdownCardEditor extends LitElement {
   private _label = (schema: { name: string }): string =>
     this._localize(`editor_${schema.name}` as Parameters<Localize>[0]);
 
+  private _helper = (schema: { name: string }): string | undefined =>
+    schema.name === "period" ? this._localize("editor_period_hint") : undefined;
+
   protected render(): TemplateResult {
     if (!this.hass || !this._config) return html``;
     const data = this._data();
-    return html`<ha-form
-      .hass=${this.hass}
-      .data=${{ ...data, breakdown_source: data.source }}
-      .schema=${this._schema(data)}
-      .computeLabel=${this._label}
-      @value-changed=${this._changed}
-    ></ha-form>`;
+    return html`<div class="editor">
+      ${data.source !== "statistics" && this._info === null
+        ? html`<p class="hint">${this._localize("editor_not_loaded")}</p>`
+        : nothing}
+      <ha-form
+        .hass=${this.hass}
+        .data=${{ ...data, breakdown_source: data.source }}
+        .schema=${this._schema(data)}
+        .computeLabel=${this._label}
+        .computeHelper=${this._helper}
+        @value-changed=${this._changed}
+      ></ha-form>
+    </div>`;
   }
+
+  static styles = css`
+    .editor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hint {
+      margin: 0;
+      color: var(--secondary-text-color);
+    }
+  `;
 }

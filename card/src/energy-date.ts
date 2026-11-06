@@ -7,6 +7,9 @@ import type { Range } from "./history";
 interface EnergyData {
   start: Date;
   end?: Date;
+  /** The period to compare with, when the date selection's compare is on. */
+  startCompare?: Date;
+  endCompare?: Date;
 }
 
 interface Collection {
@@ -43,12 +46,13 @@ function findCollection(connection: object, collectionKey?: string): Collection 
 /** The end of today, for a selection that is still open. */
 const endOfToday = (): number => new Date().setHours(24, 0, 0, 0) - 1;
 
-/** Calls back with the selected period, or with null while the dashboard has
- * no date selection. Returns a function that stops following. */
+/** Calls back with the selected period and the one to compare it with, or with
+ * null while the dashboard has no date selection. Returns a function that
+ * stops following. */
 export function followEnergyDate(
   connection: object,
   collectionKey: string | undefined,
-  callback: (range: Range | null) => void
+  callback: (range: Range | null, compare?: Range) => void
 ): () => void {
   let unsubscribe: (() => void) | undefined;
   let timer: number | undefined;
@@ -57,10 +61,15 @@ export function followEnergyDate(
     const collection = findCollection(connection, collectionKey);
     if (collection) {
       unsubscribe = collection.subscribe((data) =>
-        callback({
-          start: new Date(data.start).getTime(),
-          end: data.end ? new Date(data.end).getTime() : endOfToday(),
-        })
+        callback(
+          {
+            start: new Date(data.start).getTime(),
+            end: data.end ? new Date(data.end).getTime() : endOfToday(),
+          },
+          data.startCompare && data.endCompare
+            ? { start: new Date(data.startCompare).getTime(), end: new Date(data.endCompare).getTime() }
+            : undefined
+        )
       );
       return;
     }

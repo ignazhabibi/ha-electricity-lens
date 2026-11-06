@@ -3,7 +3,8 @@
 // share or price as a line and further lines from any statistic. Without
 // options it shows what each category saved, from the statistics the
 // integration keeps, which include the computed past. It follows the energy
-// date selection on the same dashboard, or shows a fixed period.
+// date selection on the same dashboard, with its comparison, or shows a fixed
+// period.
 
 import {
   css,
@@ -25,10 +26,11 @@ import {
 import { valueOf, type Unit } from "./figures";
 import { formatter, hour12, type Format } from "./format";
 import {
+  FIRST_YEAR,
   fixedRange,
+  fromFirstValue,
   meansPerSlot,
   periodOf,
-  rangeLabel,
   slotsOf,
   statisticsPeriod,
   valuesPerSlot,
@@ -102,11 +104,22 @@ interface Plan {
   key: string;
   range: Range;
   period: Period;
+  /** The period compared with, from the date selection. */
+  compare?: Range;
+  /** Whether the years before the first value are left out. */
+  fromFirstValue: boolean;
   bars: Array<{ series: BarSeries; name: string }>;
   unit: Unit;
   lineFigure?: { figure: LineFigure; area: FigureArea; name: string };
   lines: HistoryLine[];
   ids: string[];
+}
+
+interface Shown {
+  range: Range;
+  period: Period;
+  compare?: Range;
+  fromFirstValue: boolean;
 }
 
 interface Loaded {
@@ -115,8 +128,16 @@ interface Loaded {
   plan: Plan;
   slots: number[];
   rows: StatisticsResult;
+  compareSlots: number[];
+  compareRows: StatisticsResult;
   metadata: Record<string, StatisticMetadata>;
   failed: boolean;
+}
+
+interface Chart extends ReturnType<typeof barChart> {
+  /** The bars' total, without the feed-in, and whether anything has a value. */
+  total: number;
+  hasData: boolean;
 }
 
 export class ElectricityLensHistoryCard extends LensCard {
@@ -135,6 +156,8 @@ export class ElectricityLensHistoryCard extends LensCard {
   private _infoLoading = false;
   /** The date selection's period; null without one, undefined until known. */
   private _selected?: Range | null;
+  /** The period the date selection compares with, if it does. */
+  private _compare?: Range;
   private _loaded?: Loaded;
   /** Whether HA's chart element is there; undefined while it may still load. */
   private _hasChart?: boolean;
@@ -142,7 +165,7 @@ export class ElectricityLensHistoryCard extends LensCard {
   private _loading?: string;
   private _unfollow?: () => void;
   private _retryTimer?: ReturnType<typeof setTimeout>;
-  private _chart?: ReturnType<typeof barChart>;
+  private _chart?: Chart;
 
   static getStubConfig(): Record<string, never> {
     return {};
@@ -197,8 +220,9 @@ export class ElectricityLensHistoryCard extends LensCard {
   private _follow(): void {
     if ((this._config.period ?? "energy_date") !== "energy_date") return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, this._config.collection_key, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._config.collection_key, (range, compare) => {
       this._selected = range;
+      this._compare = compare;
     });
   }
 
@@ -214,18 +238,28 @@ export class ElectricityLensHistoryCard extends LensCard {
     }
   }
 
-  /** The period shown, and how long each bar is. */
-  private _range(fallback: () => Range): { range: Range; period: Period } | undefined {
+  /** The period shown, how long each bar is, and the period compared with. */
+  private _range(fallback: () => Range): Shown | undefined {
     const option = this._config.period ?? "energy_date";
-    if (option === "all") return { range: fallback(), period: "year" };
+    if (option === "all") {
+      const end = new Date(new Date().getFullYear() + 1, 0, 1).getTime() - 1;
+      return { range: { start: new Date(FIRST_YEAR, 0, 1).getTime(), end }, period: "year", fromFirstValue: true };
+    }
     if (option !== "energy_date") {
       const range = fixedRange(option);
-      return { range, period: periodOf(range) };
+      return { range, period: periodOf(range), fromFirstValue: false };
     }
     if (this._selected === undefined) return undefined;
-    if (this._selected) return { range: this._selected, period: periodOf(this._selected) };
+    if (this._selected) {
+      return {
+        range: this._selected,
+        period: periodOf(this._selected),
+        compare: this._compare,
+        fromFirstValue: false,
+      };
+    }
     const range = fallback();
-    return { range, period: this._savings ? "year" : periodOf(range) };
+    return { range, period: this._savings ? "year" : periodOf(range), fromFirstValue: false };
   }
 
   private _savingsPlan(): Plan | undefined {
@@ -283,23 +317,17 @@ export class ElectricityLensHistoryCard extends LensCard {
       config.line && area.statistics
         ? { figure: config.line, area: lineArea, name: config.line_name ?? figureLabel(t, config.line, lineArea) }
         : undefined;
-    // Costs say what the solar power in them counts at.
-    const note =
-      figure === "cost"
-        ? [...(area.statistics.solar ?? []), ...(area.statistics.solar_cost ?? [])]
-        : [];
-    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? [], note);
+    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? []);
   }
 
   private _plan(
-    shown: { range: Range; period: Period },
+    shown: Shown,
     bars: Plan["bars"],
     unit: Unit,
     lineFigure: Plan["lineFigure"],
-    lines: HistoryLine[],
-    note: string[] = []
+    lines: HistoryLine[]
   ): Plan {
-    const ids = new Set(note);
+    const ids = new Set<string>();
     for (const { series } of bars) [...series.plus, ...series.minus].forEach((id) => ids.add(id));
     if (lineFigure) {
       for (const list of Object.values(lineFigure.area.statistics)) {
@@ -317,9 +345,13 @@ export class ElectricityLensHistoryCard extends LensCard {
         shown.range.start,
         shown.range.end,
         shown.period,
+        shown.compare?.start,
+        shown.compare?.end,
       ]),
       range: shown.range,
       period: shown.period,
+      compare: shown.compare,
+      fromFirstValue: shown.fromFirstValue,
       bars,
       unit,
       lineFigure,
@@ -337,21 +369,29 @@ export class ElectricityLensHistoryCard extends LensCard {
       plan,
       slots: slotsOf(plan.range, plan.period),
       rows: {},
+      compareSlots: plan.compare ? slotsOf(plan.compare, plan.period) : [],
+      compareRows: {},
       metadata: {},
       failed: false,
     };
+    const hass = this.hass;
+    const request = (range: Range, ids: string[]) =>
+      hass.callWS<StatisticsResult>({
+        type: "recorder/statistics_during_period",
+        start_time: new Date(range.start).toISOString(),
+        end_time: new Date(range.end + 1).toISOString(),
+        statistic_ids: ids,
+        period: statisticsPeriod(plan.period),
+        types: ["change", "mean"],
+        units: { energy: "kWh" },
+      });
     try {
       const statistics = plan.lines.map((line) => line.statistic);
-      const [rows, metadata] = await Promise.all([
-        this.hass.callWS<StatisticsResult>({
-          type: "recorder/statistics_during_period",
-          start_time: new Date(plan.range.start).toISOString(),
-          end_time: new Date(plan.range.end + 1).toISOString(),
-          statistic_ids: plan.ids,
-          period: statisticsPeriod(plan.period),
-          types: ["change", "mean"],
-          units: { energy: "kWh" },
-        }),
+      // The compared period shows the bars only, as in HA's energy graphs.
+      const barIds = [...new Set(plan.bars.flatMap(({ series }) => [...series.plus, ...series.minus]))];
+      const [rows, compareRows, metadata] = await Promise.all([
+        request(plan.range, plan.ids),
+        plan.compare ? request(plan.compare, barIds) : Promise.resolve({}),
         statistics.length
           ? this.hass.callWS<StatisticMetadata[]>({
               type: "recorder/get_statistics_metadata",
@@ -360,6 +400,7 @@ export class ElectricityLensHistoryCard extends LensCard {
           : Promise.resolve([]),
       ]);
       loaded.rows = rows;
+      loaded.compareRows = compareRows;
       loaded.metadata = Object.fromEntries(metadata.map((m) => [m.statistic_id, m]));
     } catch {
       loaded.failed = true;
@@ -403,21 +444,23 @@ export class ElectricityLensHistoryCard extends LensCard {
 
   // Values per slot
 
-  private _perSlot(ids: string[]): Array<number | null> {
+  private _perSlot(ids: string[], compared = false): Array<number | null> {
     const loaded = this._loaded;
     if (!loaded) return [];
-    const result: Array<number | null> = loaded.slots.map(() => null);
+    const slots = compared ? loaded.compareSlots : loaded.slots;
+    const rows = compared ? loaded.compareRows : loaded.rows;
+    const result: Array<number | null> = slots.map(() => null);
     for (const id of ids) {
-      valuesPerSlot(loaded.rows[id], loaded.slots, loaded.plan.period).forEach((value, i) => {
+      valuesPerSlot(rows[id], slots, loaded.plan.period).forEach((value, i) => {
         if (value !== null) result[i] = (result[i] ?? 0) + value;
       });
     }
     return result;
   }
 
-  private _barValues(series: BarSeries): Array<number | null> {
-    const plus = this._perSlot(series.plus);
-    const minus = this._perSlot(series.minus);
+  private _barValues(series: BarSeries, compared = false): Array<number | null> {
+    const plus = this._perSlot(series.plus, compared);
+    const minus = this._perSlot(series.minus, compared);
     return plus.map((value, i) => {
       if (value === null && minus[i] === null) return null;
       const result = (value ?? 0) - (minus[i] ?? 0);
@@ -483,7 +526,7 @@ export class ElectricityLensHistoryCard extends LensCard {
     return lines;
   }
 
-  private _buildChart(): ReturnType<typeof barChart> | undefined {
+  private _buildChart(): Chart | undefined {
     const loaded = this._loaded;
     if (!loaded || loaded.failed) return undefined;
     const t = this._localize;
@@ -496,7 +539,28 @@ export class ElectricityLensHistoryCard extends LensCard {
       values: this._barValues(bar),
       inTotal: !bar.negative,
     }));
-    const lines = this._lines();
+    let lines = this._lines();
+    let labels = this._labels(loaded.slots, plan.period);
+    // "All years" begins with the first year that has a value.
+    const first = plan.fromFirstValue
+      ? fromFirstValue([...series, ...lines].map((item) => item.values), labels.length)
+      : 0;
+    const from = <T,>(values: T[]) => values.slice(first);
+    series.forEach((item) => (item.values = from(item.values)));
+    lines = lines.map((line) => ({ ...line, values: from(line.values) }));
+    labels = from(labels);
+    const compare = plan.compare
+      ? {
+          series: plan.bars.map(({ series: bar, name }) => ({
+            id: bar.id,
+            name,
+            color: bar.color,
+            values: this._barValues(bar, true),
+            inTotal: !bar.negative,
+          })),
+          labels: this._labels(loaded.compareSlots, plan.period).map((label) => label.tooltip),
+        }
+      : undefined;
     const lineUnits: Partial<Record<Unit, string>> = {
       price: this.hass?.config.currency === "EUR" ? "ct/kWh" : `${fmt.currencySymbol()}/kWh`,
       percent: "%",
@@ -506,9 +570,10 @@ export class ElectricityLensHistoryCard extends LensCard {
       plan.lineFigure && !plan.lines.length
         ? (lineUnits[valueOf(plan.lineFigure.figure, plan.lineFigure.area, () => 0, null).unit] ?? "")
         : "";
-    return barChart({
-      labels: this._labels(loaded.slots, plan.period),
+    const chart = barChart({
+      labels,
       series,
+      compare,
       unit: plan.unit === "money" ? fmt.currencySymbol() : plan.unit === "distance" ? "km" : "kWh",
       total: t("history_total"),
       format: (value) =>
@@ -520,6 +585,10 @@ export class ElectricityLensHistoryCard extends LensCard {
       lines,
       lineUnit,
     });
+    const counted = series.filter((item) => item.inTotal !== false);
+    const total = counted.flatMap((item) => item.values).reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const hasData = [...series, ...lines].some((item) => item.values.some((value) => value));
+    return { ...chart, total, hasData };
   }
 
   private _labels(slots: number[], period: Period): Array<{ axis: string; tooltip: string }> {
@@ -561,41 +630,6 @@ export class ElectricityLensHistoryCard extends LensCard {
     return hasText(generic) ? t(generic) : t("history_title");
   }
 
-  /** What the shown figure is measured against, under the title. */
-  private _note(loaded: Loaded | undefined): string {
-    const t = this._localize;
-    if (!this.hass) return "";
-    if (this._savings) {
-      const compared = readCategories(this.hass).map((category) =>
-        t(
-          category.category === "pv"
-            ? "compare_pv"
-            : category.category === "wallbox"
-              ? "compare_fuel"
-              : category.heating === "oil"
-                ? "compare_oil"
-                : "compare_gas"
-        )
-      );
-      return compared.length
-        ? t("history_savings_note", {
-            list: new Intl.ListFormat(this._language, { type: "conjunction" }).format(compared),
-          })
-        : "";
-    }
-    const area = this._info?.areas.find((item) => item.id === this._config.area);
-    if (!loaded || loaded.failed || this._config.figure !== "cost") return "";
-    if (this._config.stack === "bill") return t("history_bill_note");
-    const total = (ids: string[] | undefined) =>
-      this._perSlot(ids ?? []).reduce<number>((sum, value) => sum + (value ?? 0), 0);
-    const solar = total(area?.statistics.solar);
-    return solar > 0
-      ? t("history_cost_note", {
-          rate: this._fmt.value(total(area?.statistics.solar_cost) / solar, "price"),
-        })
-      : t("history_cost_note_no_solar");
-  }
-
   protected render(): TemplateResult {
     const t = this._localize;
     if (!this.hass) return html``;
@@ -610,11 +644,7 @@ export class ElectricityLensHistoryCard extends LensCard {
       ? readCategories(this.hass).some((category) => category.calculating)
       : this._info?.calculating === true;
     const loaded = calculating ? undefined : this._loaded;
-    const values = this._chart?.data
-      .filter((series) => series.type === "bar" && series.id !== "export")
-      .flatMap((series) => series.data.map((point) => (point as { value?: number | null }).value ?? null)) ?? [];
-    const sum = values.reduce<number>((total, value) => total + (value ?? 0), 0);
-    const hasData = values.some((value) => value);
+    const hasData = this._chart?.hasData ?? false;
     const unit = loaded?.plan.unit ?? "money";
     // Missing only once the integration answered without this area.
     const missing =
@@ -623,17 +653,14 @@ export class ElectricityLensHistoryCard extends LensCard {
       !this._info?.areas.some(
         (area) => area.id === this._config.area && area.statistics[this._config.figure ?? "energy"]?.length
       );
-    const note = this._note(loaded);
+    // As HA's energy graphs, the chip holds the total, and only that.
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${title}</h2>
-        ${loaded && !loaded.failed && hasData
-          ? html`<span class="chip">${this._fmt.value(sum, unit)}</span>`
-          : loaded
-            ? html`<span class="chip">${rangeLabel(loaded.plan.range, this._language)}</span>`
-            : nothing}
+        ${loaded && !loaded.failed && hasData && this._chart
+          ? html`<span class="chip">${this._fmt.value(this._chart.total, unit)}</span>`
+          : nothing}
       </div>
-      ${note ? html`<p class="note">${note}</p>` : nothing}
       ${calculating
         ? html`<p class="summary">${t("calculating")}</p>`
         : missing
@@ -669,13 +696,6 @@ export class ElectricityLensHistoryCard extends LensCard {
   static styles = [
     cardStyles,
     css`
-      .note {
-        margin: 0;
-        padding: var(--ha-space-1, 4px) var(--ha-space-4, 16px) 0;
-        font-size: var(--ha-font-size-s, 12px);
-        line-height: 16px;
-        color: var(--secondary-text-color);
-      }
       .chart {
         position: relative;
         min-height: ${unsafeCSS(CHART_HEIGHT)};

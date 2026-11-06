@@ -15,14 +15,28 @@ export interface Range {
 
 export type Period = "hour" | "day" | "month" | "year";
 
-/** The slot length for a period: hours for up to two days, days for up to
- * about three months, months up to three years, years beyond. */
+/** Whole days from start to end, counted on the calendar as date-fns'
+ * differenceInDays does, so a change to summer time costs no day. */
+function wholeDays(start: number, end: number): number {
+  const from = new Date(start);
+  const to = new Date(end);
+  const calendar = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((calendar(to) - calendar(from)) / DAY);
+  const timeOfDay = (date: Date) => date.getTime() - new Date(date).setHours(0, 0, 0, 0);
+  return timeOfDay(to) < timeOfDay(from) ? days - 1 : days;
+}
+
+/** The slot length for a period, as Home Assistant's energy graphs choose it:
+ * months for whole months longer than 35 days, days for more than two days,
+ * hours otherwise. Years are only asked for, by "all years". */
 export function periodOf({ start, end }: Range): Period {
-  const span = end - start;
-  if (span <= 2 * DAY + HOUR) return "hour";
-  if (span <= 95 * DAY) return "day";
-  if (span <= 3 * 366 * DAY) return "month";
-  return "year";
+  const days = wholeDays(start, end);
+  const lastDay = new Date(end);
+  const wholeMonths =
+    new Date(start).getDate() === 1 &&
+    new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate() + 1).getDate() === 1;
+  if (wholeMonths && days > 35) return "month";
+  return days > 2 ? "day" : "hour";
 }
 
 /** The statistics period to request for a slot length. The recorder has no
@@ -72,6 +86,18 @@ export function yearsOf(firstDates: Array<Date | null>, now = new Date()): Range
     start: new Date(first, 0, 1).getTime(),
     end: new Date(now.getFullYear() + 1, 0, 1).getTime() - 1,
   };
+}
+
+/** The first year statistics can hold; "all years" starts here and drops the
+ * empty years before the first value. */
+export const FIRST_YEAR = 2000;
+
+/** The slots from the first one with a value on; all of them if none has one. */
+export function fromFirstValue(columns: Array<Array<number | null>>, slots: number): number {
+  for (let i = 0; i < slots; i += 1) {
+    if (columns.some((values) => values[i] !== null && values[i] !== undefined)) return i;
+  }
+  return 0;
 }
 
 /** The change of one statistic summed per slot; null where it has no rows. */
