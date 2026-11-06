@@ -1,24 +1,22 @@
 // Breakdown card of the Electricity Lens integration: shares of a whole for a
 // period, as a ring or as bars. Split by source (solar power and grid power
-// by price level) or by consumer (top-level devices and Other), in energy or
-// costs; or the shares of any statistics, shown as they are.
+// by price level) or by device (top-level devices and Other), in energy or
+// costs; or the shares of any statistics, shown as they are, in their unit.
+// With the date selection's comparison the compared period shows inside the
+// ring, or as a thin bar under each bar.
 
-import { css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { css, html, nothing, type TemplateResult } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 
 import { shareChart, shares, watchChart } from "./chart";
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
-import { checkCollectionKey, followEnergyDate } from "./energy-date";
-import { formatter, type Format } from "./format";
-import { fixedRange, rangeLabel, type Range } from "./history";
+import { checkCollectionKey } from "./energy-date";
 import { barSeries, type BarSeries } from "./history-figures";
-import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
-import { LensCard } from "./lens-card";
-import { hasText, localizer, type Localize } from "./localize";
+import { hasText } from "./localize";
+import { PeriodSumsCard } from "./period-sums-card";
 import { cardStyles } from "./styles";
-import { loadSums } from "./sums";
-import type { FigureArea, FiguresInfo, HomeAssistant, StatisticMetadata } from "./types";
+import type { FigureArea } from "./types";
 
 export { PERIODS };
 
@@ -37,7 +35,6 @@ export interface BreakdownCardConfig {
   statistics?: Array<{ statistic: string; name?: string }>;
 }
 
-const REFRESH_MS = 5 * 60 * 1000;
 // Room for the 180 px ring and its labels outside, with the legend below.
 const RING_HEIGHT = "240px";
 // The legend icons of HA's chart legend: a checked and an empty circle.
@@ -51,32 +48,25 @@ interface Part {
   name: string;
   color: string;
   value: number;
+  /** The value in the compared period, if the date selection compares. */
+  compare?: number;
+  /** The entity whose dialog a tap opens, if the part is one. */
+  entity?: string;
   /** For consumers: the value per source, to split the bar. */
   mix?: Array<{ color: string; value: number }>;
   /** For consumers by costs: their energy, for the average price. */
   energy?: number;
 }
 
-export class ElectricityLensBreakdownCard extends LensCard {
+export class ElectricityLensBreakdownCard extends PeriodSumsCard {
   static properties = {
-    hass: { attribute: false },
+    ...PeriodSumsCard.properties,
     _config: { state: true },
-    _info: { state: true },
-    _selected: { state: true },
-    _sums: { state: true },
     _hasChart: { state: true },
     _hidden: { state: true },
   };
 
-  hass?: HomeAssistant;
   private _config: BreakdownCardConfig = { type: "" };
-  private _info?: FiguresInfo | null;
-  private _infoLoading = false;
-  private _selected?: Range | null;
-  private _sums?: { key: string; at: number; values: Record<string, number>; names: Record<string, string>; failed: boolean };
-  private _loading?: string;
-  private _unfollow?: () => void;
-  private _retryTimer?: ReturnType<typeof setTimeout>;
   /** Whether HA's chart element is there; undefined while it may still load. */
   private _hasChart?: boolean;
   private _watchingChart = false;
@@ -99,58 +89,31 @@ export class ElectricityLensBreakdownCard extends LensCard {
     }
     checkCollectionKey(config?.collection_key);
     this._config = config ?? { type: "" };
-  }
-
-  getCardSize(): number {
-    return 4;
+    this._collectionKey = this._config.collection_key;
   }
 
   getGridOptions(): { columns: number; min_columns: number } {
     return { columns: 6, min_columns: 4 };
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._follow();
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unfollow?.();
-    this._unfollow = undefined;
-    clearTimeout(this._retryTimer);
-    this._retryTimer = undefined;
-  }
-
-  private get _localize(): Localize {
-    return localizer(this.hass?.locale?.language ?? this.hass?.language ?? "en");
-  }
-
-  private get _language(): string {
-    return this.hass?.locale?.language ?? "en";
-  }
-
-  private get _fmt(): Format {
-    return formatter(this.hass?.locale, this.hass?.config.currency ?? "EUR");
-  }
-
   private get _byStatistics(): boolean {
     return !!this._config.statistics?.length;
   }
 
-  private _follow(): void {
-    if ((this._config.period ?? "energy_date") !== "energy_date") return;
-    if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, this._config.collection_key, (range) => {
-      this._selected = range;
-    });
+  protected _period(): PeriodOption {
+    return this._config.period ?? "energy_date";
   }
 
-  private _range(): Range | undefined {
-    const option = this._config.period ?? "energy_date";
-    if (option !== "energy_date") return fixedRange(option);
-    if (this._selected === undefined) return undefined;
-    return this._selected ?? fixedRange("this_month");
+  protected _showsCompare(): boolean {
+    return true;
+  }
+
+  protected _needsInfo(): boolean {
+    return !this._byStatistics;
+  }
+
+  protected _described(): string[] {
+    return this._byStatistics ? (this._config.statistics ?? []).map((item) => item.statistic) : [];
   }
 
   private _area(): FigureArea | undefined {
@@ -183,7 +146,7 @@ export class ElectricityLensBreakdownCard extends LensCard {
     );
   }
 
-  private _ids(): string[] {
+  protected _ids(): string[] {
     const ids = new Set<string>();
     if (this._byStatistics) {
       this._config.statistics?.forEach((item) => ids.add(item.statistic));
@@ -211,75 +174,39 @@ export class ElectricityLensBreakdownCard extends LensCard {
     return [...ids].sort();
   }
 
-  private async _loadInfo(): Promise<void> {
-    if (!this.hass || this._infoLoading) return;
-    this._infoLoading = true;
-    this._info = await loadInfo(this.hass);
-    this._infoLoading = false;
-    clearTimeout(this._retryTimer);
-    this._retryTimer = undefined;
-    if (this.isConnected && (!this._info || this._info.calculating)) {
-      this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
-    }
-  }
-
-  private async _load(key: string, ids: string[], range: Range): Promise<void> {
-    if (!this.hass) return;
-    this._loading = key;
-    const result = { key, at: Date.now(), values: {} as Record<string, number>, names: {} as Record<string, string>, failed: false };
-    try {
-      const statistics = this._byStatistics ? ids : [];
-      const [values, metadata] = await Promise.all([
-        loadSums(this.hass, ids, range),
-        statistics.length
-          ? this.hass.callWS<StatisticMetadata[]>({ type: "recorder/get_statistics_metadata", statistic_ids: statistics })
-          : Promise.resolve([]),
-      ]);
-      result.values = values;
-      result.names = Object.fromEntries(
-        metadata.map((m) => [
-          m.statistic_id,
-          m.name || (this.hass?.states[m.statistic_id]?.attributes.friendly_name as string | undefined) || m.statistic_id,
-        ])
-      );
-    } catch {
-      result.failed = true;
-    }
-    if (this._loading !== key) return;
-    this._loading = undefined;
-    this._sums = result;
-  }
-
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hass) return;
-    if (changed.has("hass") || changed.has("_config")) this._follow();
-    if (!this._watchingChart) {
+  protected willUpdate(): void {
+    super.willUpdate();
+    if (this.hass && !this._watchingChart) {
       this._watchingChart = true;
       watchChart((ok) => {
         this._hasChart = ok;
       });
     }
-    if (this._info === undefined) this._info = cachedInfo();
-    if (infoStale() && !this._infoLoading) void this._loadInfo();
-    if (!this._byStatistics) {
-      if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
-        this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
-      }
-      if (!this._info || this._info.calculating) return;
-    }
-    const range = this._range();
-    if (!range) return;
-    const ids = this._ids();
-    if (!ids.length) return;
-    const key = JSON.stringify([ids, range.start, range.end]);
-    const stale = !this._sums || Date.now() - this._sums.at > REFRESH_MS;
-    if (key !== this._loading && (key !== this._sums?.key || (stale && !this._loading))) {
-      void this._load(key, ids, range);
-    }
   }
 
-  private _sum(ids: string[]): number {
-    return ids.reduce((total, id) => total + (this._sums?.values[id] ?? 0), 0);
+  private _sum(ids: string[], compared = false): number {
+    const values = (compared ? this._sums?.compare : this._sums?.values) ?? {};
+    return ids.reduce((total, id) => total + (values[id] ?? 0), 0);
+  }
+
+  /** Whether the compared period is there to show. */
+  private get _compared(): boolean {
+    return this._sums?.compare !== undefined;
+  }
+
+  /** The entity behind statistics, if they are one entity's. */
+  private _entityOf(ids: string[] | undefined): string | undefined {
+    return ids?.length === 1 && this.hass?.states[ids[0]] ? ids[0] : undefined;
+  }
+
+  /** The unit of the statistics shown, from their metadata; energy in kWh. */
+  private get _unit(): string | undefined {
+    if (!this._byStatistics) return undefined;
+    const units = (this._config.statistics ?? []).map((item) => {
+      const metadata = this._sums?.metadata[item.statistic];
+      return metadata?.unit_class === "energy" ? "kWh" : (metadata?.statistics_unit_of_measurement ?? "");
+    });
+    return units[0];
   }
 
   private _parts(): Part[] {
@@ -297,25 +224,41 @@ export class ElectricityLensBreakdownCard extends LensCard {
         );
         return {
           id: item.statistic,
-          name: item.name ?? device?.name ?? this._sums?.names[item.statistic] ?? item.statistic,
+          name:
+            item.name ??
+            device?.name ??
+            (this._sums?.metadata[item.statistic]?.name ||
+              (this.hass?.states[item.statistic]?.attributes.friendly_name as string | undefined) ||
+              item.statistic),
           color: (device && known.get(device.id)) ?? colors.consumers[index % colors.consumers.length],
           value: this._sum([item.statistic]),
+          compare: this._compared ? this._sum([item.statistic], true) : undefined,
+          entity: this._entityOf([item.statistic]),
         };
       });
     }
     const parts = this._series().map((series) => {
       const value = this._sum(series.plus) - this._sum(series.minus);
+      const compared = this._sum(series.plus, true) - this._sum(series.minus, true);
       // The mix takes the short source names of the energy cards, so the
       // labels around the ring fit a sidebar.
       const key = series.name.key?.replace(/^source\./, "mix.");
       const name =
         series.name.text ??
         (key && hasText(key) ? t(key) : series.name.key && hasText(series.name.key) ? t(series.name.key) : series.id);
-      const part: Part = { id: series.id, name, color: series.color, value: series.floor ? Math.max(value, 0) : value };
+      const floor = (amount: number) => (series.floor ? Math.max(amount, 0) : amount);
+      const part: Part = {
+        id: series.id,
+        name,
+        color: series.color,
+        value: floor(value),
+        compare: this._compared ? floor(compared) : undefined,
+      };
       if (this._by === "consumer" && this._info) {
         const colors = palette(this);
         const area = this._info.areas.find((item) => item.id === series.id);
         if (area) {
+          part.entity = this._entityOf(area.statistics.energy);
           const of = (key: string) => this._sum(area.statistics[key] ?? []);
           const energy = of("energy");
           const solar = of("solar");
@@ -349,9 +292,19 @@ export class ElectricityLensBreakdownCard extends LensCard {
   }
 
   private _value(value: number): string {
+    const unit = this._unit;
+    if (unit !== undefined && unit !== "kWh") return unit ? `${this._fmt.number(value)} ${unit}` : this._fmt.number(value);
     return this._figure === "cost" && !this._byStatistics
       ? this._fmt.value(value, "money")
       : this._fmt.value(value, "energy");
+  }
+
+  /** Opens the dialog of a part's entity, as HA's devices graph does. */
+  private _open(entity: string | undefined): void {
+    if (!entity) return;
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", { detail: { entityId: entity }, bubbles: true, composed: true })
+    );
   }
 
   private _title(): string {
@@ -361,7 +314,7 @@ export class ElectricityLensBreakdownCard extends LensCard {
     // Until the integration answered, the configured split names the card.
     const by = this._area() ? this._by : (this._config.by ?? "source");
     if (by === "source") return t("breakdown_mix");
-    return t(this._figure === "cost" ? "breakdown_cost_by_consumer" : "breakdown_energy_by_consumer");
+    return t(this._figure === "cost" ? "breakdown_cost_by_device" : "breakdown_energy_by_device");
   }
 
   /** The ring on HA's chart element, as in the user's energy cards, with
@@ -382,6 +335,8 @@ export class ElectricityLensBreakdownCard extends LensCard {
           total: t("breakdown_total"),
           format: (value) => this._value(value),
           percent: (value) => this._fmt.value(value, "percent"),
+          compare: this._compared ? parts.map((part) => part.compare ?? 0) : undefined,
+          compared: t("breakdown_compare_period"),
           centerColor,
           labelColor,
           hidden: this._hidden,
@@ -398,7 +353,8 @@ export class ElectricityLensBreakdownCard extends LensCard {
     };
     return html`<div class="ring">
       ${keyed(
-        money,
+        // ECharts keeps a series' first drawing: a new kind of ring needs a new chart.
+        `${money}-${this._compared}`,
         html`<ha-chart-base
           .hass=${this.hass}
           .data=${chart.data}
@@ -434,13 +390,17 @@ export class ElectricityLensBreakdownCard extends LensCard {
 
   private _bars(parts: Part[]): TemplateResult {
     // A consumer that would read as zero only pushes the others apart.
-    const shown = parts.filter((part) => this._value(part.value) !== this._value(0));
-    const max = Math.max(...shown.map((part) => part.value), 0);
+    const zero = this._value(0);
+    const shown = parts.filter(
+      (part) => this._value(part.value) !== zero || (part.compare !== undefined && this._value(part.compare) !== zero)
+    );
+    const max = Math.max(...shown.map((part) => Math.max(part.value, part.compare ?? 0)), 0);
+    const widthOf = (value: number) => (max > 0 ? Math.max((value / max) * 100, 0) : 0);
     const split = this._config.color_by_source === true && this._by === "consumer";
     const t = this._localize;
     return html`<div class="bars">
       ${shown.map((part) => {
-        const width = max > 0 ? Math.max((part.value / max) * 100, 0) : 0;
+        const width = widthOf(part.value);
         const mixTotal = part.mix?.reduce((sum, item) => sum + item.value, 0) ?? 0;
         let line = "";
         if (this._figure === "cost" && part.energy !== undefined) {
@@ -449,7 +409,30 @@ export class ElectricityLensBreakdownCard extends LensCard {
             line += ` · ${t("line_average_price", { price: this._fmt.value(part.value / part.energy, "price") })}`;
           }
         }
-        return html`<div class="bar-row">
+        if (part.compare !== undefined) {
+          const compared = t("breakdown_compared", { amount: this._value(part.compare) });
+          line = line ? `${line} · ${compared}` : compared;
+        }
+        // A part with an entity of its own opens its dialog, as in HA's devices graph.
+        const open = part.entity
+          ? {
+              role: "button",
+              tabindex: "0",
+              click: () => this._open(part.entity),
+              key: (event: KeyboardEvent) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                this._open(part.entity);
+              },
+            }
+          : undefined;
+        return html`<div
+          class="bar-row ${open ? "clickable" : ""}"
+          role=${open?.role ?? nothing}
+          tabindex=${open?.tabindex ?? nothing}
+          @click=${open?.click}
+          @keydown=${open?.key}
+        >
           <div class="bar-text">
             <span class="name">${part.name}</span>
             <span class="amount">${this._value(part.value)}</span>
@@ -462,6 +445,11 @@ export class ElectricityLensBreakdownCard extends LensCard {
                 : nothing}
             </div>
           </div>
+          ${part.compare !== undefined
+            ? html`<div class="track compare">
+                <div class="fill" style="width: ${widthOf(part.compare)}%; --c: ${part.color}"></div>
+              </div>`
+            : nothing}
         </div>`;
       })}
       ${split
@@ -489,28 +477,24 @@ export class ElectricityLensBreakdownCard extends LensCard {
   protected render(): TemplateResult {
     if (!this.hass) return html``;
     const t = this._localize;
-    const range = this._range();
-    const parts = this._sums ? this._parts() : [];
+    const parts = this._sums?.values ? this._parts() : [];
     const total = parts.reduce((sum, part) => sum + Math.max(part.value, 0), 0);
     const calculating = !this._byStatistics && this._info?.calculating === true;
     const missing = !this._byStatistics && this._info !== undefined && !this._area();
     const display =
       this._config.display ?? (!this._byStatistics && this._by === "consumer" ? "bars" : "ring");
-    // The bars name each amount; a total would only repeat the card above them.
-    // Their period needs no chip either where the date selection shows it.
-    const followsDate = (this._config.period ?? "energy_date") === "energy_date";
-    const chip = range && !(display === "bars" && followsDate) ? rangeLabel(range, this._language) : "";
+    // No chip: the ring holds the total in its middle, the bars name each
+    // amount, and the date selection or the title says the period.
     let body: TemplateResult;
     if (calculating) body = html`<p class="summary">${t("calculating")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
-    else if (this._sums?.failed) body = html`<p class="summary">${t("figures_failed")}</p>`;
+    else if (this._sums && !this._sums.values) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
     else body = display === "bars" ? this._bars(parts) : this._ring(parts);
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${this._title()}</h2>
-        ${chip ? html`<span class="chip">${chip}</span>` : nothing}
       </div>
       ${body}
     </ha-card>`;
@@ -642,6 +626,24 @@ export class ElectricityLensBreakdownCard extends LensCard {
       }
       .fill span {
         height: 100%;
+      }
+      /* The compared period: thin and paler, as in HA's energy graphs. */
+      .track.compare {
+        height: 4px;
+        margin-top: 2px;
+        background: none;
+      }
+      .track.compare .fill {
+        background: color-mix(in srgb, var(--c, transparent) 20%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, transparent) 50%, transparent);
+      }
+      .bar-row.clickable {
+        cursor: pointer;
+        border-radius: var(--ha-border-radius-sm, 4px);
+      }
+      .bar-row.clickable:focus-visible {
+        outline: 2px solid var(--ha-color-focus, var(--primary-color));
+        outline-offset: 4px;
       }
       /* HA's energy look: the color at half strength, framed by the full color. */
       .fill,

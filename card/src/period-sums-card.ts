@@ -1,8 +1,10 @@
-// What the table cards share: they add up statistics over the period of the
-// energy date selection on the same dashboard, this month without one. Rows
-// follow from the sums in each card.
+// What the cards with sums share: they add up statistics over the period of
+// the energy date selection on the same dashboard, this month without one, or
+// over a fixed period. With the date selection's comparison they add up the
+// compared period too, if they show it. What they show follows from the sums
+// in each card.
 
-import { css, type TemplateResult } from "lit";
+import { css, type PropertyValues, type TemplateResult } from "lit";
 
 import { followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
@@ -12,7 +14,8 @@ import { LensCard } from "./lens-card";
 import { localizer, type Key, type Localize } from "./localize";
 import { noCategoriesText, readCategories } from "./model";
 import { loadSums } from "./sums";
-import type { FiguresInfo, HomeAssistant } from "./types";
+import type { FixedPeriod } from "./history";
+import type { FiguresInfo, HomeAssistant, StatisticMetadata } from "./types";
 
 /** The integration computes new hours every 15 minutes. */
 const REFRESH_MS = 5 * 60 * 1000;
@@ -20,7 +23,11 @@ const REFRESH_MS = 5 * 60 * 1000;
 interface Sums {
   key: string;
   at: number;
+  /** Null when they could not be loaded. */
   values: Record<string, number> | null;
+  /** The same for the compared period, if the card shows one. */
+  compare?: Record<string, number>;
+  metadata: Record<string, StatisticMetadata>;
 }
 
 export const addUp = (values: Record<string, number>, ids: string[] | undefined): number =>
@@ -31,6 +38,7 @@ export abstract class PeriodSumsCard extends LensCard {
     hass: { attribute: false },
     _info: { state: true },
     _selected: { state: true },
+    _compare: { state: true },
     _sums: { state: true },
   };
 
@@ -46,6 +54,26 @@ export abstract class PeriodSumsCard extends LensCard {
 
   /** The statistics the card adds up. */
   protected abstract _ids(): string[];
+
+  /** The period: the date selection's, or a fixed one. */
+  protected _period(): "energy_date" | FixedPeriod {
+    return "energy_date";
+  }
+
+  /** Whether the card shows the date selection's compared period. */
+  protected _showsCompare(): boolean {
+    return false;
+  }
+
+  /** Whether the card needs the integration's areas before it adds up. */
+  protected _needsInfo(): boolean {
+    return true;
+  }
+
+  /** Statistics whose names and units the card shows. */
+  protected _described(): string[] {
+    return [];
+  }
 
   getCardSize(): number {
     return 4;
@@ -79,11 +107,24 @@ export abstract class PeriodSumsCard extends LensCard {
   /** The date selection's collection, if it has a key of its own. */
   protected _collectionKey?: string;
 
+  /** The period compared with, while the date selection compares. */
+  private _compare?: Range;
+
   private _follow(): void {
+    if (this._period() !== "energy_date") return;
     if (this._unfollow || !this.isConnected || !this.hass?.connection) return;
-    this._unfollow = followEnergyDate(this.hass.connection, this._collectionKey, (range) => {
+    this._unfollow = followEnergyDate(this.hass.connection, this._collectionKey, (range, compare) => {
       this._selected = range;
+      this._compare = compare;
     });
+  }
+
+  /** The period added up; undefined while the date selection is not known. */
+  protected _range(): Range | undefined {
+    const period = this._period();
+    if (period !== "energy_date") return fixedRange(period);
+    if (this._selected === undefined) return undefined;
+    return this._selected ?? fixedRange("this_month");
   }
 
   private async _loadInfo(): Promise<void> {
@@ -98,33 +139,57 @@ export abstract class PeriodSumsCard extends LensCard {
     }
   }
 
-  private async _load(key: string, ids: string[], range: Range): Promise<void> {
+  private async _load(
+    key: string,
+    ids: string[],
+    range: Range,
+    compare: Range | undefined,
+    described: string[]
+  ): Promise<void> {
     if (!this.hass) return;
+    const hass = this.hass;
     this._loading = key;
-    let values: Record<string, number> | null = null;
+    const sums: Sums = { key, at: 0, values: null, metadata: {} };
     try {
-      values = await loadSums(this.hass, ids, range);
+      const [values, compared, metadata] = await Promise.all([
+        loadSums(hass, ids, range),
+        compare ? loadSums(hass, ids, compare) : Promise.resolve(undefined),
+        described.length
+          ? hass.callWS<StatisticMetadata[]>({ type: "recorder/get_statistics_metadata", statistic_ids: described })
+          : Promise.resolve([]),
+      ]);
+      sums.values = values;
+      sums.compare = compared;
+      sums.metadata = Object.fromEntries(metadata.map((item) => [item.statistic_id, item]));
     } catch {
       // The card says so.
     }
     if (this._loading !== key) return;
     this._loading = undefined;
-    this._sums = { key, at: Date.now(), values };
+    this._sums = { ...sums, at: Date.now() };
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(_changed?: PropertyValues): void {
     if (!this.hass) return;
     this._follow();
     if (this._info === undefined) this._info = cachedInfo();
     if (infoStale() && !this._infoLoading) void this._loadInfo();
-    if (this._selected === undefined || !this._info || this._info.calculating) return;
-    const range = this._selected ?? fixedRange("this_month");
+    if (this._needsInfo()) {
+      if (this.isConnected && this._info?.calculating && !this._retryTimer && !this._infoLoading) {
+        this._retryTimer = setTimeout(() => void this._loadInfo(), RETRY_MS);
+      }
+      if (!this._info || this._info.calculating) return;
+    }
+    const range = this._range();
+    if (!range) return;
+    const compare = this._showsCompare() && this._period() === "energy_date" ? this._compare : undefined;
     const ids = [...new Set(this._ids())].sort();
     if (!ids.length) return;
-    const key = JSON.stringify([ids, range.start, range.end]);
+    const described = [...new Set(this._described())].sort();
+    const key = JSON.stringify([ids, range.start, range.end, compare?.start, compare?.end, described]);
     const stale = !this._sums || Date.now() - this._sums.at > REFRESH_MS;
     if (key !== this._loading && (key !== this._sums?.key || (stale && !this._loading))) {
-      void this._load(key, ids, range);
+      void this._load(key, ids, range, compare, described);
     }
   }
 

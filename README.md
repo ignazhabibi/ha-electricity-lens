@@ -300,7 +300,7 @@ than it saved shows below the line.
 |---|---|
 | Period | *Follow the date selection*, a fixed period such as last month or this year, or all years from the first one with a value |
 | Area and figure | The savings of all categories, or an area's consumption, costs, savings, or feed-in |
-| Split | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also by bill item (standing charge and grid power by price level, without the feed-in); by consumer (top-level devices and Other) for the household's consumption and costs; or none |
+| Split | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also by bill item (standing charge and grid power by price level, without the feed-in); by device (top-level devices and Other) for the household's consumption and costs; or none |
 | Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency; for the household also the grid price |
 | Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
 
@@ -381,12 +381,18 @@ that hides a share with a tap.
 
 - **By source**: solar power and grid power by price level, for the
   household, a device, or Other.
-- **By consumer**: the household's consumption or costs by top-level device
-  and Other, each with its consumption and average price. Bars can be
-  colored by the sources of each consumer, in the bar's own unit: a bar of costs
-  splits by what each source cost. A consumer that would read as zero is left out.
-- **Statistics**: the shares of any statistics as they are, for example the
-  heat for heating and hot water from the heat pump's own sensors.
+- **By device**: the household's consumption or costs by top-level device
+  and Other, each with its consumption and average price, or a category's
+  devices, such as the heat pump's heating and hot water. Bars can be
+  colored by the sources of each device, in the bar's own unit: a bar of costs
+  splits by what each source cost. A device that would read as zero is left out.
+- **Statistics**: the shares of any statistics as they are, in their unit, for
+  example the heat for heating and hot water from the heat pump's own sensors.
+
+A bar whose device or statistic is an entity opens its dialog with a tap. When
+the date selection compares with an earlier period, that period shows as a
+paler inner ring, or as a thin bar under each bar. The period is *Follow the
+date selection* (this month without one) or a fixed period.
 
 ```yaml
 type: custom:electricity-lens-breakdown-card
@@ -417,7 +423,7 @@ other views follow the energy date selection.
 |---|---|---|
 | Now | How is today going? | The economics card, which always shows the current state; the solar forecast for today and tomorrow as gauges up to 70 kWh; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
-| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by consumer; average grid price and average price; consumers ranked and split by source; the savings of the period as a table |
+| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
 | Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
 

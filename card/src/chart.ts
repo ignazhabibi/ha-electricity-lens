@@ -355,6 +355,10 @@ export interface ShareChartInput {
   labelColor: string;
   /** Parts hidden in the legend. */
   hidden: Set<string>;
+  /** Each part's value in the compared period, shown as an inner ring. */
+  compare?: number[];
+  /** The compared period's name in the tooltip. */
+  compared?: string;
 }
 
 /** Shares of a whole, in percent; zero when there is nothing. */
@@ -363,8 +367,22 @@ export function shares(values: number[]): number[] {
   return values.map((value) => (sum > 0 ? (Math.max(0, value) / sum) * 100 : 0));
 }
 
+/** The angles of the parts of a ring: from twelve o'clock clockwise, as
+ * ECharts' pie goes. */
+function anglesOf(percents: number[]): Array<[number, number]> {
+  const angles: Array<[number, number]> = [];
+  let at = -Math.PI / 2;
+  for (const p of percents) {
+    const to = at + (p / 100) * 2 * Math.PI;
+    angles.push([at, to]);
+    at = to;
+  }
+  return angles;
+}
+
 /** The data and options for a donut like HA's devices graph in its pie mode:
- * a ring of parts with their labels outside and the sum in the middle. HA's
+ * a ring of parts with their labels outside and the sum in the middle. With a
+ * compared period, that period forms a paler inner ring, as in HA. HA's
  * ECharts build loads the pie chart only for its own cards, so each part is a
  * custom series that draws its sector; a part hidden in the legend leaves the
  * ring to the others. The ring has a fixed diameter, so it is the same size
@@ -373,20 +391,18 @@ export function shareChart(input: ShareChartInput) {
   const values = input.items.map((item) => (input.hidden.has(item.id) ? 0 : item.value));
   const pct = shares(values);
   const sum = values.reduce((total, value) => total + Math.max(0, value), 0);
-  // Start at twelve o'clock and go clockwise, as ECharts' pie does.
-  const angles: Array<[number, number]> = [];
-  let at = -Math.PI / 2;
-  for (const p of pct) {
-    const to = at + (p / 100) * 2 * Math.PI;
-    angles.push([at, to]);
-    at = to;
-  }
+  const angles = anglesOf(pct);
+  const compare = input.compare?.map((value, k) => (input.hidden.has(input.items[k].id) ? 0 : value));
+  const comparePct = compare ? shares(compare) : [];
+  const compareAngles = anglesOf(comparePct);
   // ECharts may keep the first renderItem of a series when the data changes,
   // so everything that changes travels in the data and is read with value().
   type Api = { getWidth(): number; getHeight(): number; value(dim: number): number };
+  // HA's radii: 40 to 70 % of the space, or 50 to 70 % around the compared
+  // period at 30 to 50 %.
   const ring = (api: Api) => {
     const r = Math.min(90, api.getWidth() / 2 - 8, api.getHeight() / 2 - 8);
-    return { cx: api.getWidth() / 2, cy: api.getHeight() / 2, r, r0: (r * 40) / 70 };
+    return { cx: api.getWidth() / 2, cy: api.getHeight() / 2, r, r0: (r * (compare ? 50 : 40)) / 70 };
   };
   const data: Array<Record<string, unknown>> = input.items.map((item, k) => ({
     id: item.id,
@@ -436,6 +452,29 @@ export function shareChart(input: ShareChartInput) {
       return { type: "group", children };
     },
   }));
+  if (compare) {
+    input.items.forEach((item, k) => {
+      data.push({
+        id: `compare-${item.id}`,
+        type: "custom",
+        name: item.name,
+        coordinateSystem: "none",
+        cursor: "default",
+        data: [[compare[k], compareAngles[k][0], compareAngles[k][1], comparePct[k]]],
+        renderItem: (_params: unknown, api: Api) => {
+          const from = api.value(1);
+          const to = api.value(2);
+          if (!(to - from > 0)) return null;
+          const g = ring(api);
+          return {
+            type: "sector",
+            shape: { cx: g.cx, cy: g.cy, r: g.r0, r0: (g.r * 30) / 70, startAngle: from, endAngle: to, cornerRadius: 4 },
+            style: { fill: withAlpha(item.color, 0x32 / 255), stroke: withAlpha(item.color, 0x7f / 255), lineWidth: 1 },
+          };
+        },
+      });
+    });
+  }
   data.push({
     id: "total",
     type: "custom",
@@ -449,10 +488,11 @@ export function shareChart(input: ShareChartInput) {
         type: "text",
         x: g.cx,
         y: g.cy,
+        // Inside the compared ring there is room for the amount only.
         style: {
-          text: `${input.total}\n${input.format(api.value(0))}`,
+          text: compare ? input.format(api.value(0)) : `${input.total}\n${input.format(api.value(0))}`,
           fill: input.centerColor,
-          fontSize: 14,
+          fontSize: compare ? 12 : 14,
           lineHeight: 24,
           fontWeight: "bold",
           align: "center",
@@ -470,13 +510,17 @@ export function shareChart(input: ShareChartInput) {
       show: true,
       trigger: "item",
       formatter: (p: { seriesId?: string; value?: number[] }): Node | string => {
-        const k = input.items.findIndex((item) => item.id === p.seriesId);
+        const compared = (p.seriesId ?? "").startsWith("compare-");
+        const id = compared ? (p.seriesId ?? "").slice("compare-".length) : p.seriesId;
+        const k = input.items.findIndex((item) => item.id === id);
         if (k < 0) return "";
         const item = input.items[k];
         const element = document.createElement("div");
+        const value = p.value?.[0] ?? (compared ? (compare?.[k] ?? 0) : values[k]);
+        const percent = p.value?.[3] ?? (compared ? comparePct[k] : pct[k]);
         element.innerHTML =
-          `<b>${escape(item.name)}</b><br>${marker(item.color)}` +
-          `${input.format(p.value?.[0] ?? values[k])} (${input.percent(p.value?.[3] ?? pct[k])})`;
+          `<b>${escape(item.name)}${compared && input.compared ? ` · ${escape(input.compared)}` : ""}</b>` +
+          `<br>${marker(item.color)}${input.format(value)} (${input.percent(percent)})`;
         return element;
       },
     },

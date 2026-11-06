@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { barChart } from "../src/chart";
+import { barChart, shareChart } from "../src/chart";
 import { fromFirstValue, periodOf } from "../src/history";
 
 const range = (from: Date, to: Date) => ({ start: from.getTime(), end: to.getTime() - 1 });
@@ -51,4 +51,26 @@ test("compared bars stand left, paler, and go with their legend entry", () => {
     ]
   );
   assert.deepEqual(chart.options.legend.data, [{ id: "solar", secondaryIds: ["compare-solar"], name: "Solar" }]);
+});
+
+test("the compared period forms a paler inner ring", () => {
+  const items = [
+    { id: "solar", name: "Solar", color: "#ff9800", value: 3 },
+    { id: "grid", name: "Grid", color: "#488fc2", value: 1 },
+  ];
+  const chart = shareChart({
+    items,
+    total: "Total",
+    format: String,
+    percent: String,
+    centerColor: "#000",
+    labelColor: "#000",
+    hidden: new Set(["grid"]),
+    compare: [1, 1],
+  });
+  const ids = (chart.data as Array<{ id: string; data: number[][] }>).map((series) => series.id);
+  assert.deepEqual(ids, ["solar", "grid", "compare-solar", "compare-grid", "total"]);
+  // A part hidden in the legend leaves both rings to the others.
+  const compareGrid = (chart.data as Array<{ id: string; data: number[][] }>).find((s) => s.id === "compare-grid");
+  assert.equal(compareGrid?.data[0][3], 0);
 });
