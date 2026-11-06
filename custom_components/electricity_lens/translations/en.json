@@ -696,6 +696,12 @@
       "saving_per_year": {
         "name": "Saving per year"
       },
+      "forecast_today": {
+        "name": "Solar forecast today"
+      },
+      "forecast_tomorrow": {
+        "name": "Solar forecast tomorrow"
+      },
       "payback": {
         "name": "Paid back",
         "state_attributes": {

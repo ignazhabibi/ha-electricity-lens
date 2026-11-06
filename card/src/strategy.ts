@@ -59,11 +59,16 @@ const view = (
   sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
 
+/** The upper end of the forecast gauges, in kWh a day. */
+const FORECAST_MAX_KWH = 70;
+
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   categories: Category[];
   /** The categories with an investment, and the sensors about it. */
   investments: { category: Category; payback: string; annualReturn: string }[];
+  /** The sensors of today's and tomorrow's solar forecast. */
+  forecasts: { day: "today" | "tomorrow"; entity: string }[];
 }
 
 /** Finds the categories among the entities. */
@@ -74,12 +79,16 @@ export function findSensors(hass: HomeAssistant): Sensors {
   const categories = savings
     .map((entry) => hass.states[entry.entity_id]?.attributes.category as Category)
     .filter((category) => order.includes(category));
-  return { categories, investments: investmentSensors(hass) };
+  const forecasts = (["today", "tomorrow"] as const).flatMap((day) => {
+    const entity = entries.find((entry) => entry.translation_key === `forecast_${day}`)?.entity_id;
+    return entity ? [{ day, entity }] : [];
+  });
+  return { categories, investments: investmentSensors(hass), forecasts };
 }
 
 /** The views, one question each; every card has one home. Only the
  * overview repeats headline figures, and only for today. */
-export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors = { categories: [], investments: [] }): View[] {
+export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors = { categories: [], investments: [], forecasts: [] }): View[] {
   type Key = Parameters<Localize>[0];
   /** A figure in the view of its own area, named without the area. */
   const own = (area: string, figure: string, options: Card = {}): Card =>
@@ -128,6 +137,18 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ...half,
     }),
   ]);
+  // The day's solar forecast as gauges, from the integration's sensors.
+  const forecastGauges = solar?.forecast
+    ? sensors.forecasts.map(({ entity, day }) =>
+        card("gauge", {
+          entity,
+          name: t(`strategy.forecast_${day}`),
+          min: 0,
+          max: FORECAST_MAX_KWH,
+          ...half,
+        })
+      )
+    : [];
   const views: View[] = [];
 
   views.push(
@@ -137,13 +158,9 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       // Without savings there is no balance; the day's curve keeps the column filled.
       [savings ? card("electricity-lens-balance-card") : sourceHistory("household", today)],
       [
+        ...forecastGauges,
         named("household", "cost", "strategy.cost_today", today),
-        solar
-          ? named("household", "solar_share", "strategy.self_sufficiency_today", today)
-          : named("household", "price", "strategy.price_today", today),
         named("household", "energy", "strategy.consumption_today", today),
-        ...(solar ? [named("solar", "energy", "strategy.solar_today", today)] : []),
-        ...(solar?.forecast ? [own("solar", "forecast_today"), own("solar", "forecast_tomorrow")] : []),
         ...investmentTiles,
       ],
       false

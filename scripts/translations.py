@@ -227,6 +227,8 @@ TEXTS: dict[str, dict[str, Any]] = {
             "saving_per_year": "Saving per year",
             "annual_return": "Return per year",
             "balance": "Balance",
+            "forecast_today": "Solar forecast today",
+            "forecast_tomorrow": "Solar forecast tomorrow",
         },
         "attributes": {
             "category": "Category",
@@ -483,6 +485,8 @@ TEXTS: dict[str, dict[str, Any]] = {
             "saving_per_year": "Ersparnis pro Jahr",
             "annual_return": "Rendite pro Jahr",
             "balance": "Bilanz",
+            "forecast_today": "PV-Prognose heute",
+            "forecast_tomorrow": "PV-Prognose morgen",
         },
         "attributes": {
             "category": "Kategorie",
@@ -816,7 +820,14 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                     "name": t["entities"]["saving"],
                     "state_attributes": attributes,
                 },
-                "saving_per_year": {"name": t["entities"]["saving_per_year"]},
+                **{
+                    key: {"name": t["entities"][key]}
+                    for key in (
+                        "saving_per_year",
+                        "forecast_today",
+                        "forecast_tomorrow",
+                    )
+                },
                 **{
                     key: {
                         "name": t["entities"][key],

@@ -131,7 +131,6 @@ export function valueOf(
   const solar = sum("solar");
   const kwh = (value: number) => ({ value, unit: "energy" as const });
   const money = (value: number) => ({ value, unit: "money" as const });
-  const plain = (value: number) => ({ value, unit: "number" as const });
   switch (figure) {
     case "energy": {
       if (energy !== null && solar !== null && energy > 0) {
@@ -142,7 +141,7 @@ export function valueOf(
             unit: "energy",
             line: {
               key: "line_energy_parts",
-              values: { grid: plain(Math.max(energy - solar, 0)), solar: plain(solar) },
+              values: { grid: kwh(Math.max(energy - solar, 0)), solar: kwh(solar) },
             },
           };
         }
@@ -269,7 +268,7 @@ export function valueOf(
         unit: "percent",
         line: {
           key: "line_part_of",
-          values: { part: plain(solar), whole: kwh(energy) },
+          values: { part: kwh(solar), whole: kwh(energy) },
         },
       };
     }
@@ -285,7 +284,7 @@ export function valueOf(
         unit: "percent",
         line: {
           key: "line_part_of",
-          values: { part: plain(level), whole: kwh(grid) },
+          values: { part: kwh(level), whole: kwh(grid) },
         },
       };
     }
@@ -299,7 +298,7 @@ export function valueOf(
         unit: "percent",
         line: {
           key: "line_part_of",
-          values: { part: plain(used), whole: kwh(energy) },
+          values: { part: kwh(used), whole: kwh(energy) },
         },
       };
     }
@@ -341,7 +340,7 @@ export function valueOf(
         unit: "number",
         line: {
           key: "line_heat_from",
-          values: { heat: plain(heat), energy: kwh(energy) },
+          values: { heat: kwh(heat), energy: kwh(energy) },
         },
       };
     }

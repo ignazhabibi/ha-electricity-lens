@@ -84,6 +84,7 @@ from .sources import (
     async_hourly_ranges,
     async_hourly_values,
     async_remove_statistics,
+    async_solar_forecast,
     async_statistic_ids,
     async_wait_recorder,
     async_write_statistics,
@@ -257,6 +258,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         self.setup: EnergySetup | None = None
         """The energy dashboard as of the last update."""
         self._without_data: set[str] = set()
+        self.forecast: tuple[float, float] | None = None
+        """Today's and tomorrow's solar forecast in kWh, as of the last update."""
 
     async def async_load(self) -> None:
         """Restore progress and record changed current values."""
@@ -355,6 +358,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 translation_placeholders={"error": str(err)},
             ) from err
         ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ENERGY_INTERFACE)
+        self.forecast = await async_solar_forecast(self.hass, setup.forecasts)
 
         grid = setup.grid()
         if grid is None or grid.import_stat is None:
