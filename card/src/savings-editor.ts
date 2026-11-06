@@ -4,6 +4,7 @@ import { LitElement, html, type TemplateResult } from "lit";
 
 import type { SavingsCardConfig } from "./electricity-lens-savings-card";
 import { localizer, type Localize } from "./localize";
+import { readCategories } from "./model";
 import type { HomeAssistant } from "./types";
 
 const ALL = "all";
@@ -38,16 +39,19 @@ export class ElectricityLensSavingsCardEditor extends LitElement {
   protected render(): TemplateResult {
     if (!this.hass || !this._config) return html``;
     const t = this._localize;
+    const set = new Set<string>(readCategories(this.hass).map((category) => category.category));
     const schema = [
       {
         name: "area",
         selector: {
           select: {
             mode: "dropdown",
+            // Only the categories that are set up, and the one already chosen.
             options: [
               { value: ALL, label: t("editor_savings") },
-              { value: "heat_pump", label: t("category.heat_pump") },
-              { value: "wallbox", label: t("category.wallbox") },
+              ...(["heat_pump", "wallbox"] as const)
+                .filter((area) => area === this._config?.area || set.has(area))
+                .map((area) => ({ value: area, label: t(`category.${area}`) })),
             ],
           },
         },

@@ -53,6 +53,10 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     const fmt = this._fmt;
     const values = this._sums?.values ?? {};
     const colors = consumerColors(this._info!, palette(this));
+    const devices = this._devices;
+    const heat = devices.reduce((sum, device) => sum + addUp(values, device.statistics.heat), 0);
+    const energy = devices.reduce((sum, device) => sum + addUp(values, device.statistics.energy), 0);
+    const ratio = (of: number, by: number) => (by > 0 ? fmt.number(of / by, 2) : "–");
     return html`<table>
       <thead>
         <tr>
@@ -63,7 +67,7 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
         </tr>
       </thead>
       <tbody>
-        ${this._devices.map((device) => {
+        ${devices.map((device) => {
           const heat = addUp(values, device.statistics.heat);
           const energy = addUp(values, device.statistics.energy);
           return html`<tr>
@@ -73,10 +77,18 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
             <td class="name">${device.name}</td>
             <td>${fmt.value(heat, "energy")}</td>
             <td>${fmt.value(energy, "energy")}</td>
-            <td>${energy > 0 ? fmt.number(heat / energy, 2) : "–"}</td>
+            <td>${ratio(heat, energy)}</td>
           </tr>`;
         })}
       </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="2" class="name">${t("savings_total")}</th>
+          <td>${fmt.value(heat, "energy")}</td>
+          <td>${fmt.value(energy, "energy")}</td>
+          <td>${ratio(heat, energy)}</td>
+        </tr>
+      </tfoot>
     </table>`;
   }
 

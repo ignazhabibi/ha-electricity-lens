@@ -167,7 +167,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
         </tbody>
         <tfoot>
           <tr>
-            <th scope="row" class="name">${t("savings_title")}</th>
+            <th scope="row" class="name">${t("savings_saved")}</th>
             <td>${fmt.value(saving, "money")}</td>
           </tr>
           ${hasSolar
