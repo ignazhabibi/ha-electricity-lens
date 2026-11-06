@@ -227,7 +227,7 @@ overall balance.
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
-| Solar forecast today, tomorrow | The day's solar forecast in kWh over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. |
+| Solar remaining today, solar forecast tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, and the yearly savings. |
 
 ## Statistics
@@ -421,7 +421,7 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | The economics card, which always shows the current state; the solar forecast for today and tomorrow as gauges up to 70 kWh; costs and consumption today; each investment's payback, and once paid back its return |
+| Now | How is today going? | The economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to 70 kWh, red below 25 and green from 45 kWh; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |

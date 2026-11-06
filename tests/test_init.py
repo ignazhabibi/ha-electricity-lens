@@ -889,18 +889,31 @@ async def test_migration_from_future_version(hass: HomeAssistant) -> None:
 
 
 async def test_forecast_sensors(hass: HomeAssistant) -> None:
-    """With a forecast in the energy dashboard, two sensors show it."""
+    """With a forecast in the energy dashboard, two sensors show it.
+
+    The sensor of the whole day up to 0.24.0 is gone.
+    """
     solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
     await set_energy_prefs(
         hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
+    )
+    entry = make_entry(("pv", PV_DATA))
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor", DOMAIN, f"{entry.entry_id}_forecast_today", config_entry=entry
     )
     with patch(
         "custom_components.electricity_lens.coordinator.async_solar_forecast",
         AsyncMock(return_value=(12.5, 20.25)),
     ):
-        await setup_entry(hass, make_entry(("pv", PV_DATA)))
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+    assert not registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_forecast_today"
+    )
     assert (
-        float(_state(hass, "sensor.electricity_lens_solar_forecast_today").state)
+        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
         == 12.5
     )
     assert (
@@ -913,4 +926,4 @@ async def test_no_forecast_sensors_without_forecast(
     hass: HomeAssistant, config_entry: MockConfigEntry
 ) -> None:
     """Without a forecast there is nothing to show."""
-    assert hass.states.get("sensor.electricity_lens_solar_forecast_today") is None
+    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None

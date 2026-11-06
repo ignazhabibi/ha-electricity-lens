@@ -14,8 +14,10 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .const import DOMAIN
 from .coordinator import ElectricityLensConfigEntry, ElectricityLensCoordinator
 from .entity import ElectricityLensEntity
 from .models import CategoryResult
@@ -94,12 +96,12 @@ BALANCE_SENSOR = SensorEntityDescription(
     suggested_display_precision=0,
 )
 
-# Today's and tomorrow's solar forecast over all forecasts of the energy
-# dashboard, so that a gauge can show it.
+# The solar forecast for the rest of today and for tomorrow over all forecasts
+# of the energy dashboard, so that a gauge can show it.
 FORECAST_SENSORS = (
     SensorEntityDescription(
-        key="forecast_today",
-        translation_key="forecast_today",
+        key="forecast_rest_today",
+        translation_key="forecast_rest_today",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=1,
@@ -122,6 +124,12 @@ async def async_setup_entry(
     """Set up the overall balance and the sensors of each category."""
     coordinator = entry.runtime_data
     async_add_entities([BalanceSensor(coordinator, entry.entry_id)])
+    # Up to 0.24.0 a sensor showed the whole day; the rest of the day replaced it.
+    registry = er.async_get(hass)
+    if old := registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_forecast_today"
+    ):
+        registry.async_remove(old)
     if (await async_get_energy_setup(hass)).forecasts:
         async_add_entities(
             ForecastSensor(coordinator, description, entry.entry_id)
@@ -184,7 +192,9 @@ class ForecastSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
         forecast = self.coordinator.forecast
         if forecast is None:
             return None
-        return forecast[0 if self.entity_description.key == "forecast_today" else 1]
+        return forecast[
+            0 if self.entity_description.key == "forecast_rest_today" else 1
+        ]
 
 
 class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]

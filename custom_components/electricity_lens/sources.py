@@ -218,13 +218,16 @@ async def _async_manager(hass: HomeAssistant) -> Any:
 async def async_solar_forecast(
     hass: HomeAssistant, entry_ids: Iterable[str]
 ) -> tuple[float, float] | None:
-    """Return today's and tomorrow's solar forecast in kWh, over all forecasts.
+    """Return the solar forecast in kWh for the rest of today and for tomorrow.
 
-    Asks each forecast's energy platform, as the energy dashboard does. None
-    without a forecast that answers.
+    Adds up all forecasts, asking each forecast's energy platform as the energy
+    dashboard does. Of the current hour only what is left counts. None without
+    a forecast that answers.
     """
-    today = dt_util.now().date()
-    totals = {today: 0.0, today + timedelta(days=1): 0.0}
+    now = dt_util.now()
+    today = now.date()
+    tomorrow = today + timedelta(days=1)
+    rest = ahead = 0.0
     answered = False
     for entry_id in entry_ids:
         if (entry := hass.config_entries.async_get_entry(entry_id)) is None:
@@ -241,13 +244,15 @@ async def async_solar_forecast(
         for time, wh in forecast.get("wh_hours", {}).items():
             if (moment := dt_util.parse_datetime(time)) is None:
                 continue
-            day = dt_util.as_local(moment).date()
-            if day in totals:
-                totals[day] += wh / 1000
+            start = dt_util.as_local(moment)
+            if start.date() == tomorrow:
+                ahead += wh / 1000
+            elif start.date() == today:
+                left = (start + timedelta(hours=1) - now) / timedelta(hours=1)
+                rest += wh / 1000 * min(max(left, 0.0), 1.0)
     if not answered:
         return None
-    first, second = totals.values()
-    return first, second
+    return rest, ahead
 
 
 async def async_get_energy_setup(hass: HomeAssistant) -> EnergySetup:
