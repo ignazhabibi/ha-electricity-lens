@@ -27,6 +27,8 @@ from homeassistant.components.recorder.statistics import (
     statistics_during_period,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.loader import IntegrationNotFound, async_get_integration
 from homeassistant.util import dt as dt_util, slugify
 
 from .const import CATEGORIES, DOMAIN
@@ -211,6 +213,41 @@ async def _async_manager(hass: HomeAssistant) -> Any:
     except ImportError as err:
         raise EnergyInterfaceError("Energy data manager not found") from err
     return await async_get_manager(hass)
+
+
+async def async_solar_forecast(
+    hass: HomeAssistant, entry_ids: Iterable[str]
+) -> tuple[float, float] | None:
+    """Return today's and tomorrow's solar forecast in kWh, over all forecasts.
+
+    Asks each forecast's energy platform, as the energy dashboard does. None
+    without a forecast that answers.
+    """
+    today = dt_util.now().date()
+    totals = {today: 0.0, today + timedelta(days=1): 0.0}
+    answered = False
+    for entry_id in entry_ids:
+        if (entry := hass.config_entries.async_get_entry(entry_id)) is None:
+            continue
+        try:
+            integration = await async_get_integration(hass, entry.domain)
+            platform = await integration.async_get_platform("energy")
+            forecast = await platform.async_get_solar_forecast(hass, entry_id)
+        except IntegrationNotFound, ImportError, AttributeError, HomeAssistantError:
+            continue
+        if not forecast:
+            continue
+        answered = True
+        for time, wh in forecast.get("wh_hours", {}).items():
+            if (moment := dt_util.parse_datetime(time)) is None:
+                continue
+            day = dt_util.as_local(moment).date()
+            if day in totals:
+                totals[day] += wh / 1000
+    if not answered:
+        return None
+    first, second = totals.values()
+    return first, second
 
 
 async def async_get_energy_setup(hass: HomeAssistant) -> EnergySetup:

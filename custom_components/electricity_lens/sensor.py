@@ -12,14 +12,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ElectricityLensConfigEntry, ElectricityLensCoordinator
 from .entity import ElectricityLensEntity
 from .models import CategoryResult
-from .sources import saving_statistic_id
+from .sources import async_get_energy_setup, saving_statistic_id
 
 # Sensors only read the coordinator's data.
 PARALLEL_UPDATES = 0
@@ -94,6 +94,25 @@ BALANCE_SENSOR = SensorEntityDescription(
     suggested_display_precision=0,
 )
 
+# Today's and tomorrow's solar forecast over all forecasts of the energy
+# dashboard, so that a gauge can show it.
+FORECAST_SENSORS = (
+    SensorEntityDescription(
+        key="forecast_today",
+        translation_key="forecast_today",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="forecast_tomorrow",
+        translation_key="forecast_tomorrow",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=1,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -103,6 +122,11 @@ async def async_setup_entry(
     """Set up the overall balance and the sensors of each category."""
     coordinator = entry.runtime_data
     async_add_entities([BalanceSensor(coordinator, entry.entry_id)])
+    if (await async_get_energy_setup(hass)).forecasts:
+        async_add_entities(
+            ForecastSensor(coordinator, description, entry.entry_id)
+            for description in FORECAST_SENSORS
+        )
     for subentry_id, subentry in entry.subentries.items():
         async_add_entities(
             [
@@ -140,6 +164,27 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
             "invested": data.invested,
             "per_year": data.per_year,
         }
+
+
+class ForecastSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
+    """The solar forecast of a day, over all forecasts of the energy dashboard."""
+
+    def __init__(
+        self,
+        coordinator: ElectricityLensCoordinator,
+        description: SensorEntityDescription,
+        entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, description, entry_id, "total")
+
+    @property
+    def native_value(self) -> float | None:  # pyright: ignore[reportIncompatibleVariableOverride]
+        """Return the forecast, unknown without one."""
+        forecast = self.coordinator.forecast
+        if forecast is None:
+            return None
+        return forecast[0 if self.entity_description.key == "forecast_today" else 1]
 
 
 class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
@@ -886,3 +886,31 @@ async def test_migration_from_future_version(hass: HomeAssistant) -> None:
     entry = make_entry(("pv", {}), version=2)
     entry.add_to_hass(hass)
     assert not await hass.config_entries.async_setup(entry.entry_id)
+
+
+async def test_forecast_sensors(hass: HomeAssistant) -> None:
+    """With a forecast in the energy dashboard, two sensors show it."""
+    solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
+    )
+    with patch(
+        "custom_components.electricity_lens.coordinator.async_solar_forecast",
+        AsyncMock(return_value=(12.5, 20.25)),
+    ):
+        await setup_entry(hass, make_entry(("pv", PV_DATA)))
+    assert (
+        float(_state(hass, "sensor.electricity_lens_solar_forecast_today").state)
+        == 12.5
+    )
+    assert (
+        float(_state(hass, "sensor.electricity_lens_solar_forecast_tomorrow").state)
+        == 20.25
+    )
+
+
+async def test_no_forecast_sensors_without_forecast(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Without a forecast there is nothing to show."""
+    assert hass.states.get("sensor.electricity_lens_solar_forecast_today") is None

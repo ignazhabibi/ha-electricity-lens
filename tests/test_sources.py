@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from types import SimpleNamespace
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import IntegrationNotFound
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
@@ -23,6 +27,7 @@ from custom_components.electricity_lens.sources import (
     async_hourly_changes,
     async_hourly_values,
     async_listen_energy_updates,
+    async_solar_forecast,
     cost_stat,
     parse_preferences,
 )
@@ -190,3 +195,34 @@ async def test_history_values_step(hass: HomeAssistant) -> None:
     )
     assert values["input_number.price"] == {start: 0.11, start + 3600: 0.11}
     assert values["input_number.broken"] == {}
+
+
+async def test_solar_forecast_adds_up_all_forecasts(hass: HomeAssistant) -> None:
+    """Each forecast's energy platform answers; the days add up over all of them."""
+    now = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    hours = {
+        "a": {now.isoformat(): 2000, (now + timedelta(days=1)).isoformat(): 1000},
+        "b": {now.isoformat(): 500, (now + timedelta(days=2)).isoformat(): 9000},
+    }
+
+    async def forecast(_hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
+        return {"wh_hours": hours[entry_id]} if entry_id in hours else {}
+
+    platform = SimpleNamespace(async_get_solar_forecast=forecast)
+    integration = SimpleNamespace(async_get_platform=AsyncMock(return_value=platform))
+    for entry_id in ("a", "b", "silent"):
+        MockConfigEntry(domain="forecast_solar", entry_id=entry_id).add_to_hass(hass)
+    with patch(
+        "custom_components.electricity_lens.sources.async_get_integration",
+        AsyncMock(return_value=integration),
+    ):
+        assert await async_solar_forecast(hass, ["a", "b", "silent", "gone"]) == (
+            pytest.approx(2.5),
+            pytest.approx(1.0),
+        )
+        assert await async_solar_forecast(hass, ["silent"]) is None
+    with patch(
+        "custom_components.electricity_lens.sources.async_get_integration",
+        AsyncMock(side_effect=IntegrationNotFound("forecast_solar")),
+    ):
+        assert await async_solar_forecast(hass, ["a"]) is None
