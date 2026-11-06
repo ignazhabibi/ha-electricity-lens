@@ -377,10 +377,7 @@ name: Price now
 Shares of a whole for a period, as a ring or as bars, set up in the card
 editor. The ring is drawn like the pie of Home Assistant's devices graph:
 each share labeled outside, the total in the middle, and a legend below
-that hides a share with a tap. The bars are drawn like the bars of that graph,
-with the total below them. Split by device or by statistics, the button at the
-top switches between ring and bars, and the browser keeps the choice for all
-breakdown cards; the display set in the editor applies until then.
+that hides a share with a tap.
 
 - **By source**: solar power and grid power by price level, for the
   household, a device, or Other.
@@ -388,14 +385,13 @@ breakdown cards; the display set in the editor applies until then.
   and Other, each with its consumption and average price, or a category's
   devices, such as the heat pump's heating and hot water. Bars can be
   colored by the sources of each device, in the bar's own unit: a bar of costs
-  splits by what each source cost, and each part names its amount on hover.
-  Other comes last. A device that would read as zero is left out.
+  splits by what each source cost. A device that would read as zero is left out.
 - **Statistics**: the shares of any statistics as they are, in their unit, for
   example the heat for heating and hot water from the heat pump's own sensors.
 
 A bar whose device or statistic is an entity opens its dialog with a tap. When
 the date selection compares with an earlier period, that period shows as a
-paler inner ring, or as a paler bar under each bar. The period is *Follow the
+paler inner ring, or as a thin bar under each bar. The period is *Follow the
 date selection* (this month without one) or a fixed period.
 
 ```yaml
@@ -427,7 +423,7 @@ other views follow the energy date selection.
 |---|---|---|
 | Now | How is today going? | The economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to 70 kWh, red below 25 and green from 45 kWh; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
-| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; costs by device, ranked and split by source; the savings of the period as a table |
+| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
 | Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
 
