@@ -281,13 +281,14 @@ household's figures can begin later than the savings.
 
 With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
 instead: what the alternative would have cost, less the electricity costs, and
-how much of it is solar power.
+how much of it is solar power. The card editor offers only the categories that
+are set up.
 
 ### Electricity Lens heat meters
 
 Heat, electricity, and seasonal COP of each of the heat pump's meters in the
-selected period, for example heating and hot water. It needs a heat meter per
-electricity meter and has no options.
+selected period, for example heating and hot water, with their total below. It
+needs a heat meter per electricity meter and has no options.
 
 ### Electricity Lens history
 
