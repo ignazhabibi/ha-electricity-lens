@@ -79,7 +79,7 @@ replaced.
 | Category | Saving | Compared with |
 |---|---|---|
 | PV plant | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received. A home battery counts as part of the PV plant. | No PV plant: all electricity from the grid, no feed-in. |
-| Heat pump | What the former gas or oil heating would have cost for the same heat, minus what the heat pump's electricity cost. | A gas or oil heating with 92 % efficiency; heating oil has 10 kWh per litre. Heat comes from heat meters where they measured, otherwise from electricity × seasonal COP. |
+| Heat pump | What the former heating would have cost for the same heat, minus what the heat pump's electricity cost. | The former heating, with the fixed values below. Heat comes from heat meters where they measured, otherwise from electricity × seasonal COP. |
 | Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. |
 
 - **No double counting.** The three savings add up to the household's total
@@ -97,6 +97,17 @@ replaced.
 - **Honest numbers.** There is no yearly average before twelve months of data,
   because seasons would distort it. Heat that was estimated instead of
   measured is marked as such.
+
+The former heating would have paid per kWh of heat:
+
+| Former heating | Price per | Energy per unit | Efficiency |
+|---|---|---|---|
+| Gas | kWh | 1 kWh | 92 % |
+| Heating oil | litre | 10 kWh | 92 % |
+| LPG | litre | 6.57 kWh | 92 % |
+| Pellets | kilogram | 4.8 kWh | 88 % |
+| District heating | kWh of heat | 1 kWh | 100 % |
+| Electric heating | kWh | 1 kWh | 100 % |
 
 ### Three phases
 
@@ -124,8 +135,9 @@ Electricity Lens works with any energy dashboard that has:
   energy dashboard marks as included in another selected meter are not
   counted twice. A meter belongs to one category only.
 
-Not supported: other alternatives than a gas or oil heating and a combustion
-car, or none, gas prices per cubic metre, solar thermal, investments from a helper,
+Not supported: other alternatives than the former heatings above and a
+combustion car, or none, gas prices per cubic metre, the standing charge of a
+former gas or district heating, solar thermal, investments from a helper,
 and fetching prices from online services. Price sensors you already have can
 be used, though.
 
@@ -178,15 +190,15 @@ where it stopped.
    |---|---|
    | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
    | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
-   | Former heating | Gas or oil, or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the balance, but its heat, seasonal COP, heat price, and the Heating view. |
-   | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. Not with no former heating. |
+   | Former heating | Gas, heating oil, LPG, pellets, district heating, or an electric heating such as storage heaters; or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the balance, but its heat, seasonal COP, heat price, and the Heating view. |
+   | Extra cost (optional) | Extra purchase cost over the former heating, for the payback. Not with no former heating. |
 5. **Heat pump, average since the first data**:
    | Field | Description |
    |---|---|
-   | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. Not with no former heating. |
+   | Price of the former heating | Average per kWh (gas, district heating, heating electricity), per litre (heating oil, LPG), or per kilogram (pellets). Also the current value from now on. Not with no former heating. |
    | Seasonal COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
    | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
-   | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
+   | Price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
 6. **Electric car**: charging meters, what it is compared with, a combustion
    car or nothing, and the extra purchase cost over a combustion car
    (optional). Compared with nothing, as for a second car, the car has no
@@ -301,7 +313,7 @@ phones and desktops, and can be used with keyboard and screen reader.
 ### Electricity Lens savings
 
 What was saved in the selected period, as a table: solar power instead of grid
-power, the feed-in, electricity instead of gas or oil, and electricity instead
+power, the feed-in, electricity instead of the former heating, and electricity instead
 of fuel, each with its energy and amount. The amounts are the balance's, so
 they add up without counting solar power twice; the saving on the Heating and
 Charging views includes the device's solar power and can be higher. The card

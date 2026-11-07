@@ -5,11 +5,13 @@ import type {
   Category,
   CategoryFigures,
   FiguresInfo,
+  Heating,
   HomeAssistant,
 } from "./types";
 
 export const DOMAIN = "electricity_lens";
 const ORDER: Category[] = ["pv", "heat_pump", "wallbox"];
+const HEATINGS: Heating[] = ["gas", "oil", "lpg", "pellets", "district_heating", "electric"];
 
 const number = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -53,10 +55,7 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       perYear: value(siblings(entry.device_id, "saving_per_year")?.entity_id),
       countingSince: date(attributes.counting_since),
       entityId: entry.entity_id,
-      heating:
-        attributes.heating === "gas" || attributes.heating === "oil"
-          ? attributes.heating
-          : null,
+      heating: HEATINGS.includes(attributes.heating as Heating) ? (attributes.heating as Heating) : null,
     });
   }
   return figures.sort(

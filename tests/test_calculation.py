@@ -111,9 +111,15 @@ def test_pv_saving() -> None:
 
 
 def test_heating_cost() -> None:
-    """Gas per kWh, oil per litre at 10 kWh; both at 92 % efficiency."""
+    """Each fuel at its unit, energy content, and efficiency."""
     assert heating_cost(9.2, "gas", 0.1) == pytest.approx(1.0)
     assert heating_cost(92, "oil", 1.0) == pytest.approx(10.0)
+    # LPG: 6.57 kWh per litre at 92 %; pellets: 4.8 kWh per kg at 88 %.
+    assert heating_cost(92 * 6.57, "lpg", 0.8) == pytest.approx(100 * 0.8)
+    assert heating_cost(88 * 4.8, "pellets", 0.35) == pytest.approx(100 * 0.35)
+    # District heating and an electric heating pay for each kWh of heat.
+    assert heating_cost(100, "district_heating", 0.12) == pytest.approx(12.0)
+    assert heating_cost(100, "electric", 0.25) == pytest.approx(25.0)
 
 
 def test_heat_pump_saving() -> None:

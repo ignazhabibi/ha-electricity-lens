@@ -73,7 +73,7 @@
           "meters": "Total meter, or heating and hot water separately",
           "heat_meters": "Heat meters for the same parts as the electricity consumption",
           "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
-          "investment": "Extra purchase cost over a gas or oil heating. For the payback."
+          "investment": "Extra purchase cost over the former heating. For the payback."
         }
       },
       "heat_pump_values_gas": {
@@ -166,6 +166,190 @@
           "scop": "Estimates the heat until {heat_until}; there are no readings before",
           "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
           "oil_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_lpg": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "lpg_price": "LPG price",
+          "tariff": "Own electricity tariff (optional)",
+          "lpg_price_entity": "LPG price sensor (optional)"
+        },
+        "data_description": {
+          "lpg_price": "Average price per litre",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "lpg_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_lpg_scop": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "lpg_price": "LPG price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "lpg_price_entity": "LPG price sensor (optional)"
+        },
+        "data_description": {
+          "lpg_price": "Average price per litre",
+          "scop": "Estimates the heat from the electricity consumption",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "lpg_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_lpg_scop_until": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "lpg_price": "LPG price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "lpg_price_entity": "LPG price sensor (optional)"
+        },
+        "data_description": {
+          "lpg_price": "Average price per litre",
+          "scop": "Estimates the heat until {heat_until}; there are no readings before",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "lpg_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_pellets": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "pellets_price": "Pellet price",
+          "tariff": "Own electricity tariff (optional)",
+          "pellets_price_entity": "Pellet price sensor (optional)"
+        },
+        "data_description": {
+          "pellets_price": "Average price per kilogram",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "pellets_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_pellets_scop": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "pellets_price": "Pellet price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "pellets_price_entity": "Pellet price sensor (optional)"
+        },
+        "data_description": {
+          "pellets_price": "Average price per kilogram",
+          "scop": "Estimates the heat from the electricity consumption",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "pellets_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_pellets_scop_until": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "pellets_price": "Pellet price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "pellets_price_entity": "Pellet price sensor (optional)"
+        },
+        "data_description": {
+          "pellets_price": "Average price per kilogram",
+          "scop": "Estimates the heat until {heat_until}; there are no readings before",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "pellets_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_district_heating": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "district_heating_price": "District heating price",
+          "tariff": "Own electricity tariff (optional)",
+          "district_heating_price_entity": "District heating price sensor (optional)"
+        },
+        "data_description": {
+          "district_heating_price": "Unit price per kWh on the heating bill",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "district_heating_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_district_heating_scop": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "district_heating_price": "District heating price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "district_heating_price_entity": "District heating price sensor (optional)"
+        },
+        "data_description": {
+          "district_heating_price": "Unit price per kWh on the heating bill",
+          "scop": "Estimates the heat from the electricity consumption",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "district_heating_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_district_heating_scop_until": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "district_heating_price": "District heating price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "district_heating_price_entity": "District heating price sensor (optional)"
+        },
+        "data_description": {
+          "district_heating_price": "Unit price per kWh on the heating bill",
+          "scop": "Estimates the heat until {heat_until}; there are no readings before",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "district_heating_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_electric": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "electric_price": "Heating electricity price",
+          "tariff": "Own electricity tariff (optional)",
+          "electric_price_entity": "Heating electricity price sensor (optional)"
+        },
+        "data_description": {
+          "electric_price": "Unit price per kWh of the former heating tariff",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "electric_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_electric_scop": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "electric_price": "Heating electricity price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "electric_price_entity": "Heating electricity price sensor (optional)"
+        },
+        "data_description": {
+          "electric_price": "Unit price per kWh of the former heating tariff",
+          "scop": "Estimates the heat from the electricity consumption",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "electric_price_entity": "Replaces the average from now on"
+        }
+      },
+      "heat_pump_values_electric_scop_until": {
+        "title": "Average since {since}",
+        "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+        "data": {
+          "electric_price": "Heating electricity price",
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)",
+          "electric_price_entity": "Heating electricity price sensor (optional)"
+        },
+        "data_description": {
+          "electric_price": "Unit price per kWh of the former heating tariff",
+          "scop": "Estimates the heat until {heat_until}; there are no readings before",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+          "electric_price_entity": "Replaces the average from now on"
         }
       },
       "heat_pump_values_none": {
@@ -381,7 +565,7 @@
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
             "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
-            "investment": "Extra purchase cost over a gas or oil heating. For the payback."
+            "investment": "Extra purchase cost over the former heating. For the payback."
           }
         },
         "reconfigure": {
@@ -406,7 +590,7 @@
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
             "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
-            "investment": "Extra purchase cost over a gas or oil heating. For the payback."
+            "investment": "Extra purchase cost over the former heating. For the payback."
           }
         },
         "recompute": {
@@ -505,6 +689,190 @@
             "oil_price_entity": "Replaces the average from now on"
           }
         },
+        "heat_pump_values_lpg": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "lpg_price": "LPG price",
+            "tariff": "Own electricity tariff (optional)",
+            "lpg_price_entity": "LPG price sensor (optional)"
+          },
+          "data_description": {
+            "lpg_price": "Average price per litre",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "lpg_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_lpg_scop": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "lpg_price": "LPG price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "lpg_price_entity": "LPG price sensor (optional)"
+          },
+          "data_description": {
+            "lpg_price": "Average price per litre",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "lpg_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_lpg_scop_until": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "lpg_price": "LPG price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "lpg_price_entity": "LPG price sensor (optional)"
+          },
+          "data_description": {
+            "lpg_price": "Average price per litre",
+            "scop": "Estimates the heat until {heat_until}; there are no readings before",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "lpg_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_pellets": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "pellets_price": "Pellet price",
+            "tariff": "Own electricity tariff (optional)",
+            "pellets_price_entity": "Pellet price sensor (optional)"
+          },
+          "data_description": {
+            "pellets_price": "Average price per kilogram",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "pellets_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_pellets_scop": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "pellets_price": "Pellet price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "pellets_price_entity": "Pellet price sensor (optional)"
+          },
+          "data_description": {
+            "pellets_price": "Average price per kilogram",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "pellets_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_pellets_scop_until": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "pellets_price": "Pellet price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "pellets_price_entity": "Pellet price sensor (optional)"
+          },
+          "data_description": {
+            "pellets_price": "Average price per kilogram",
+            "scop": "Estimates the heat until {heat_until}; there are no readings before",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "pellets_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_district_heating": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "district_heating_price": "District heating price",
+            "tariff": "Own electricity tariff (optional)",
+            "district_heating_price_entity": "District heating price sensor (optional)"
+          },
+          "data_description": {
+            "district_heating_price": "Unit price per kWh on the heating bill",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "district_heating_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_district_heating_scop": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "district_heating_price": "District heating price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "district_heating_price_entity": "District heating price sensor (optional)"
+          },
+          "data_description": {
+            "district_heating_price": "Unit price per kWh on the heating bill",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "district_heating_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_district_heating_scop_until": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "district_heating_price": "District heating price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "district_heating_price_entity": "District heating price sensor (optional)"
+          },
+          "data_description": {
+            "district_heating_price": "Unit price per kWh on the heating bill",
+            "scop": "Estimates the heat until {heat_until}; there are no readings before",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "district_heating_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_electric": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "electric_price": "Heating electricity price",
+            "tariff": "Own electricity tariff (optional)",
+            "electric_price_entity": "Heating electricity price sensor (optional)"
+          },
+          "data_description": {
+            "electric_price": "Unit price per kWh of the former heating tariff",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "electric_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_electric_scop": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "electric_price": "Heating electricity price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "electric_price_entity": "Heating electricity price sensor (optional)"
+          },
+          "data_description": {
+            "electric_price": "Unit price per kWh of the former heating tariff",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "electric_price_entity": "Replaces the average from now on"
+          }
+        },
+        "heat_pump_values_electric_scop_until": {
+          "title": "Average since {since}",
+          "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
+          "data": {
+            "electric_price": "Heating electricity price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "electric_price_entity": "Heating electricity price sensor (optional)"
+          },
+          "data_description": {
+            "electric_price": "Unit price per kWh of the former heating tariff",
+            "scop": "Estimates the heat until {heat_until}; there are no readings before",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "electric_price_entity": "Replaces the average from now on"
+          }
+        },
         "heat_pump_values_none": {
           "title": "Average since {since}",
           "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
@@ -571,6 +939,70 @@
             "oil_price_entity": "Replaces the heating oil price"
           }
         },
+        "now_lpg": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "lpg_price": "LPG price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "lpg_price_entity": "LPG price sensor (optional)"
+          },
+          "data_description": {
+            "lpg_price": "Average price per litre",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "lpg_price_entity": "Replaces the LPG price"
+          }
+        },
+        "now_pellets": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "pellets_price": "Pellet price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "pellets_price_entity": "Pellet price sensor (optional)"
+          },
+          "data_description": {
+            "pellets_price": "Average price per kilogram",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "pellets_price_entity": "Replaces the pellet price"
+          }
+        },
+        "now_district_heating": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "district_heating_price": "District heating price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "district_heating_price_entity": "District heating price sensor (optional)"
+          },
+          "data_description": {
+            "district_heating_price": "Unit price per kWh on the heating bill",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "district_heating_price_entity": "Replaces the district heating price"
+          }
+        },
+        "now_electric": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "electric_price": "Heating electricity price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)",
+            "electric_price_entity": "Heating electricity price sensor (optional)"
+          },
+          "data_description": {
+            "electric_price": "Unit price per kWh of the former heating tariff",
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts",
+            "electric_price_entity": "Replaces the heating electricity price"
+          }
+        },
         "now_none": {
           "title": "Values from now on",
           "description": "New values apply from the next full hour. What was computed stays.",
@@ -607,6 +1039,62 @@
           },
           "data_description": {
             "oil_price": "Average price per litre",
+            "scop": "Estimates the heat where none was measured",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "before_lpg": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "lpg_price": "LPG price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "lpg_price": "Average price per litre",
+            "scop": "Estimates the heat where none was measured",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "before_pellets": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "pellets_price": "Pellet price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "pellets_price": "Average price per kilogram",
+            "scop": "Estimates the heat where none was measured",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "before_district_heating": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "district_heating_price": "District heating price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "district_heating_price": "Unit price per kWh on the heating bill",
+            "scop": "Estimates the heat where none was measured",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "before_electric": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "electric_price": "Heating electricity price",
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "electric_price": "Unit price per kWh of the former heating tariff",
             "scop": "Estimates the heat where none was measured",
             "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
           }
@@ -831,6 +1319,10 @@
             "state": {
               "gas": "Gas",
               "oil": "Oil",
+              "lpg": "LPG",
+              "pellets": "Pellets",
+              "district_heating": "District heating",
+              "electric": "Electric heating",
               "none": "None (new build)"
             }
           },
@@ -921,6 +1413,10 @@
       "options": {
         "gas": "Gas",
         "oil": "Oil",
+        "lpg": "LPG",
+        "pellets": "Pellets",
+        "district_heating": "District heating",
+        "electric": "Electric heating",
         "none": "None (new build)"
       }
     },

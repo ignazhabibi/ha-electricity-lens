@@ -53,6 +53,9 @@ export interface BalanceFigures {
   entityId: string;
 }
 
+/** A former heating, as the integration names it. */
+export type Heating = "gas" | "oil" | "lpg" | "pellets" | "district_heating" | "electric";
+
 export interface CategoryFigures {
   category: Category;
   /** The statistic that holds the saving per hour, kept by the integration. */
@@ -65,7 +68,7 @@ export interface CategoryFigures {
   perYear: number | null;
   countingSince: Date | null;
   entityId: string;
-  heating: "gas" | "oil" | null;
+  heating: Heating | null;
 }
 
 /** One area of `electricity_lens/figures`: where each of its figures is kept. */

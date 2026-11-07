@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
 from math import log1p
 
-from .const import BOILER_EFFICIENCY, HEATING_OIL, OIL_KWH_PER_LITRE
+from .const import FUELS
 
 HOUR = 3600.0
 DAY = 24 * HOUR
@@ -231,12 +231,11 @@ def pv_saving(
 def heating_cost(heat: float, heating: str, price: float) -> float:
     """Return what the former heating would have paid for this heat.
 
-    Gas is priced per kWh, heating oil per litre. The efficiency is fixed.
+    The price is per unit of its fuel, such as a kWh of gas or a litre of oil.
+    Energy content and efficiency are fixed.
     """
-    fuel = heat / BOILER_EFFICIENCY
-    if heating == HEATING_OIL:
-        fuel /= OIL_KWH_PER_LITRE
-    return fuel * price
+    fuel = FUELS[heating]
+    return heat / fuel.efficiency / fuel.kwh_per_unit * price
 
 
 def heat_pump_saving(

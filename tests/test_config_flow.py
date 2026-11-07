@@ -70,6 +70,13 @@ def _options(result: Any, field: str) -> list[Any]:
     return list(selector.config["options"])
 
 
+def _unit(result: Any, field: str) -> str:
+    selector = next(
+        value for key, value in result["data_schema"].schema.items() if key == field
+    )
+    return selector.config["unit_of_measurement"]
+
+
 def _fields(result: Any) -> list[str]:
     return [str(key) for key in result["data_schema"].schema]
 
@@ -403,6 +410,41 @@ async def test_add_heat_pump_without_former_heating(hass: HomeAssistant) -> None
     assert data["before"] == data["current"] == {"scop": 4.2}
     assert "investment" not in data
     assert hass.states.get("sensor.heat_pump_saving") is None
+
+
+async def test_heat_pump_replacing_pellets(hass: HomeAssistant) -> None:
+    """A pellet heating asks for its price per kilogram, now and before."""
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "heat_pump"), context={"source": SOURCE_USER}
+    )
+    assert _options(result, "heating") == [
+        "gas",
+        "oil",
+        "lpg",
+        "pellets",
+        "district_heating",
+        "electric",
+        "none",
+    ]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {**HEAT_PUMP_METERS, "heating": "pellets"}
+    )
+    assert result["step_id"] == "heat_pump_values_pellets_scop"
+    assert _unit(result, "pellets_price") == "EUR/kg"
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"pellets_price": 0.35, "scop": 4.0}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _data(entry, "heat_pump")["before"] == {"price": 0.35, "scop": 4.0}
+
+    result = await _reconfigure(hass, entry, "heat_pump", "now")
+    assert result["step_id"] == "now_pellets"
+    assert _suggested(result)["pellets_price"] == 0.35
+    result = await _reconfigure(hass, entry, "heat_pump", "before")
+    assert result["step_id"] == "before_pellets"
 
 
 async def test_reconfigure_without_former_heating(hass: HomeAssistant) -> None:

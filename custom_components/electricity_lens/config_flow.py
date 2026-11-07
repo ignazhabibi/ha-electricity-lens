@@ -61,9 +61,9 @@ from .const import (
     CONF_SETUP_AT,
     CONF_STANDING_CHARGE,
     DOMAIN,
+    FUELS,
     HEATING_GAS,
     HEATING_NONE,
-    HEATING_OIL,
     VALUE_COMBUSTION_CONSUMPTION,
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
@@ -86,8 +86,7 @@ HOUSEHOLD_FIELDS = (CONF_STANDING_CHARGE, CONF_CHEAP_UNTIL, CONF_EXPENSIVE_FROM)
 # heating there is no price to ask for.
 PRICE_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
     CATEGORY_HEAT_PUMP: {
-        HEATING_GAS: ("gas_price", "gas_price_entity"),
-        HEATING_OIL: ("oil_price", "oil_price_entity"),
+        heating: (f"{heating}_price", f"{heating}_price_entity") for heating in FUELS
     },
     CATEGORY_WALLBOX: {COMPARISON_COMBUSTION: ("fuel_price", "fuel_price_entity")},
 }
@@ -241,7 +240,7 @@ def meters_schema(
         )
         fields[probatio.Optional(CONF_HEATING)] = SelectSelector(
             SelectSelectorConfig(
-                options=[HEATING_GAS, HEATING_OIL, HEATING_NONE],
+                options=[*FUELS, HEATING_NONE],
                 mode=SelectSelectorMode.LIST,
                 translation_key=CONF_HEATING,
             )
@@ -305,7 +304,6 @@ def values_schema(
     """
     currency = hass.config.currency
     prices = PRICE_FIELDS[category].get(heating)
-    unit = "kWh" if category == CATEGORY_HEAT_PUMP and heating == HEATING_GAS else "l"
     fields: dict[Any, Any] = {}
     if category == CATEGORY_WALLBOX and prices is not None:
         fields[probatio.Required(VALUE_EV_CONSUMPTION)] = _number(
@@ -315,6 +313,7 @@ def values_schema(
             "l/100 km", maximum=50, step=0.1
         )
     if prices is not None:
+        unit = FUELS[heating].unit if category == CATEGORY_HEAT_PUMP else "l"
         fields[probatio.Required(prices[0])] = _number(f"{currency}/{unit}")
     if scop:
         fields[probatio.Required(VALUE_SCOP)] = _number(maximum=10, step=0.1)
@@ -591,15 +590,6 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
         """Ask for the heat pump's averages since its data begins."""
         return await self._async_values(CATEGORY_HEAT_PUMP, user_input)
 
-    async_step_heat_pump_values_gas_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_gas_scop_until = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil_scop_until = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none_scop_until = async_step_heat_pump_values_gas
-
     async def async_step_wallbox_values(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -841,15 +831,6 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         """Ask for the heat pump's averages, compared with gas."""
         return await self.async_step_wallbox_values(user_input)
 
-    async_step_heat_pump_values_gas_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_gas_scop_until = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_oil_scop_until = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none_scop = async_step_heat_pump_values_gas
-    async_step_heat_pump_values_none_scop_until = async_step_heat_pump_values_gas
-
     # Changing a category
 
     async def async_step_reconfigure(
@@ -955,10 +936,6 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             errors=errors,
         )
 
-    async_step_now_gas = async_step_now
-    async_step_now_oil = async_step_now
-    async_step_now_none = async_step_now
-
     async def async_step_before(
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
@@ -1002,10 +979,6 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             },
         )
 
-    async_step_before_gas = async_step_before
-    async_step_before_oil = async_step_before
-    async_step_before_none = async_step_before
-
     async def async_step_meters(
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
@@ -1038,6 +1011,33 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             user_input if user_input is not None else subentry.data,
         )
         return self.async_show_form(step_id="meters", data_schema=schema, errors=errors)
+
+
+# Each former heating has steps of its own, so that their labels and units fit.
+# They all lead to the same handler.
+for _heating in (*FUELS, HEATING_NONE):
+    for _suffix in ("", "_scop", "_scop_until"):
+        _step = f"async_step_heat_pump_values_{_heating}{_suffix}"
+        setattr(
+            ElectricityLensConfigFlow,
+            _step,
+            ElectricityLensConfigFlow.async_step_heat_pump_values_gas,
+        )
+        setattr(
+            CategorySubentryFlow,
+            _step,
+            CategorySubentryFlow.async_step_heat_pump_values_gas,
+        )
+    setattr(
+        CategorySubentryFlow,
+        f"async_step_now_{_heating}",
+        CategorySubentryFlow.async_step_now,
+    )
+    setattr(
+        CategorySubentryFlow,
+        f"async_step_before_{_heating}",
+        CategorySubentryFlow.async_step_before,
+    )
 
 
 class HouseholdOptionsFlow(OptionsFlow):
