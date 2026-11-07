@@ -51,6 +51,26 @@ test("a household without solar power or categories has three views and no savin
   assert.ok(!typesOf(viewOf(all, "household")).includes("energy-solar-graph"));
 });
 
+test("without devices and a second source, no card shows a single share", () => {
+  const all = views(infoOf([]));
+
+  const cards = all.flatMap(cardsOf);
+  assert.ok(!cards.some((card) => card.stack === "consumer" || card.by === "consumer"));
+  assert.ok(!cards.some((card) => card.by === "source"));
+});
+
+test("devices bring the costs by device, price levels the shares by source", () => {
+  const device = area("device_washer", "device", { energy: ["sensor.washer"] });
+  const info = { ...infoOf([device]), levels: { cheap_until: 0.2, expensive_from: null } };
+
+  const all = views(info);
+
+  const costs = cardsOf(viewOf(all, "costs"));
+  assert.ok(costs.some((card) => card.stack === "consumer"));
+  assert.ok(costs.some((card) => card.by === "consumer"));
+  assert.ok(cardsOf(viewOf(all, "household")).some((card) => card.by === "source"));
+});
+
 test("the power flow stands on top where the grid has a power sensor", () => {
   const all = views(infoOf([], { grid: ["sensor.grid_power"], solar: [], battery: [] }));
 

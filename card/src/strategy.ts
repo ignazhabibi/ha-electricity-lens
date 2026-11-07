@@ -106,6 +106,9 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const heatPump = has("heat_pump");
   const car = has("wallbox");
   const devices = info.areas.some((area) => area.kind === "device");
+  // Shares by source need more than one source: solar power, or price levels
+  // that part the grid power. Without them a ring would be one whole.
+  const sources = Boolean(solar) || info.levels.cheap_until !== null || info.levels.expensive_from !== null;
   const savings = Boolean(solar?.statistics.saving?.length || heatPump || car || sensors.categories.length);
   const today = { period: "today" };
   // With a PV plant the price of a kWh includes its solar power; the name says so.
@@ -119,8 +122,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const quiet = { secondary: "none" };
   const sourceHistory = (area: string, options: Card = {}) =>
     card("electricity-lens-history-card", { area, figure: "energy", stack: "source", ...priceLine, ...options });
-  const ring = (area: string) =>
-    card("electricity-lens-breakdown-card", { area, by: "source", ...wide });
+  const ring = (area: string): Card[] =>
+    sources ? [card("electricity-lens-breakdown-card", { area, by: "source", ...wide })] : [];
   // Each investment shows its payback, and once it is paid back its return.
   // Home Assistant shows and hides them by the sensors' states.
   const investmentTiles = sensors.investments.flatMap(({ category, payback, annualReturn }) => [
@@ -196,7 +199,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ],
       [
         titled("energy-distribution", "strategy.distribution", wide),
-        ring("household"),
+        ...ring("household"),
         ...(solar ? [card("energy-self-sufficiency-gauge", half), card("energy-solar-consumed-gauge", half)] : []),
       ]
     )
@@ -223,24 +226,33 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
               }),
             ]
           : []),
-        titled("electricity-lens-history-card", "strategy.cost_history", {
-          area: "household",
-          figure: "cost",
-          stack: "consumer",
-          ...(solar ? {} : priceLine),
-        }),
+        // Costs by device need devices: without them, Other is the whole.
+        ...(devices
+          ? [
+              titled("electricity-lens-history-card", "strategy.cost_history", {
+                area: "household",
+                figure: "cost",
+                stack: "consumer",
+                ...(solar ? {} : priceLine),
+              }),
+            ]
+          : []),
       ],
       [
         own("grid", "grid_price", quiet),
         price("household", quiet),
-        titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
-          area: "household",
-          by: "consumer",
-          figure: "cost",
-          display: "bars",
-          color_by_source: true,
-          ...wide,
-        }),
+        ...(devices
+          ? [
+              titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
+                area: "household",
+                by: "consumer",
+                figure: "cost",
+                display: "bars",
+                color_by_source: true,
+                ...wide,
+              }),
+            ]
+          : []),
         ...(savings ? [card("electricity-lens-savings-card", wide)] : []),
       ]
     )
@@ -274,7 +286,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           own("heat_pump", "scop", quiet),
           own("heat_pump", "heat_price", quiet),
-          ring("heat_pump"),
+          ...ring("heat_pump"),
           ...(heatDevices(info).length
             ? [card("electricity-lens-heat-meters-card", wide)]
             : [
@@ -328,7 +340,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           own("wallbox", "device_grid_price", quiet),
           price("wallbox", quiet),
-          ring("wallbox"),
+          ...ring("wallbox"),
           card("electricity-lens-savings-card", { area: "wallbox", ...wide }),
         ]
       )

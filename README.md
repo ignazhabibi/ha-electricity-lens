@@ -437,9 +437,11 @@ strategy:
 ```
 
 It has no settings. It asks the integration what the household has and shows
-only the views that fit. Each view answers one question, and each card has
-one home; only the first view repeats headline figures, always for today. The
-other views follow the energy date selection.
+only the views and cards that fit: costs by device need individual devices in
+the energy dashboard, and shares by source need solar power or price levels.
+Each view answers one question, and each card has one home; only the first
+view repeats headline figures, always for today. The other views follow the
+energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
