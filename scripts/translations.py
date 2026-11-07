@@ -219,7 +219,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "household_saved": "Saved. The standing charge applies from {time}.",
             "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         },
-        "create_entry": 'The past is now being computed; with several years of data this can take a few minutes. You find the card "Electricity Lens" under "Add card" when editing a dashboard.',
+        "create_entry": 'The past is now being computed; with several years of data this can take a few minutes. Add the dashboard "Electricity Lens" under [Settings › Dashboards](/config/lovelace/dashboards) › "Add dashboard". Its cards are also under "Add card".',
         "devices": {"total": "Electricity Lens"},
         "entities": {
             "saving": "Saving",
@@ -477,7 +477,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "household_saved": "Gespeichert. Der Grundpreis gilt ab {time} Uhr.",
             "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         },
-        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«.",
+        "create_entry": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Das Dashboard »Electricity Lens« fügst du unter [Einstellungen › Dashboards](/config/lovelace/dashboards) › »Dashboard hinzufügen« hinzu. Seine Karten findest du auch unter »Karte hinzufügen«.",
         "devices": {"total": "Electricity Lens"},
         "entities": {
             "saving": "Ersparnis",

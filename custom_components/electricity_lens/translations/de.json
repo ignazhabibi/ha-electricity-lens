@@ -210,7 +210,7 @@
       "single_instance_allowed": "Electricity Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu."
     },
     "create_entry": {
-      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«."
+      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Das Dashboard »Electricity Lens« fügst du unter [Einstellungen › Dashboards](/config/lovelace/dashboards) › »Dashboard hinzufügen« hinzu. Seine Karten findest du auch unter »Karte hinzufügen«."
     }
   },
   "options": {

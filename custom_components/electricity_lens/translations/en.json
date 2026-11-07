@@ -210,7 +210,7 @@
       "single_instance_allowed": "Electricity Lens is already set up. Add more on its integration page."
     },
     "create_entry": {
-      "default": "The past is now being computed; with several years of data this can take a few minutes. You find the card \"Electricity Lens\" under \"Add card\" when editing a dashboard."
+      "default": "The past is now being computed; with several years of data this can take a few minutes. Add the dashboard \"Electricity Lens\" under [Settings › Dashboards](/config/lovelace/dashboards) › \"Add dashboard\". Its cards are also under \"Add card\"."
     }
   },
   "options": {
