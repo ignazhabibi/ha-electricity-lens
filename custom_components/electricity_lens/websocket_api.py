@@ -176,11 +176,22 @@ async def async_figures(
                         if threshold is not None
                         for key in (level, f"{level}_cost")
                     },
-                    saving=[saving_statistic_id(category)],
-                    **{
-                        figure: [category_statistic_id(category, figure)]
-                        for figure in CATEGORY_FIGURES[category]
-                    },
+                    # Without a comparison there is no saving, only its own figures.
+                    **(
+                        {
+                            "saving": [saving_statistic_id(category)],
+                            **{
+                                figure: [category_statistic_id(category, figure)]
+                                for figure in CATEGORY_FIGURES[category]
+                            },
+                        }
+                        if config.is_compared
+                        else {
+                            figure: [category_statistic_id(category, figure)]
+                            for figure in CATEGORY_FIGURES[category]
+                            if figure not in ("alternative_cost", "solar_saving")
+                        }
+                    ),
                     **(
                         {"heat_meters": list(config.heat_meters)}
                         if config.heat_meters
@@ -193,11 +204,28 @@ async def async_figures(
     # Only top-level devices add up to the household, beside "Other".
     top_level = set(effective_meters(parents, parents))
     paired_heat: dict[str, str] = {}
+    heat_compared = False
     if CATEGORY_HEAT_PUMP in categories:
         hp_config = categories[CATEGORY_HEAT_PUMP][1]
         hp_meters = effective_meters(hp_config.meters, parents)
+        heat_compared = hp_config.is_compared
         if len(hp_config.heat_meters) == len(hp_meters) > 1:
             paired_heat = dict(zip(hp_meters, hp_config.heat_meters, strict=True))
+
+    def heat_figures(device: str) -> dict[str, list[str]]:
+        """Return a heat pump device's heat, and with a comparison its saving."""
+        if device not in paired_heat:
+            return {}
+        figures = {"heat": [paired_heat[device]]}
+        if heat_compared:
+            for name in ("saving", "alternative_cost", "solar_saving"):
+                figures[name] = [
+                    category_statistic_id(
+                        CATEGORY_HEAT_PUMP, f"{device_area(device)}_{name}"
+                    )
+                ]
+        return figures
+
     areas.extend(
         {
             **area(
@@ -205,31 +233,7 @@ async def async_figures(
                 device_area(device.stat),
                 coordinator.device_name(device),
                 **household(device_area(device.stat), energy=[device.stat]),
-                **(
-                    {
-                        "heat": [paired_heat[device.stat]],
-                        "saving": [
-                            category_statistic_id(
-                                CATEGORY_HEAT_PUMP,
-                                f"{device_area(device.stat)}_saving",
-                            )
-                        ],
-                        "alternative_cost": [
-                            category_statistic_id(
-                                CATEGORY_HEAT_PUMP,
-                                f"{device_area(device.stat)}_alternative_cost",
-                            )
-                        ],
-                        "solar_saving": [
-                            category_statistic_id(
-                                CATEGORY_HEAT_PUMP,
-                                f"{device_area(device.stat)}_solar_saving",
-                            )
-                        ],
-                    }
-                    if device.stat in paired_heat
-                    else {}
-                ),
+                **heat_figures(device.stat),
             ),
             "top_level": device.stat in top_level,
             "power": [device.power] if device.power else [],

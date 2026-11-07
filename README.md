@@ -124,8 +124,8 @@ Electricity Lens works with any energy dashboard that has:
   energy dashboard marks as included in another selected meter are not
   counted twice. A meter belongs to one category only.
 
-Not supported: other alternatives than a gas or oil heating and a combustion
-car, gas prices per cubic metre, solar thermal, investments from a helper,
+Not supported: other alternatives than a gas or oil heating, or none, and a
+combustion car, gas prices per cubic metre, solar thermal, investments from a helper,
 and fetching prices from online services. Price sensors you already have can
 be used, though.
 
@@ -178,15 +178,15 @@ where it stopped.
    |---|---|
    | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
    | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
-   | Former heating | Gas or oil. |
-   | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. |
+   | Former heating | Gas or oil, or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the balance, but its heat, seasonal COP, heat price, and the Heating view. |
+   | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. Not with no former heating. |
 5. **Heat pump, average since the first data**:
    | Field | Description |
    |---|---|
-   | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. |
+   | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. Not with no former heating. |
    | Seasonal COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
    | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
-   | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. |
+   | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
 6. **Electric car**: charging meters, and the extra purchase cost over a
    combustion car (optional).
 7. **Electric car, average since the first data**: consumption of the electric
@@ -225,8 +225,9 @@ meter computes the household again, and a category whose meters changed.
 
 ## Entities
 
-Each category is a device with three sensors; one more device holds the
-overall balance.
+Each category is a device with these sensors; one more device holds the
+overall balance. A heat pump without a former heating saves nothing, so it has
+none: its heat and the figures built on it are statistics the cards show.
 
 | Entity | Description |
 |---|---|
@@ -452,7 +453,7 @@ energy date selection.
 | Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to the best solar day of the last twelve months, red below about a third of it and green from about two thirds once the data covers a year; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
-| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and, with a former heating, its saving reckoned up |
 | Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
 
 ### Colors

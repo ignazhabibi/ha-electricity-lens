@@ -62,7 +62,7 @@
       },
       "heat_pump": {
         "title": "Heat pump",
-        "description": "Compares the heat pump with your former heating.",
+        "description": "Compares the heat pump with your former heating, if there was one.",
         "data": {
           "meters": "Electricity consumption",
           "heat_meters": "Produced heat (optional)",
@@ -72,6 +72,7 @@
         "data_description": {
           "meters": "Total meter, or heating and hot water separately",
           "heat_meters": "Heat meters for the same parts as the electricity consumption",
+          "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
           "investment": "Extra purchase cost over a gas or oil heating. For the payback."
         }
       },
@@ -167,6 +168,40 @@
           "oil_price_entity": "Replaces the average from now on"
         }
       },
+      "heat_pump_values_none": {
+        "title": "Average since {since}",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "data": {
+          "tariff": "Own electricity tariff (optional)"
+        },
+        "data_description": {
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+        }
+      },
+      "heat_pump_values_none_scop": {
+        "title": "Average since {since}",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "data": {
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)"
+        },
+        "data_description": {
+          "scop": "Estimates the heat from the electricity consumption",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+        }
+      },
+      "heat_pump_values_none_scop_until": {
+        "title": "Average since {since}",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "data": {
+          "scop": "Seasonal COP",
+          "tariff": "Own electricity tariff (optional)"
+        },
+        "data_description": {
+          "scop": "Estimates the heat until {heat_until}; there are no readings before",
+          "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+        }
+      },
       "wallbox": {
         "title": "Electric car",
         "description": "Compares the electric car with a combustion car. What is charged at the wallbox is measured.",
@@ -202,7 +237,8 @@
       "meters_required": "Choose at least one meter.",
       "heating_required": "Choose the former heating.",
       "value_required": "Enter a value above 0.",
-      "scop_range": "Enter a seasonal COP between 1 and 10."
+      "scop_range": "Enter a seasonal COP between 1 and 10.",
+      "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
     },
     "abort": {
       "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
@@ -302,7 +338,8 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10."
+        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -321,7 +358,7 @@
       "step": {
         "user": {
           "title": "Heat pump",
-          "description": "Compares the heat pump with your former heating.",
+          "description": "Compares the heat pump with your former heating, if there was one.",
           "data": {
             "meters": "Electricity consumption",
             "heat_meters": "Produced heat (optional)",
@@ -331,6 +368,7 @@
           "data_description": {
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
+            "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
             "investment": "Extra purchase cost over a gas or oil heating. For the payback."
           }
         },
@@ -355,6 +393,7 @@
           "data_description": {
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
+            "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
             "investment": "Extra purchase cost over a gas or oil heating. For the payback."
           }
         },
@@ -454,6 +493,40 @@
             "oil_price_entity": "Replaces the average from now on"
           }
         },
+        "heat_pump_values_none": {
+          "title": "Average since {since}",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "data": {
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "heat_pump_values_none_scop": {
+          "title": "Average since {since}",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "data": {
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
+        "heat_pump_values_none_scop_until": {
+          "title": "Average since {since}",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "data": {
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "scop": "Estimates the heat until {heat_until}; there are no readings before",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
         "now_gas": {
           "title": "Values from now on",
           "description": "New values apply from the next full hour. What was computed stays.",
@@ -486,6 +559,18 @@
             "oil_price_entity": "Replaces the heating oil price"
           }
         },
+        "now_none": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "scop": "Estimates the heat from the electricity consumption",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
+        },
         "before_gas": {
           "title": "Before the setup",
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
@@ -513,6 +598,18 @@
             "scop": "Estimates the heat where none was measured",
             "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
           }
+        },
+        "before_none": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "scop": "Seasonal COP",
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "scop": "Estimates the heat where none was measured",
+            "tariff": "Only with a separate heat pump tariff; otherwise the energy dashboard's price counts"
+          }
         }
       },
       "error": {
@@ -520,7 +617,8 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10."
+        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -629,7 +727,8 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10."
+        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -685,7 +784,8 @@
             "name": "Former heating",
             "state": {
               "gas": "Gas",
-              "oil": "Oil"
+              "oil": "Oil",
+              "none": "None (new build)"
             }
           },
           "heat_estimated": {
@@ -774,7 +874,8 @@
     "heating": {
       "options": {
         "gas": "Gas",
-        "oil": "Oil"
+        "oil": "Oil",
+        "none": "None (new build)"
       }
     },
     "statistics": {

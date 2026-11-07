@@ -114,7 +114,9 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   // Shares by source need more than one source: solar power, or price levels
   // that part the grid power. Without them a ring would be one whole.
   const sources = Boolean(solar) || info.levels.cheap_until !== null || info.levels.expensive_from !== null;
-  const savings = Boolean(solar?.statistics.saving?.length || heatPump || car || sensors.categories.length);
+  // A heat pump or car saves only when compared with what it replaced.
+  const saves = (area?: FigureArea) => Boolean(area?.statistics.saving?.length);
+  const savings = saves(solar) || saves(heatPump) || saves(car) || sensors.categories.length > 0;
   const today = { period: "today" };
   // With a PV plant the price of a kWh includes its solar power; the name says so.
   const priceLine = {
@@ -329,7 +331,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
                     ]
                   : []),
               ]),
-          card("electricity-lens-savings-card", { area: "heat_pump", ...wide }),
+          ...(saves(heatPump) ? [card("electricity-lens-savings-card", { area: "heat_pump", ...wide })] : []),
         ]
       )
     );
@@ -357,7 +359,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
           own("wallbox", "device_grid_price", quiet),
           price("wallbox", quiet),
           ...ring("wallbox"),
-          card("electricity-lens-savings-card", { area: "wallbox", ...wide }),
+          ...(saves(car) ? [card("electricity-lens-savings-card", { area: "wallbox", ...wide })] : []),
         ]
       )
     );

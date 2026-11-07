@@ -193,6 +193,63 @@ async def test_heat_distance_and_alternative_costs(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_heat_pump_without_former_heating(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """Without a former heating the heat pump keeps its heat, but saves nothing.
+
+    It has no saving sensors and stays out of the balance.
+    """
+    # Arrange: a saving sensor left from when it had a former heating.
+    values = {"scop": 4.0}
+    entry = make_entry(
+        ("pv", PV_DATA),
+        (
+            "heat_pump",
+            {
+                **HEAT_PUMP_DATA,
+                "heating": "none",
+                "investment": None,
+                "before": values,
+                "current": values,
+            },
+        ),
+    )
+    entry.add_to_hass(hass)
+    heat_pump = next(
+        subentry_id
+        for subentry_id, subentry in entry.subentries.items()
+        if subentry.subentry_type == "heat_pump"
+    )
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{heat_pump}_saving",
+        config_entry=entry,
+        config_subentry_id=heat_pump,
+    )
+
+    # Act
+    await setup_entry(hass, entry)
+
+    # Assert
+    heat = await statistic_sums(hass, "electricity_lens:heat_pump_heat", data_start)
+    assert heat[-1] == pytest.approx(COUNTED * HP_KWH * 4.0)
+    for figure in ("saving", "alternative_cost", "solar_saving"):
+        assert (
+            await statistic_sums(
+                hass, f"electricity_lens:heat_pump_{figure}", data_start
+            )
+            == []
+        )
+    assert not registry.async_get_entity_id("sensor", DOMAIN, f"{heat_pump}_saving")
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert float(balance.state) == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
+    assert balance.attributes["invested"] == 10000
+
+
+@pytest.mark.usefixtures("energy")
 async def test_new_hours_continue_the_history(
     hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
 ) -> None:

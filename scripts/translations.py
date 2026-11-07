@@ -74,12 +74,13 @@ TEXTS: dict[str, dict[str, Any]] = {
             "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
             "no_export": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.",
         },
-        "heat_pump": "Compares the heat pump with your former heating.",
+        "heat_pump": "Compares the heat pump with your former heating, if there was one.",
         "wallbox": "Compares the electric car with a combustion car. What is charged at the wallbox is measured.",
         "values": {
             "title": "Average since {since}",
             "gas": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
             "oil": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
+            "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
             "wallbox": "For the time since {since}, Home Assistant knows neither fuel prices nor consumptions. Enter averages. They also apply from now on, until you change them.",
         },
         "now": {
@@ -131,7 +132,10 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Produced heat (optional)",
                 "Heat meters for the same parts as the electricity consumption",
             ),
-            "heating": ("Former heating", None),
+            "heating": (
+                "Former heating",
+                "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
+            ),
             "gas_price": ("Gas price", "Unit price on the gas bill"),
             "oil_price": ("Heating oil price", "Average price per litre"),
             "fuel_price": ("Fuel price", None),
@@ -199,13 +203,14 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Replaces the fuel price",
             ),
         },
-        "heating": {"gas": "Gas", "oil": "Oil"},
+        "heating": {"gas": "Gas", "oil": "Oil", "none": "None (new build)"},
         "errors": {
             "levels_order": "Expensive must be above cheap.",
             "meters_required": "Choose at least one meter.",
             "heating_required": "Choose the former heating.",
             "value_required": "Enter a value above 0.",
             "scop_range": "Enter a seasonal COP between 1 and 10.",
+            "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty.",
         },
         "aborts": {
             "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
@@ -332,12 +337,13 @@ TEXTS: dict[str, dict[str, Any]] = {
             "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
             "no_export": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.",
         },
-        "heat_pump": "Vergleicht die Wärmepumpe mit deiner früheren Heizung.",
+        "heat_pump": "Vergleicht die Wärmepumpe mit deiner früheren Heizung, falls es eine gab.",
         "wallbox": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
         "values": {
             "title": "Durchschnitt seit {since}",
             "gas": "Für die Zeit seit dem {since} kennt Home Assistant deine Gaspreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "oil": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizölpreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
             "wallbox": "Für die Zeit seit dem {since} kennt Home Assistant weder Spritpreise noch Verbräuche. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
         },
         "now": {
@@ -389,7 +395,10 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Erzeugte Wärme (optional)",
                 "Wärmemengenzähler für dieselben Teile wie der Stromverbrauch",
             ),
-            "heating": ("Frühere Heizung", None),
+            "heating": (
+                "Frühere Heizung",
+                "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, JAZ und Wärmepreis",
+            ),
             "gas_price": ("Gaspreis", "Arbeitspreis laut Gasrechnung"),
             "oil_price": ("Heizölpreis", "Durchschnittlicher Literpreis"),
             "fuel_price": ("Spritpreis", None),
@@ -457,13 +466,14 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Ersetzt den Spritpreis",
             ),
         },
-        "heating": {"gas": "Gas", "oil": "Öl"},
+        "heating": {"gas": "Gas", "oil": "Öl", "none": "Keine (Neubau)"},
         "errors": {
             "levels_order": "Teuer muss über günstig liegen.",
             "meters_required": "Wähle mindestens einen Zähler.",
             "heating_required": "Wähle die frühere Heizung.",
             "value_required": "Gib einen Wert über 0 an.",
             "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+            "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer.",
         },
         "aborts": {
             "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
@@ -622,25 +632,28 @@ def meters_block(t: dict[str, Any], category: str) -> dict[str, Any]:
 
 
 def heat_pump_values_steps(t: dict[str, Any], prefix: str) -> dict[str, Any]:
-    """Return the values forms of the heat pump for gas and oil.
+    """Return the values forms of the heat pump for each former heating.
 
     prefix is heat_pump_values (setup), now, or before. The setup has variants
     with and without the seasonal COP, and with the date until which it
-    estimates the heat.
+    estimates the heat. Without a former heating there is no price to ask for.
     """
     steps: dict[str, Any] = {}
-    for heating in ("gas", "oil"):
+    for heating in ("gas", "oil", "none"):
+        compared = heating != "none"
         price, entity = f"{heating}_price", f"{heating}_price_entity"
+        priced = [price] if compared else []
+        sensor = [entity] if compared else []
         if prefix == "heat_pump_values":
             variants = {
-                "": [price, "tariff", entity],
-                "_scop": [price, "scop", "tariff", entity],
-                "_scop_until": [price, "scop", "tariff", entity],
+                "": [*priced, "tariff", *sensor],
+                "_scop": [*priced, "scop", "tariff", *sensor],
+                "_scop_until": [*priced, "scop", "tariff", *sensor],
             }
             title, description = t["values"]["title"], t["values"][heating]
         else:
-            keys = [price, "scop", "tariff"]
-            variants = {"": [*keys, entity] if prefix == "now" else keys}
+            keys = [*priced, "scop", "tariff"]
+            variants = {"": [*keys, *sensor] if prefix == "now" else keys}
             title, description = t[prefix]["title"], t[prefix]["description"]
         for suffix, keys in variants.items():
             overrides: dict[str, str] = {}

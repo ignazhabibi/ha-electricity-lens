@@ -377,6 +377,68 @@ async def test_add_category(hass: HomeAssistant) -> None:
     assert hass.states.get("sensor.electric_car_saving") is not None
 
 
+async def test_add_heat_pump_without_former_heating(hass: HomeAssistant) -> None:
+    """A new build's heat pump asks for no prices and has no saving sensors."""
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "heat_pump"), context={"source": SOURCE_USER}
+    )
+    assert "none" in _options(result, "heating")
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {**HEAT_PUMP_METERS, "heating": "none"}
+    )
+    assert result["errors"] == {"investment": "investment_without_comparison"}
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"meters": ["sensor.heat_pump"], "heating": "none"}
+    )
+    assert result["step_id"] == "heat_pump_values_none_scop"
+    assert _fields(result) == ["scop", "tariff"]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"scop": 4.2}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(wait_background_tasks=True)
+    data = _data(entry, "heat_pump")
+    assert data["before"] == data["current"] == {"scop": 4.2}
+    assert "investment" not in data
+    assert hass.states.get("sensor.heat_pump_saving") is None
+
+
+async def test_reconfigure_without_former_heating(hass: HomeAssistant) -> None:
+    """Values from now on and before the setup ask for no price."""
+    values = {"scop": 4.0}
+    entry = make_entry(
+        (
+            "heat_pump",
+            {
+                **HEAT_PUMP_DATA,
+                "heating": "none",
+                "investment": None,
+                "before": values,
+                "current": values,
+            },
+        )
+    )
+    await setup_entry(hass, entry)
+    result = await _reconfigure(hass, entry, "heat_pump", "now")
+    assert result["step_id"] == "now_none"
+    assert _fields(result) == ["scop", "tariff"]
+    assert _suggested(result)["scop"] == 4.0
+    await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"scop": 3.5, "tariff": 0.24}
+    )
+    assert _data(entry, "heat_pump")["current"] == {"scop": 3.5, "tariff": 0.24}
+
+    result = await _reconfigure(hass, entry, "heat_pump", "before")
+    assert result["step_id"] == "before_none"
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"scop": 3.9}
+    )
+    assert result["reason"] == "recomputing"
+    assert _data(entry, "heat_pump")["before"] == {"scop": 3.9}
+
+
 async def test_add_pv(hass: HomeAssistant) -> None:
     """The PV plant is added in one step."""
     entry = make_entry(("wallbox", WALLBOX_DATA))
@@ -651,6 +713,7 @@ def test_values_form_input_uses_the_categorys_price_fields() -> None:
         "heat_pump", "gas", {"price": 0.1, "price_entity": "sensor.gas", "scop": 4.0}
     )
     assert form == {"gas_price": 0.1, "gas_price_entity": "sensor.gas", "scop": 4.0}
+    assert values_form_input("heat_pump", "none", {"scop": 4.0}) == {"scop": 4.0}
 
 
 async def test_scop_needed_without_heat_data(hass: HomeAssistant) -> None:

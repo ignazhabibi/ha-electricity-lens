@@ -144,6 +144,16 @@ async def async_setup_entry(
             ):
                 registry.async_remove(forecast)
     for subentry_id, subentry in entry.subentries.items():
+        config = coordinator.configs.get(subentry_id)
+        if config is not None and not config.is_compared:
+            # Without a comparison there is no saving to show. Its figures,
+            # such as the heat, are statistics the cards read.
+            for description in CATEGORY_SENSORS:
+                if stale := registry.async_get_entity_id(
+                    "sensor", DOMAIN, f"{subentry_id}_{description.key}"
+                ):
+                    registry.async_remove(stale)
+            continue
         async_add_entities(
             [
                 CategorySensor(

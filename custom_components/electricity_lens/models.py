@@ -25,6 +25,7 @@ from .const import (
     CONF_SETUP_AT,
     CONF_STANDING_CHARGE,
     HEATING_GAS,
+    HEATING_NONE,
     VALUE_COMBUSTION_CONSUMPTION,
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
@@ -94,6 +95,17 @@ class CategoryConfig:
     def values(self) -> tuple[str, ...]:
         """Return the keys of the values this category asks for."""
         return CATEGORY_VALUES.get(self.category, ())
+
+    @property
+    def is_compared(self) -> bool:
+        """Return whether the category is compared with what it replaced.
+
+        Only then does it save. A heat pump without a former heating, as in a
+        new build, still has its heat, seasonal COP, and heat price.
+        """
+        return not (
+            self.category == CATEGORY_HEAT_PUMP and self.heating == HEATING_NONE
+        )
 
     @property
     def fingerprint(self) -> str:
@@ -339,6 +351,8 @@ class CategoryResult:
     """The gas, oil, or fuel price in effect now."""
     heating: str | None = None
     heat_estimated: bool | None = None
+    compared: bool = True
+    """Whether it saves: without a comparison it stays out of the balance."""
 
     @property
     def balance_ready(self) -> bool:
@@ -362,12 +376,17 @@ class PaybackData:
     )
 
     @property
+    def _compared(self) -> list[CategoryResult]:
+        """Return the categories that save; only they take part in the balance."""
+        return [result for result in self.categories.values() if result.compared]
+
+    @property
     def balance(self) -> float | None:
         """Return all savings minus all investments.
 
         Unknown while any category is still calculating or has no data yet.
         """
-        results = list(self.categories.values())
+        results = self._compared
         if not results or not all(result.balance_ready for result in results):
             return None
         return sum(
@@ -377,17 +396,17 @@ class PaybackData:
     @property
     def saved(self) -> float:
         """Return all savings so far."""
-        return sum(result.saving or 0.0 for result in self.categories.values())
+        return sum(result.saving or 0.0 for result in self._compared)
 
     @property
     def invested(self) -> float:
         """Return all investments."""
-        return sum(result.investment or 0.0 for result in self.categories.values())
+        return sum(result.investment or 0.0 for result in self._compared)
 
     @property
     def per_year(self) -> float | None:
         """Return all yearly savings, once every category has a yearly figure."""
-        yearly = [result.per_year for result in self.categories.values()]
+        yearly = [result.per_year for result in self._compared]
         if self.balance is None or None in yearly:
             return None
         return sum(value or 0.0 for value in yearly)

@@ -45,6 +45,8 @@ VALUE_COMBUSTION_CONSUMPTION: Final = "combustion_consumption"
 
 HEATING_GAS: Final = "gas"
 HEATING_OIL: Final = "oil"
+HEATING_NONE: Final = "none"
+"""No former heating, as in a new build: nothing to compare with, so no saving."""
 
 # Fixed values almost nobody knows. The documentation names them.
 BOILER_EFFICIENCY: Final = 0.92

@@ -80,8 +80,8 @@ test("the power flow stands on top where the grid has a power sensor", () => {
 test("heat pump and car bring their views, and the savings with them", () => {
   const all = views(
     infoOf([
-      area("heat_pump", "category", { energy: ["sensor.heat_pump"] }),
-      area("wallbox", "category", { energy: ["sensor.wallbox"] }),
+      area("heat_pump", "category", { energy: ["sensor.heat_pump"], saving: ["electricity_lens:heat_pump_saving"] }),
+      area("wallbox", "category", { energy: ["sensor.wallbox"], saving: ["electricity_lens:wallbox_saving"] }),
     ])
   );
 
@@ -122,6 +122,15 @@ test("the forecast gauges have no colors before a year of solar data", () => {
   assert.equal(firstMonths?.max, 42);
   assert.equal(firstMonths?.severity, undefined);
   assert.equal(gauge({})?.max, undefined);
+});
+
+test("a heat pump without a former heating has its view but no saving", () => {
+  const all = views(infoOf([area("heat_pump", "category", { energy: ["sensor.heat_pump"], heat: ["electricity_lens:heat_pump_heat"] })]));
+
+  assert.ok(all.some((view) => view.path === "heating"));
+  const cards = all.flatMap(cardsOf);
+  assert.ok(!cards.some((card) => card.type === "custom:electricity-lens-savings-card"));
+  assert.ok(!cards.some((card) => card.type === "custom:electricity-lens-balance-card"));
 });
 
 test("several heat meters of the heat pump's devices share one card", () => {

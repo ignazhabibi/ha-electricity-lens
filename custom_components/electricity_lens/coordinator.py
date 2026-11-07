@@ -630,6 +630,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             saving = 0.0
             if config.category == CATEGORY_HEAT_PUMP:
                 heat = self._heat(config, state, changes, electricity, hour)
+                add("heat", hour, heat)
+                if not config.is_compared:
+                    continue
                 saving = heat_pump_saving(
                     electricity=electricity,
                     heat=heat,
@@ -638,7 +641,6 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     electricity_price=electricity_price,
                 )
                 alternative = heating_cost(heat, config.heating, fuel_price)
-                add("heat", hour, heat)
                 add("alternative_cost", hour, alternative)
                 add(
                     "solar_saving",
@@ -1200,6 +1202,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 if config.category == CATEGORY_PV
                 else self.current_price(config, state),
                 "heating": config.heating if is_heat_pump else None,
+                "compared": config.is_compared,
             }
             if (
                 state.data_start is None
