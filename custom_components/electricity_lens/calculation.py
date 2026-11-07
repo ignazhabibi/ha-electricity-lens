@@ -9,6 +9,7 @@ from __future__ import annotations
 from bisect import bisect_right
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, tzinfo
 from math import log1p
 
 from .const import BOILER_EFFICIENCY, HEATING_OIL, OIL_KWH_PER_LITRE
@@ -146,6 +147,68 @@ def average_price(
     return sum(price for price, _ in known) / len(known)
 
 
+@dataclass(frozen=True, slots=True)
+class GridPrices:
+    """The electricity price of each hour over all grid connections."""
+
+    mean: list[float | None]
+    """The mean price, which values what did not come from the grid."""
+    paid: list[float | None]
+    """What a kWh imported in the hour cost."""
+    low: list[float | None]
+    high: list[float | None]
+
+
+def combine_grid_prices(
+    hours: Sequence[float],
+    *,
+    means: Sequence[Sequence[float | None]],
+    paids: Sequence[Sequence[float | None]],
+    energies: Sequence[Mapping[float, float]],
+    ranges: Sequence[Mapping[float, tuple[float, float]]],
+) -> GridPrices:
+    """Return the prices of each hour over all grid connections.
+
+    means, paids, energies, and ranges hold one entry per grid connection:
+    its mean and paid prices, its imports, and its price sensor's lowest and
+    highest price per hour, if known. Each connection counts with what it
+    imported, as in average_price. The lowest and highest price of an hour
+    also hold its mean and paid price.
+    """
+
+    def over_grids(per_grid: Sequence[Sequence[float | None]]) -> list[float | None]:
+        return [
+            average_price(
+                [prices[index] for prices in per_grid],
+                [energy.get(hour, 0.0) for energy in energies],
+            )
+            for index, hour in enumerate(hours)
+        ]
+
+    mean = over_grids(means)
+    paid = over_grids(paids)
+    low: list[float | None] = []
+    high: list[float | None] = []
+    for index, hour in enumerate(hours):
+        known = [item[hour] for item in ranges if hour in item]
+        bounds = [price for price in (mean[index], paid[index]) if price is not None]
+        low.append(min([*bounds, *(item[0] for item in known)], default=None))
+        high.append(max([*bounds, *(item[1] for item in known)], default=None))
+    return GridPrices(mean=mean, paid=paid, low=low, high=high)
+
+
+def standing_charge_share(monthly: float, hour: float, time_zone: tzinfo) -> float:
+    """Return the standing charge of an hour: an even share of its month's.
+
+    Months begin at local midnight, so a month with a change to or from
+    summer time has an hour less or more.
+    """
+    local = datetime.fromtimestamp(hour, time_zone)
+    month = local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (month + timedelta(days=32)).replace(day=1)
+    return monthly / ((next_month.timestamp() - month.timestamp()) / HOUR)
+
+
 def pv_saving(
     *,
     solar: float,
@@ -186,6 +249,54 @@ def heat_pump_saving(
 ) -> float:
     """Return what the heat pump saved in one hour, compared with the former heating."""
     return heating_cost(heat, heating, fuel_price) - electricity * electricity_price
+
+
+def estimated_heat(
+    electricity: float,
+    *,
+    entered_scop: float | None,
+    measured_heat: float,
+    measured_electricity: float,
+    measuring: bool,
+) -> float:
+    """Return the heat of an hour no heat meter measured, from its electricity.
+
+    Before the heat meters began to measure, the seasonal COP entered for that
+    time counts; later gaps use the COP measured until then. measured_heat and
+    measured_electricity are what the measured hours so far added up to.
+    """
+    scop = None if measuring else entered_scop
+    if scop is None and measured_electricity > 0:
+        scop = measured_heat / measured_electricity
+    if scop is None:
+        scop = entered_scop or 0.0
+    return electricity * scop
+
+
+def fuel_price(
+    *, sensor: float | None, last_sensor: float | None, entered: float | None
+) -> float:
+    """Return the gas, oil, or fuel price of an hour.
+
+    A price sensor takes precedence. While it has no value, its last value
+    counts, and without one the price entered for that time.
+    """
+    if sensor is not None:
+        return sensor
+    if last_sensor is not None:
+        return last_sensor
+    return entered or 0.0
+
+
+def solar_saving(*, alternative_cost: float, cost: float, saving: float) -> float:
+    """Return what a device's solar power added to its saving in one hour.
+
+    The saving counts all of the device's electricity at the hour's price, as
+    the benefit of solar power belongs to the PV plant. The device's cost
+    counts its solar power at the feed-in compensation it did not earn. What
+    remains between them and the alternative is what its solar power saved.
+    """
+    return alternative_cost - cost - saving
 
 
 def wallbox_distance(electricity: float, ev_consumption: float) -> float:

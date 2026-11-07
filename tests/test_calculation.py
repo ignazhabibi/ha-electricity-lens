@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import pytest
 
 from custom_components.electricity_lens.calculation import (
@@ -10,8 +13,11 @@ from custom_components.electricity_lens.calculation import (
     YEAR,
     Timeline,
     average_price,
+    combine_grid_prices,
     effective_meters,
     electricity_prices,
+    estimated_heat,
+    fuel_price,
     heat_pump_saving,
     heating_cost,
     household_hour,
@@ -20,6 +26,8 @@ from custom_components.electricity_lens.calculation import (
     paid_prices,
     price_level,
     pv_saving,
+    solar_saving,
+    standing_charge_share,
     summarize,
     wallbox_saving,
 )
@@ -364,3 +372,79 @@ def test_balance_figures() -> None:
         "surplus_percent": pytest.approx(20),
     }
     assert _surplus(paying) == {"surplus": None, "surplus_percent": None}
+
+
+def test_combine_grid_prices() -> None:
+    """Each grid connection counts with its imports; the bounds hold all prices."""
+    hours = [0.0, HOUR]
+    prices = combine_grid_prices(
+        hours,
+        means=[[0.30, 0.30], [0.10, None]],
+        paids=[[0.28, 0.30], [0.10, None]],
+        energies=[{0.0: 3.0}, {0.0: 1.0}],
+        ranges=[{0.0: (0.20, 0.40)}, {}],
+    )
+    assert prices.mean == pytest.approx([0.25, 0.30])
+    assert prices.paid == pytest.approx([0.235, 0.30])
+    assert prices.low == pytest.approx([0.20, 0.30])
+    assert prices.high == pytest.approx([0.40, 0.30])
+
+
+def test_standing_charge_share() -> None:
+    """A month's standing charge is shared evenly over its hours."""
+    berlin = ZoneInfo("Europe/Berlin")
+    february = datetime(2025, 2, 10, 12, tzinfo=berlin).timestamp()
+    assert standing_charge_share(28 * 24, february, berlin) == pytest.approx(1.0)
+    # March 2025 has an hour less: summer time begins.
+    march = datetime(2025, 3, 10, 12, tzinfo=berlin).timestamp()
+    assert standing_charge_share(31 * 24 - 1, march, berlin) == pytest.approx(1.0)
+
+
+def test_estimated_heat() -> None:
+    """The entered COP counts before measuring, the measured COP in later gaps."""
+    assert estimated_heat(
+        2.0,
+        entered_scop=4.0,
+        measured_heat=0.0,
+        measured_electricity=0.0,
+        measuring=False,
+    ) == pytest.approx(8.0)
+    assert estimated_heat(
+        2.0,
+        entered_scop=4.0,
+        measured_heat=30.0,
+        measured_electricity=10.0,
+        measuring=True,
+    ) == pytest.approx(6.0)
+    # Measuring, but without electricity yet: the entered COP, else nothing.
+    assert estimated_heat(
+        2.0, entered_scop=4.0, measured_heat=0, measured_electricity=0, measuring=True
+    ) == pytest.approx(8.0)
+    assert estimated_heat(
+        2.0, entered_scop=None, measured_heat=0, measured_electricity=0, measuring=True
+    ) == pytest.approx(0.0)
+
+
+def test_fuel_price() -> None:
+    """A sensor's price first, then its last price, then the entered one."""
+    assert fuel_price(sensor=1.9, last_sensor=1.7, entered=1.5) == 1.9
+    assert fuel_price(sensor=None, last_sensor=1.7, entered=1.5) == 1.7
+    assert fuel_price(sensor=None, last_sensor=None, entered=1.5) == 1.5
+    assert fuel_price(sensor=None, last_sensor=None, entered=None) == 0.0
+
+
+def test_solar_saving() -> None:
+    """What the solar power added: the hour's price against the lost compensation."""
+    # 2 kWh, half solar power; grid power at 0.30, feed-in at 0.08.
+    saving = heat_pump_saving(
+        electricity=2.0,
+        heat=8.0,
+        heating="gas",
+        fuel_price=0.10,
+        electricity_price=0.30,
+    )
+    alternative = heating_cost(8.0, "gas", 0.10)
+    cost = 1.0 * 0.30 + 1.0 * 0.08
+    assert solar_saving(
+        alternative_cost=alternative, cost=cost, saving=saving
+    ) == pytest.approx(1.0 * (0.30 - 0.08))

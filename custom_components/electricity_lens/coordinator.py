@@ -6,7 +6,6 @@ import logging
 import math
 from collections.abc import Callable, Collection, Iterator
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import timedelta
 from time import time
 from typing import Any
@@ -32,10 +31,14 @@ from .calculation import (
     HOUR,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
+    GridPrices,
     average_price,
+    combine_grid_prices,
     effective_meters,
     electricity_prices,
+    estimated_heat,
     fuel_cost,
+    fuel_price,
     heat_pump_saving,
     heating_cost,
     household_hour,
@@ -43,6 +46,8 @@ from .calculation import (
     paid_prices,
     price_level,
     pv_saving,
+    solar_saving,
+    standing_charge_share,
     summarize,
     wallbox_distance,
     wallbox_saving,
@@ -120,18 +125,6 @@ CATEGORY_CALCULATION_VERSION = 4
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
 
-@dataclass(frozen=True, slots=True)
-class GridPrices:
-    """The electricity price of each hour over all grid connections."""
-
-    mean: list[float | None]
-    """The mean price, which values what did not come from the grid."""
-    paid: list[float | None]
-    """What a kWh imported in the hour cost."""
-    low: list[float | None]
-    high: list[float | None]
-
-
 def _hours(start: float, end: float) -> list[float]:
     return [start + index * HOUR for index in range(int((end - start) // HOUR))]
 
@@ -174,10 +167,7 @@ def _standing_charge(state: HouseholdState, hour: float) -> float:
     monthly = state.standing_charge.value_at(hour)
     if not isinstance(monthly, int | float):
         return 0.0
-    local = dt_util.as_local(dt_util.utc_from_timestamp(hour))
-    month = local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month = (month + timedelta(days=32)).replace(day=1)
-    return monthly / ((next_month.timestamp() - month.timestamp()) / HOUR)
+    return standing_charge_share(monthly, hour, dt_util.get_default_time_zone())
 
 
 def _number(hass: HomeAssistant, entity_id: str | None) -> float | None:
@@ -233,7 +223,9 @@ def _heat_meter_figures(
         yield f"{device_area(meter)}_alternative_cost", alternative
         yield (
             f"{device_area(meter)}_solar_saving",
-            alternative - device_costs[meter] - saving,
+            solar_saving(
+                alternative_cost=alternative, cost=device_costs[meter], saving=saving
+            ),
         )
 
 
@@ -651,7 +643,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 add(
                     "solar_saving",
                     hour,
-                    alternative - sum(device_costs.values()) - saving,
+                    solar_saving(
+                        alternative_cost=alternative,
+                        cost=sum(device_costs.values()),
+                        saving=saving,
+                    ),
                 )
                 if len(config.heat_meters) == len(meters) > 1 and all(
                     hour in changes.get(m, {}) for m in config.heat_meters
@@ -683,7 +679,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 add(
                     "solar_saving",
                     hour,
-                    alternative - sum(device_costs.values()) - saving,
+                    solar_saving(
+                        alternative_cost=alternative,
+                        cost=sum(device_costs.values()),
+                        saving=saving,
+                    ),
                 )
             if saving:
                 state.saving += saving
@@ -742,14 +742,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         After the setup a price sensor takes precedence. While it has no value,
         its last value counts.
         """
+        sensor = last = None
         if hour >= config.setup_at and (entity := _price_entity_at(state, hour)):
-            price = entity_values.get(entity, {}).get(hour)
-            if price is not None:
-                state.last_prices[entity] = price
-                return price
-            if (last := state.last_prices.get(entity)) is not None:
-                return last
-        return value_at(config, state, VALUE_PRICE, hour) or 0.0
+            if (sensor := entity_values.get(entity, {}).get(hour)) is not None:
+                state.last_prices[entity] = sensor
+            last = state.last_prices.get(entity)
+        return fuel_price(
+            sensor=sensor,
+            last_sensor=last,
+            entered=value_at(config, state, VALUE_PRICE, hour),
+        )
 
     @staticmethod
     def _heat(
@@ -773,16 +775,15 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             state.measured_heat += heat
             state.measured_electricity += electricity
             return heat
-        scop = None
-        if state.heat_start is None:
-            scop = value_at(config, state, VALUE_SCOP, hour)
-        if scop is None and state.measured_electricity > 0:
-            scop = state.measured_heat / state.measured_electricity
-        if scop is None:
-            scop = value_at(config, state, VALUE_SCOP, hour) or 0.0
         if electricity:
             state.estimated = True
-        return electricity * scop
+        return estimated_heat(
+            electricity,
+            entered_scop=value_at(config, state, VALUE_SCOP, hour),
+            measured_heat=state.measured_heat,
+            measured_electricity=state.measured_electricity,
+            measuring=state.heat_start is not None,
+        )
 
     def _grid_prices(
         self,
@@ -829,28 +830,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             )
             energies.append(energy)
             grid_ranges.append(grid_range)
-
-        def over_grids(per_grid: list[list[float | None]]) -> list[float | None]:
-            return [
-                average_price(
-                    [prices[index] for prices in per_grid],
-                    [energy.get(hour, 0.0) for energy in energies],
-                )
-                for index, hour in enumerate(hours)
-            ]
-
-        mean = over_grids(means)
-        paid = over_grids(paids)
-        low: list[float | None] = []
-        high: list[float | None] = []
-        for index, hour in enumerate(hours):
-            known = [item[hour] for item in grid_ranges if hour in item]
-            bounds = [
-                price for price in (mean[index], paid[index]) if price is not None
-            ]
-            low.append(min([*bounds, *(item[0] for item in known)], default=None))
-            high.append(max([*bounds, *(item[1] for item in known)], default=None))
-        return GridPrices(mean=mean, paid=paid, low=low, high=high)
+        return combine_grid_prices(
+            hours, means=means, paids=paids, energies=energies, ranges=grid_ranges
+        )
 
     def _household_fingerprint(self, setup: EnergySetup) -> str:
         """Identify what changes the household's computed past.
