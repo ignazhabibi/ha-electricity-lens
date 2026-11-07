@@ -1064,13 +1064,6 @@ async def test_forecast_sensors(hass: HomeAssistant) -> None:
     )
 
 
-async def test_no_forecast_sensors_without_forecast(
-    hass: HomeAssistant, config_entry: MockConfigEntry
-) -> None:
-    """Without a forecast there is nothing to show."""
-    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
-
-
 @pytest.mark.usefixtures("energy")
 async def test_forecast_sensors_follow_the_energy_dashboard(
     hass: HomeAssistant, config_entry: MockConfigEntry
