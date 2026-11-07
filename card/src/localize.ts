@@ -193,6 +193,26 @@ const en = {
   "strategy.devices_graph": "Consumption over time",
   "strategy.distribution": "Power flow",
   "strategy.not_loaded": "Set up the Electricity Lens integration to see this dashboard.",
+  "flow.title": "Power right now",
+  "flow.consumption": "Consumption {power}",
+  "flow.from": "From",
+  "flow.to": "To",
+  "flow.battery": "Battery",
+  "flow.other": "Other",
+  "flow.idle": "No power is flowing right now.",
+  "flow.grid": "All power comes from the grid.",
+  "flow.share_solar": "The PV plant covers {share}, {grid} come from the grid.",
+  "flow.share_battery": "The battery covers {share}, {grid} come from the grid.",
+  "flow.share_both": "PV plant and battery cover {share}, {grid} come from the grid.",
+  "flow.covered_solar": "The PV plant covers all consumption",
+  "flow.covered_battery": "The battery covers all consumption",
+  "flow.covered_both": "PV plant and battery cover all consumption",
+  "flow.surplus_grid": "{power} go to the grid",
+  "flow.surplus_battery": "{power} go to the battery",
+  "flow.surplus_both": "{grid} go to the grid, {battery} to the battery",
+  "flow.no_sensor":
+    "Add a power sensor for the grid in the energy dashboard to see where electricity flows right now.",
+  "flow.unavailable": "The power can't be read right now.",
 };
 
 export type Key = keyof typeof en;
@@ -390,6 +410,26 @@ const de: Record<Key, string> = {
   "strategy.devices_graph": "Verbrauchsverlauf",
   "strategy.distribution": "Stromfluss",
   "strategy.not_loaded": "Richte die Integration Electricity Lens ein, um dieses Dashboard zu sehen.",
+  "flow.title": "Strom gerade",
+  "flow.consumption": "Verbrauch {power}",
+  "flow.from": "Woher",
+  "flow.to": "Wohin",
+  "flow.battery": "Batterie",
+  "flow.other": "Sonstiges",
+  "flow.idle": "Gerade fließt kein Strom.",
+  "flow.grid": "Der ganze Strom kommt aus dem Netz.",
+  "flow.share_solar": "Die PV-Anlage deckt {share}, {grid} kommen aus dem Netz.",
+  "flow.share_battery": "Die Batterie deckt {share}, {grid} kommen aus dem Netz.",
+  "flow.share_both": "PV-Anlage und Batterie decken {share}, {grid} kommen aus dem Netz.",
+  "flow.covered_solar": "Die PV-Anlage deckt den ganzen Verbrauch",
+  "flow.covered_battery": "Die Batterie deckt den ganzen Verbrauch",
+  "flow.covered_both": "PV-Anlage und Batterie decken den ganzen Verbrauch",
+  "flow.surplus_grid": "{power} gehen ins Netz",
+  "flow.surplus_battery": "{power} gehen in die Batterie",
+  "flow.surplus_both": "{grid} gehen ins Netz, {battery} in die Batterie",
+  "flow.no_sensor":
+    "Gib im Energie-Dashboard einen Leistungssensor für das Netz an, um zu sehen, wohin der Strom gerade fließt.",
+  "flow.unavailable": "Die Leistung lässt sich gerade nicht lesen.",
 };
 
 const languages: Record<string, Record<Key, string>> = { en, de };

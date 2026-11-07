@@ -21,7 +21,10 @@ affect the solution.
   Cards and strategy only add up statistics over a period, take one sum from
   another, and divide two sums (`card/src/figures.ts`, tested in `card/test/`),
   so two cards always agree. Rules and valuations, such as what a kWh costs or
-  what counts as a saving, belong to the integration.
+  what counts as a saving, belong to the integration. The one exception is the
+  power right now (`card/src/flow.ts`): the power flow card adds up and takes
+  apart the current states of the energy dashboard's power sensors, which the
+  integration names in `electricity_lens/figures`.
 - **Two questions, two numbers.** Costs count a device's solar power at the lost
   feed-in compensation. Savings give the benefit of solar power to the PV plant
   alone and count a device's electricity at the hour's price, so that the three

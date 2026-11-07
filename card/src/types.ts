@@ -73,12 +73,17 @@ export interface FigureArea {
   investment?: boolean;
   /** For devices: whether it is not part of another device. */
   top_level?: boolean;
+  /** For devices and categories: the energy dashboard's sensors of their power right now. */
+  power?: string[];
 }
 
 export interface FiguresInfo {
   calculating: boolean;
   levels: { cheap_until: number | null; expensive_from: number | null };
   areas: FigureArea[];
+  /** The energy dashboard's power sensors of the sources: the grid's are
+   * positive while importing, the batteries' while discharging. */
+  power?: { grid: string[]; solar: string[]; battery: string[] };
 }
 
 /** Rows of `recorder/statistics_during_period` with all types. */

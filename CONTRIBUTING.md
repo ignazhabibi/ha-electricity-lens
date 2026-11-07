@@ -41,7 +41,7 @@ Both are committed, because HACS installs exactly what is published.
 - **Translations:** edit `scripts/translations.py`, then run it.
 - **Card:** edit `card/src/`, then run `npm --prefix card run build`.
 
-The key figures' arithmetic and the history chart have tests in `card/test/`, run with
+The key figures' arithmetic, the power flow, and the history chart have tests in `card/test/`, run with
 `npm --prefix card test` and by the quality gate.
 
 ## Python
@@ -69,6 +69,8 @@ The key figures' arithmetic and the history chart have tests in `card/test/`, ru
 ## Cards
 
 - Cards read statistics and show them. Calculations belong to the integration.
+  Only the power flow card reads current states: the power sensors the energy
+  dashboard knows.
 - Colors live in `card/src/colors.ts`, texts in `card/src/localize.ts`, in English
   and German.
 - The cards follow Home Assistant's energy cards, in light and dark themes, on
