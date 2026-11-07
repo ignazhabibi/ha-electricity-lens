@@ -199,6 +199,9 @@ where it stopped.
 | Option | What it does |
 |---|---|
 | Standing charge and price levels | A new standing charge applies from the next full hour. New price levels sort the whole past again. |
+
+Changes to the energy dashboard's grid, solar, battery, or devices compute the
+household and all categories again.
 | Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Categories are config subentries. On the integration page each category has
@@ -512,8 +515,11 @@ actions:
 - **Heat pump or electric car are not offered**: their meters must be listed
   under *Individual devices* in the energy dashboard.
 - **A figure jumps implausibly**: a meter probably recorded a wrong reading.
-  Fix it under **Developer tools › Statistics**, then choose *Reconfigure ›
-  Recompute* for the category.
+  Fix it under **Developer tools › Statistics**, then choose *Configure ›
+  Recompute* on the integration page. It computes the household and all
+  categories again, as costs and solar power of the devices build on the
+  household. If only a category's own meter was wrong, such as a heat meter,
+  *Reconfigure › Recompute* for that category is enough.
 - **A repair issue says a meter or price sensor is missing**: it was removed.
   The category keeps its last figures, or the sensor's last price. Add it back,
   or choose another one with *Reconfigure*.

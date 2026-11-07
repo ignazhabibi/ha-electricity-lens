@@ -296,6 +296,30 @@ async def test_progress_survives_restart(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_update_computes_nothing_again(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Progress from before categories followed the household stays as it is."""
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    stored = await coordinator._store.async_load()
+    assert stored is not None
+    for category in stored["categories"].values():
+        del category["household"]
+    await coordinator._store.async_save(stored)
+
+    with patch(
+        "custom_components.electricity_lens.coordinator.async_hourly_changes"
+    ) as changes:
+        await hass.config_entries.async_reload(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+    changes.assert_not_called()
+    household = config_entry.runtime_data.household_state.fingerprint
+    for state in config_entry.runtime_data.states.values():
+        assert state.household == household
+
+
+@pytest.mark.usefixtures("energy")
 async def test_phases(hass: HomeAssistant, data_start: datetime) -> None:
     """Before the setup the averages count, after it the current values."""
     setup_at = (data_start + timedelta(hours=24)).timestamp()

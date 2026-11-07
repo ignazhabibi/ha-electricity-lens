@@ -119,6 +119,8 @@ class CategoryState:
     """The persisted progress of one category."""
 
     fingerprint: str = ""
+    household: str | None = None
+    """The household's fingerprint the past was computed with."""
     heating: str | None = None
     """The former heating the timelines were recorded for."""
     data_start: float | None = None
@@ -168,6 +170,7 @@ class CategoryState:
         """Return the state for storage."""
         return {
             "fingerprint": self.fingerprint,
+            "household": self.household,
             "heating": self.heating,
             "data_start": self.data_start,
             "heat_start": self.heat_start,
@@ -190,6 +193,7 @@ class CategoryState:
         """Restore the state from storage."""
         return cls(
             fingerprint=data.get("fingerprint", ""),
+            household=data.get("household"),
             heating=data.get("heating"),
             data_start=data.get("data_start"),
             heat_start=data.get("heat_start"),

@@ -393,6 +393,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         started = time()
         if (computing := self.progress()) is not None:
             _LOGGER.debug("Computing the past, %s %% done", computing)
+        # The household comes first: the categories read its devices' costs
+        # from its statistics.
         await self._async_advance_household(setup, end)
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
@@ -474,6 +476,14 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             return
         ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+        household = self.household_state.fingerprint
+        if state.household is None:
+            state.household = household
+        elif state.household != household:
+            # The category builds on the household's figures, such as what the
+            # solar power of its devices cost: computed again, it is too.
+            state.reset(state.fingerprint)
+            state.household = household
         if state.data_start is None:
             state.data_start = await async_first_hour(
                 self.hass, self._key_stats(config, setup)
