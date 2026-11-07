@@ -20,6 +20,7 @@ from homeassistant.helpers import (
     entity_registry as er,
     issue_registry as ir,
 )
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -28,7 +29,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
 
 from custom_components.electricity_lens import coordinator as coordinator_module
 from custom_components.electricity_lens.calculation import HOUR
-from custom_components.electricity_lens.const import DOMAIN
+from custom_components.electricity_lens.const import DOMAIN, SIGNAL_ENERGY_PREFS_UPDATED
 from custom_components.electricity_lens.coordinator import ElectricityLensCoordinator
 from custom_components.electricity_lens.models import CategoryConfig, CategoryState
 from custom_components.electricity_lens.sources import EnergyInterfaceError
@@ -1068,3 +1069,53 @@ async def test_no_forecast_sensors_without_forecast(
 ) -> None:
     """Without a forecast there is nothing to show."""
     assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_forecast_sensors_follow_the_energy_dashboard(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """A forecast added later brings its sensors; removed, they go."""
+    await setup_entry(hass, config_entry)
+    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
+
+    with patch(
+        "custom_components.electricity_lens.coordinator.async_solar_forecast",
+        AsyncMock(return_value=(12.5, 20.25)),
+    ):
+        await set_energy_prefs(
+            hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+    assert (
+        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
+        == 12.5
+    )
+
+    await set_energy_prefs(hass, PREFS)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    assert not er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{config_entry.entry_id}_forecast_rest_today"
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_unreadable_energy_dashboard_change_only_refreshes(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """If the change cannot be read, the update reports it; nothing reloads."""
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    with (
+        patch(
+            "custom_components.electricity_lens.async_get_energy_setup",
+            side_effect=EnergyInterfaceError("moved"),
+        ),
+        patch.object(coordinator, "async_request_refresh", AsyncMock()) as refresh,
+    ):
+        async_dispatcher_send(hass, SIGNAL_ENERGY_PREFS_UPDATED)
+        await hass.async_block_till_done()
+    refresh.assert_awaited_once()
+    assert config_entry.runtime_data is coordinator
