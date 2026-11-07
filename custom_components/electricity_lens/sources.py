@@ -282,6 +282,35 @@ async def async_solar_forecast(
     return rest, ahead
 
 
+async def async_best_day(
+    hass: HomeAssistant, stat_ids: Iterable[str], start: float
+) -> float | None:
+    """Return the most energy the statistics measured together on a day since start.
+
+    Days are those of Home Assistant's time zone, as in the energy dashboard.
+    None without data.
+    """
+    ids = set(stat_ids)
+    if not ids:
+        return None
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        dt_util.utc_from_timestamp(start),
+        None,
+        ids,
+        "day",
+        {"energy": "kWh"},
+        {"change"},
+    )
+    days: dict[float, float] = {}
+    for series in _rows_to_series(rows, "change").values():
+        for day, change in series.items():
+            days[day] = days.get(day, 0.0) + change
+    best = max(days.values(), default=0.0)
+    return best if best > 0 else None
+
+
 async def async_get_energy_setup(hass: HomeAssistant) -> EnergySetup:
     """Return the current energy dashboard setup."""
     manager = await _async_manager(hass)

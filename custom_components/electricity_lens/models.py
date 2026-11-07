@@ -13,8 +13,11 @@ from .calculation import Timeline
 from .const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_WALLBOX,
+    COMPARISON_COMBUSTION,
+    COMPARISON_NONE,
     CONF_BEFORE,
     CONF_CHEAP_UNTIL,
+    CONF_COMPARISON,
     CONF_CURRENT,
     CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
@@ -25,6 +28,7 @@ from .const import (
     CONF_SETUP_AT,
     CONF_STANDING_CHARGE,
     HEATING_GAS,
+    HEATING_NONE,
     VALUE_COMBUSTION_CONSUMPTION,
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
@@ -65,6 +69,8 @@ class CategoryConfig:
     meters: tuple[str, ...] = ()
     heat_meters: tuple[str, ...] = ()
     heating: str = HEATING_GAS
+    comparison: str = COMPARISON_COMBUSTION
+    """What the electric car is compared with."""
     setup_at: float = 0.0
     before: Mapping[str, float] = field(default_factory=dict[str, float])
     current: Mapping[str, float] = field(default_factory=dict[str, float])
@@ -83,6 +89,7 @@ class CategoryConfig:
             meters=tuple(data.get(CONF_METERS, ())),
             heat_meters=tuple(data.get(CONF_HEAT_METERS, ())),
             heating=data.get(CONF_HEATING, HEATING_GAS),
+            comparison=data.get(CONF_COMPARISON, COMPARISON_COMBUSTION),
             setup_at=float(data.get(CONF_SETUP_AT, 0.0)),
             before=_numbers(data.get(CONF_BEFORE)),
             current=_numbers(current),
@@ -96,6 +103,20 @@ class CategoryConfig:
         return CATEGORY_VALUES.get(self.category, ())
 
     @property
+    def is_compared(self) -> bool:
+        """Return whether the category is compared with what it replaced.
+
+        Only then does it save. A heat pump without a former heating, as in a
+        new build, still has its heat, seasonal COP, and heat price; an
+        electric car without a combustion car its charging costs and mix.
+        """
+        if self.category == CATEGORY_HEAT_PUMP:
+            return self.heating != HEATING_NONE
+        if self.category == CATEGORY_WALLBOX:
+            return self.comparison != COMPARISON_NONE
+        return True
+
+    @property
     def fingerprint(self) -> str:
         """Identify the settings that change the computed past.
 
@@ -107,6 +128,12 @@ class CategoryConfig:
             "meters": sorted(self.meters),
             "heat_meters": sorted(self.heat_meters),
             "heating": self.heating,
+            # Only when set, so that the cars compared as before keep their past.
+            **(
+                {"comparison": self.comparison}
+                if self.comparison != COMPARISON_COMBUSTION
+                else {}
+            ),
             "setup_at": self.setup_at,
             "before": dict(sorted(self.before.items())),
             "recompute": self.recompute,
@@ -339,6 +366,8 @@ class CategoryResult:
     """The gas, oil, or fuel price in effect now."""
     heating: str | None = None
     heat_estimated: bool | None = None
+    compared: bool = True
+    """Whether it saves: without a comparison it stays out of the balance."""
 
     @property
     def balance_ready(self) -> bool:
@@ -362,12 +391,17 @@ class PaybackData:
     )
 
     @property
+    def _compared(self) -> list[CategoryResult]:
+        """Return the categories that save; only they take part in the balance."""
+        return [result for result in self.categories.values() if result.compared]
+
+    @property
     def balance(self) -> float | None:
         """Return all savings minus all investments.
 
         Unknown while any category is still calculating or has no data yet.
         """
-        results = list(self.categories.values())
+        results = self._compared
         if not results or not all(result.balance_ready for result in results):
             return None
         return sum(
@@ -377,17 +411,36 @@ class PaybackData:
     @property
     def saved(self) -> float:
         """Return all savings so far."""
-        return sum(result.saving or 0.0 for result in self.categories.values())
+        return sum(result.saving or 0.0 for result in self._compared)
 
     @property
     def invested(self) -> float:
         """Return all investments."""
-        return sum(result.investment or 0.0 for result in self.categories.values())
+        return sum(result.investment or 0.0 for result in self._compared)
 
     @property
     def per_year(self) -> float | None:
         """Return all yearly savings, once every category has a yearly figure."""
-        yearly = [result.per_year for result in self.categories.values()]
+        yearly = [result.per_year for result in self._compared]
         if self.balance is None or None in yearly:
             return None
         return sum(value or 0.0 for value in yearly)
+
+    @property
+    def payback(self) -> float | None:
+        """Return the share of all investments the savings have covered, in percent."""
+        if self.balance is None or self.invested <= 0:
+            return None
+        return self.saved / self.invested * 100
+
+    @property
+    def years_left(self) -> float | None:
+        """Return the years until all savings cover all investments.
+
+        At the yearly savings, as for each category; None once the balance is
+        in the plus, or while there is no yearly figure to go by.
+        """
+        balance, per_year = self.balance, self.per_year
+        if balance is None or balance >= 0 or per_year is None or per_year <= 0:
+            return None
+        return -balance / per_year

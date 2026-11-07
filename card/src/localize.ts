@@ -16,11 +16,14 @@ const en = {
   column_per_year: "Per year",
   column_saving: "Saving",
   column_investment: "Investment",
-  column_balance: "Net",
+  column_balance: "Balance",
   total: "Total",
   average: "Ø {amount}",
   line_payback: "of {investment}",
   line_payback_left: "about {time} left",
+  summary_paid_back: "Paid back: the savings cover all investments.",
+  summary_payback: "{percent} paid back.",
+  summary_payback_left: "{percent} paid back, about {time} to go.",
   line_return: "Total {amount}",
   return_value: "{rate} % a year",
   months_one: "1 month",
@@ -43,6 +46,7 @@ const en = {
   savings_electricity: "{name} electricity costs",
   savings_solar_part: "of which by solar power",
   savings_saved: "Saved",
+  savings_in_balance: "of which in the balance",
   meters_consumer: "Device",
   meters_electricity: "Electricity",
   history_title: "Savings over time",
@@ -214,6 +218,29 @@ const en = {
   "flow.no_sensor":
     "Add a power sensor for the grid in the energy dashboard to see where electricity flows right now.",
   "flow.unavailable": "The power can't be read right now.",
+  "picker.flow": "Electricity Lens power flow",
+  "picker.flow.description":
+    "Where the power comes from right now and where it goes, as two bars, from the energy dashboard's power sensors.",
+  "picker.economics": "Electricity Lens economics",
+  "picker.economics.description": "What your PV plant, heat pump, and electric car have saved, against what they cost.",
+  "picker.savings": "Electricity Lens savings",
+  "picker.savings.description":
+    "What solar power, the heat pump, and the electric car saved in the selected period, as a table, or one area's saving reckoned up. Follows the energy date selection.",
+  "picker.heat_meters": "Electricity Lens heat meters",
+  "picker.heat_meters.description":
+    "Heat, electricity, and seasonal COP of each of the heat pump's meters in the selected period. Follows the energy date selection.",
+  "picker.history": "Electricity Lens history",
+  "picker.history.description":
+    "Savings, consumption, or costs per period as bars, stacked by source or consumer, with lines. Follows the energy date selection.",
+  "picker.figures": "Electricity Lens key figures",
+  "picker.figures.description":
+    "One key figure for a period: costs, solar share, cheap grid power, savings, or any statistic or entity.",
+  "picker.breakdown": "Electricity Lens breakdown",
+  "picker.breakdown.description":
+    "Shares for a period as a ring or bars: the electricity mix, consumption or costs by consumer, or any statistics.",
+  "picker.dashboard": "Electricity Lens",
+  "picker.dashboard.description":
+    "A finished electricity dashboard with costs, electricity mix, solar, heat pump, car, and the balance.",
 };
 
 export type Key = keyof typeof en;
@@ -234,11 +261,14 @@ const de: Record<Key, string> = {
   column_per_year: "Pro Jahr",
   column_saving: "Ersparnis",
   column_investment: "Investition",
-  column_balance: "Saldo",
+  column_balance: "Bilanz",
   total: "Summe",
   average: "Ø {amount}",
   line_payback: "von {investment}",
   line_payback_left: "noch etwa {time}",
+  summary_paid_back: "Amortisiert: Die Ersparnis deckt alle Investitionen.",
+  summary_payback: "Zu {percent} amortisiert.",
+  summary_payback_left: "Zu {percent} amortisiert, noch etwa {time} bis ins Plus.",
   line_return: "Gesamt {amount}",
   return_value: "{rate} % p. a.",
   months_one: "1 Monat",
@@ -261,6 +291,7 @@ const de: Record<Key, string> = {
   savings_electricity: "Stromkosten {name}",
   savings_solar_part: "davon durch PV",
   savings_saved: "Gespart",
+  savings_in_balance: "davon in der Bilanz",
   meters_consumer: "Gerät",
   meters_electricity: "Strom",
   history_title: "Ersparnisverlauf",
@@ -432,6 +463,29 @@ const de: Record<Key, string> = {
   "flow.no_sensor":
     "Gib im Energie-Dashboard einen Leistungssensor für das Netz an, um zu sehen, wohin der Strom gerade fließt.",
   "flow.unavailable": "Die Leistung lässt sich gerade nicht lesen.",
+  "picker.flow": "Electricity Lens Leistungsfluss",
+  "picker.flow.description":
+    "Woher der Strom gerade kommt und wohin er geht, als zwei Balken, aus den Leistungssensoren des Energie-Dashboards.",
+  "picker.economics": "Electricity Lens Wirtschaftlichkeit",
+  "picker.economics.description": "Was PV-Anlage, Wärmepumpe und E-Auto gespart haben, gegen das, was sie gekostet haben.",
+  "picker.savings": "Electricity Lens Ersparnis",
+  "picker.savings.description":
+    "Was Solarstrom, Wärmepumpe und E-Auto im gewählten Zeitraum gespart haben, als Tabelle, oder die Ersparnis eines Bereichs nachgerechnet. Folgt der Datumsauswahl.",
+  "picker.heat_meters": "Electricity Lens Wärmezähler",
+  "picker.heat_meters.description":
+    "Wärme, Strom und Jahresarbeitszahl jedes Zählers der Wärmepumpe im gewählten Zeitraum. Folgt der Datumsauswahl.",
+  "picker.history": "Electricity Lens Verlauf",
+  "picker.history.description":
+    "Ersparnis, Verbrauch oder Kosten je Zeitraum als Balken, nach Quelle oder Verbraucher gestapelt, mit Linien. Folgt der Datumsauswahl.",
+  "picker.figures": "Electricity Lens Kennzahl",
+  "picker.figures.description":
+    "Eine Kennzahl für einen Zeitraum: Kosten, PV-Anteil, günstiger Netzstrom, Ersparnis oder eine beliebige Statistik oder Entität.",
+  "picker.breakdown": "Electricity Lens Aufteilung",
+  "picker.breakdown.description":
+    "Anteile eines Zeitraums als Ring oder Balken: der Strommix, Verbrauch oder Kosten nach Verbraucher, oder beliebige Statistiken.",
+  "picker.dashboard": "Electricity Lens",
+  "picker.dashboard.description":
+    "Ein fertiges Strom-Dashboard mit Kosten, Strommix, PV, Wärmepumpe, Auto und der Bilanz.",
 };
 
 const languages: Record<string, Record<Key, string>> = { en, de };
@@ -445,6 +499,14 @@ export function localizer(language: string): Localize {
   const texts = languages[language.split("-")[0]] ?? en;
   return (key, values = {}) =>
     texts[key].replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? "");
+}
+
+/** A time still to go: months below a year, else years. */
+export function durationText(t: Localize, years: number): string {
+  const count = Math.max(1, Math.round(years < 1 ? years * 12 : years));
+  return years < 1
+    ? t(count === 1 ? "months_one" : "months_other", { count: String(count) })
+    : t(count === 1 ? "years_one" : "years_other", { count: String(count) });
 }
 
 /** What to say while the integration computes the past, with how far it is. */

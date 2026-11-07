@@ -59,18 +59,20 @@ const view = (
   sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
 
-/** The upper end of the forecast gauges, in kWh a day. */
-const FORECAST_MAX_KWH = 70;
-/** Where the forecast gauges turn from red to yellow to green, in kWh. */
-const FORECAST_SEVERITY = { red: 0, yellow: 25, green: 45 };
+/** Where the forecast gauges turn from red to yellow to green, as shares of
+ * the best solar day of the last twelve months: what a good day is depends on
+ * the plant. */
+const FORECAST_YELLOW = 0.35;
+const FORECAST_GREEN = 0.65;
 
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   categories: Category[];
   /** The categories with an investment, and the sensors about it. */
   investments: { category: Category; payback: string; annualReturn: string }[];
-  /** The sensors of the solar forecast for the rest of today and for tomorrow. */
-  forecasts: { day: "today" | "tomorrow"; entity: string }[];
+  /** The sensors of the solar forecast for the rest of today and for tomorrow,
+   * with the best solar day of the last twelve months as their scale. */
+  forecasts: { day: "today" | "tomorrow"; entity: string; bestDay?: number; fullYear?: boolean }[];
 }
 
 /** Finds the categories among the entities. */
@@ -84,7 +86,10 @@ export function findSensors(hass: HomeAssistant): Sensors {
   const forecasts = (["today", "tomorrow"] as const).flatMap((day) => {
     const key = day === "today" ? "forecast_rest_today" : "forecast_tomorrow";
     const entity = entries.find((entry) => entry.translation_key === key)?.entity_id;
-    return entity ? [{ day, entity }] : [];
+    if (!entity) return [];
+    const attributes = hass.states[entity]?.attributes ?? {};
+    const bestDay = typeof attributes.best_day === "number" ? attributes.best_day : undefined;
+    return [{ day, entity, bestDay, fullYear: attributes.best_day_full_year === true }];
   });
   return { categories, investments: investmentSensors(hass), forecasts };
 }
@@ -106,7 +111,12 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const heatPump = has("heat_pump");
   const car = has("wallbox");
   const devices = info.areas.some((area) => area.kind === "device");
-  const savings = Boolean(solar?.statistics.saving?.length || heatPump || car || sensors.categories.length);
+  // Shares by source need more than one source: solar power, or price levels
+  // that part the grid power. Without them a ring would be one whole.
+  const sources = Boolean(solar) || info.levels.cheap_until !== null || info.levels.expensive_from !== null;
+  // A heat pump or car saves only when compared with what it replaced.
+  const saves = (area?: FigureArea) => Boolean(area?.statistics.saving?.length);
+  const savings = saves(solar) || saves(heatPump) || saves(car) || sensors.categories.length > 0;
   const today = { period: "today" };
   // With a PV plant the price of a kWh includes its solar power; the name says so.
   const priceLine = {
@@ -119,8 +129,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const quiet = { secondary: "none" };
   const sourceHistory = (area: string, options: Card = {}) =>
     card("electricity-lens-history-card", { area, figure: "energy", stack: "source", ...priceLine, ...options });
-  const ring = (area: string) =>
-    card("electricity-lens-breakdown-card", { area, by: "source", ...wide });
+  const ring = (area: string): Card[] =>
+    sources ? [card("electricity-lens-breakdown-card", { area, by: "source", ...wide })] : [];
   // Each investment shows its payback, and once it is paid back its return.
   // Home Assistant shows and hides them by the sensors' states.
   const investmentTiles = sensors.investments.flatMap(({ category, payback, annualReturn }) => [
@@ -140,19 +150,30 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ...half,
     }),
   ]);
-  // The solar forecast as gauges, from the integration's sensors.
+  // The solar forecast as gauges up to the best day of the last twelve months.
+  // Colors only once the data covers a year: a best day of winter alone
+  // would make every spring day look good.
   const forecastGauges = solar?.forecast
-    ? sensors.forecasts.map(({ entity, day }) =>
-        card("gauge", {
+    ? sensors.forecasts.map(({ entity, day, bestDay, fullYear }) => {
+        const max = bestDay ? Math.ceil(bestDay) : undefined;
+        return card("gauge", {
           entity,
           name: t(`strategy.forecast_${day}`),
           min: 0,
-          max: FORECAST_MAX_KWH,
+          ...(max ? { max } : {}),
           needle: false,
-          severity: FORECAST_SEVERITY,
+          ...(max && fullYear
+            ? {
+                severity: {
+                  red: 0,
+                  yellow: Math.round(max * FORECAST_YELLOW * 10) / 10,
+                  green: Math.round(max * FORECAST_GREEN * 10) / 10,
+                },
+              }
+            : {}),
           ...half,
-        })
-      )
+        });
+      })
     : [];
   const views: View[] = [];
 
@@ -196,7 +217,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ],
       [
         titled("energy-distribution", "strategy.distribution", wide),
-        ring("household"),
+        ...ring("household"),
         ...(solar ? [card("energy-self-sufficiency-gauge", half), card("energy-solar-consumed-gauge", half)] : []),
       ]
     )
@@ -223,24 +244,33 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
               }),
             ]
           : []),
-        titled("electricity-lens-history-card", "strategy.cost_history", {
-          area: "household",
-          figure: "cost",
-          stack: "consumer",
-          ...(solar ? {} : priceLine),
-        }),
+        // Costs by device need devices: without them, Other is the whole.
+        ...(devices
+          ? [
+              titled("electricity-lens-history-card", "strategy.cost_history", {
+                area: "household",
+                figure: "cost",
+                stack: "consumer",
+                ...(solar ? {} : priceLine),
+              }),
+            ]
+          : []),
       ],
       [
         own("grid", "grid_price", quiet),
         price("household", quiet),
-        titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
-          area: "household",
-          by: "consumer",
-          figure: "cost",
-          display: "bars",
-          color_by_source: true,
-          ...wide,
-        }),
+        ...(devices
+          ? [
+              titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {
+                area: "household",
+                by: "consumer",
+                figure: "cost",
+                display: "bars",
+                color_by_source: true,
+                ...wide,
+              }),
+            ]
+          : []),
         ...(savings ? [card("electricity-lens-savings-card", wide)] : []),
       ]
     )
@@ -274,7 +304,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           own("heat_pump", "scop", quiet),
           own("heat_pump", "heat_price", quiet),
-          ring("heat_pump"),
+          ...ring("heat_pump"),
           ...(heatDevices(info).length
             ? [card("electricity-lens-heat-meters-card", wide)]
             : [
@@ -301,7 +331,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
                     ]
                   : []),
               ]),
-          card("electricity-lens-savings-card", { area: "heat_pump", ...wide }),
+          ...(saves(heatPump) ? [card("electricity-lens-savings-card", { area: "heat_pump", ...wide })] : []),
         ]
       )
     );
@@ -328,8 +358,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         [
           own("wallbox", "device_grid_price", quiet),
           price("wallbox", quiet),
-          ring("wallbox"),
-          card("electricity-lens-savings-card", { area: "wallbox", ...wide }),
+          ...ring("wallbox"),
+          ...(saves(car) ? [card("electricity-lens-savings-card", { area: "wallbox", ...wide })] : []),
         ]
       )
     );

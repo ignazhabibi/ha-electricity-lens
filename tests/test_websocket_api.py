@@ -15,6 +15,7 @@ from .conftest import (
     HEAT_PUMP_DATA,
     PREFS,
     PV_DATA,
+    WALLBOX_DATA,
     make_entry,
     set_energy_prefs,
     setup_entry,
@@ -181,6 +182,56 @@ async def test_figures_pair_heat_meters_with_devices(
     areas = {area["id"]: area for area in response["result"]["areas"]}
     assert areas["device_sensor_heat_pump"]["statistics"]["heat"] == ["sensor.heating"]
     assert areas["device_sensor_washer"]["statistics"]["heat"] == ["sensor.hot_water"]
+    assert "saving" in areas["device_sensor_washer"]["statistics"]
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_without_former_heating(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """Without a former heating the heat pump has its heat, but no saving."""
+    entry = make_entry(
+        (
+            "heat_pump",
+            {
+                **HEAT_PUMP_DATA,
+                "heating": "none",
+                "investment": None,
+                "meters": ["sensor.heat_pump", "sensor.washer"],
+                "heat_meters": ["sensor.heating", "sensor.hot_water"],
+                "before": {"scop": 4.0},
+                "current": {"scop": 4.0},
+            },
+        )
+    )
+    await setup_entry(hass, entry)
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    statistics = areas["heat_pump"]["statistics"]
+    assert statistics["heat"] == ["electricity_lens:heat_pump_heat"]
+    assert not {"saving", "alternative_cost", "solar_saving"} & set(statistics)
+    assert areas["heat_pump"]["investment"] is False
+    washer = areas["device_sensor_washer"]["statistics"]
+    assert washer["heat"] == ["sensor.hot_water"]
+    assert "saving" not in washer
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_car_without_comparison(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A car compared with nothing has its costs and mix, but no distance."""
+    entry = make_entry(
+        ("wallbox", {**WALLBOX_DATA, "comparison": "none", "before": {}, "current": {}})
+    )
+    await setup_entry(hass, entry)
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    statistics = areas["wallbox"]["statistics"]
+    assert statistics["cost"]
+    assert not {"saving", "distance", "alternative_cost", "solar_saving"} & set(
+        statistics
+    )
 
 
 @pytest.mark.usefixtures("energy")

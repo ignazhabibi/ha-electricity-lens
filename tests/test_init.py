@@ -130,6 +130,8 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert balance.attributes["saved"] == pytest.approx(total)
     assert balance.attributes["invested"] == 19000
     assert balance.attributes["per_year"] is None
+    assert balance.attributes["payback"] == pytest.approx(total / 19000 * 100)
+    assert balance.attributes["years_left"] is None
 
 
 @pytest.mark.usefixtures("energy")
@@ -188,6 +190,102 @@ async def test_heat_distance_and_alternative_costs(
     )[-1] == pytest.approx(COUNTED * distance * 7 / 100 * 1.80)
     # The PV plant keeps only its saving.
     assert await statistic_sums(hass, "electricity_lens:pv_heat", data_start) == []
+
+
+@pytest.mark.usefixtures("energy")
+async def test_heat_pump_without_former_heating(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """Without a former heating the heat pump keeps its heat, but saves nothing.
+
+    It has no saving sensors and stays out of the balance.
+    """
+    # Arrange: a saving sensor left from when it had a former heating.
+    values = {"scop": 4.0}
+    entry = make_entry(
+        ("pv", PV_DATA),
+        (
+            "heat_pump",
+            {
+                **HEAT_PUMP_DATA,
+                "heating": "none",
+                "investment": None,
+                "before": values,
+                "current": values,
+            },
+        ),
+    )
+    entry.add_to_hass(hass)
+    heat_pump = next(
+        subentry_id
+        for subentry_id, subentry in entry.subentries.items()
+        if subentry.subentry_type == "heat_pump"
+    )
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{heat_pump}_saving",
+        config_entry=entry,
+        config_subentry_id=heat_pump,
+    )
+
+    # Act
+    await setup_entry(hass, entry)
+
+    # Assert
+    heat = await statistic_sums(hass, "electricity_lens:heat_pump_heat", data_start)
+    assert heat[-1] == pytest.approx(COUNTED * HP_KWH * 4.0)
+    for figure in ("saving", "alternative_cost", "solar_saving"):
+        assert (
+            await statistic_sums(
+                hass, f"electricity_lens:heat_pump_{figure}", data_start
+            )
+            == []
+        )
+    assert not registry.async_get_entity_id("sensor", DOMAIN, f"{heat_pump}_saving")
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert float(balance.state) == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
+    assert balance.attributes["invested"] == 10000
+
+
+@pytest.mark.usefixtures("energy")
+async def test_car_without_comparison(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A car compared with nothing has no distance, saving, or saving sensors."""
+    entry = make_entry(
+        ("pv", PV_DATA),
+        (
+            "wallbox",
+            {**WALLBOX_DATA, "comparison": "none", "before": {}, "current": {}},
+        ),
+    )
+    await setup_entry(hass, entry)
+    for figure in ("saving", "distance", "alternative_cost", "solar_saving"):
+        assert (
+            await statistic_sums(hass, f"electricity_lens:wallbox_{figure}", data_start)
+            == []
+        )
+    assert hass.states.get("sensor.electric_car_saving") is None
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert float(balance.state) == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
+
+
+def test_comparison_keeps_the_past_of_cars_compared_as_before() -> None:
+    """A car compared with a combustion car keeps its fingerprint."""
+    data = dict(WALLBOX_DATA)
+    before = CategoryConfig.from_data("wallbox", data).fingerprint
+    assert (
+        CategoryConfig.from_data(
+            "wallbox", {**data, "comparison": "combustion"}
+        ).fingerprint
+        == before
+    )
+    assert (
+        CategoryConfig.from_data("wallbox", {**data, "comparison": "none"}).fingerprint
+        != before
+    )
 
 
 @pytest.mark.usefixtures("energy")
@@ -989,10 +1087,11 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
             hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
         )
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert (
-        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
-        == 12.5
-    )
+    remaining = _state(hass, "sensor.electricity_lens_solar_remaining_today")
+    assert float(remaining.state) == 12.5
+    # The scale of the forecast: the best solar day, from two days of data.
+    assert remaining.attributes["best_day"] > 0
+    assert remaining.attributes["best_day_full_year"] is False
 
     await set_energy_prefs(hass, PREFS)
     await hass.async_block_till_done(wait_background_tasks=True)

@@ -144,6 +144,16 @@ async def async_setup_entry(
             ):
                 registry.async_remove(forecast)
     for subentry_id, subentry in entry.subentries.items():
+        config = coordinator.configs.get(subentry_id)
+        if config is not None and not config.is_compared:
+            # Without a comparison there is no saving to show. Its figures,
+            # such as the heat, are statistics the cards read.
+            for description in CATEGORY_SENSORS:
+                if stale := registry.async_get_entity_id(
+                    "sensor", DOMAIN, f"{subentry_id}_{description.key}"
+                ):
+                    registry.async_remove(stale)
+            continue
         async_add_entities(
             [
                 CategorySensor(
@@ -159,7 +169,9 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
     """All savings minus all investments."""
 
     # The card reads these. The recorder skips them, as the categories' attributes.
-    _unrecorded_attributes = frozenset({"saved", "invested", "per_year", "progress"})
+    _unrecorded_attributes = frozenset(
+        {"saved", "invested", "per_year", "payback", "years_left", "progress"}
+    )
 
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
@@ -179,6 +191,8 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
             "saved": data.saved,
             "invested": data.invested,
             "per_year": data.per_year,
+            "payback": data.payback,
+            "years_left": data.years_left,
             "progress": self.coordinator.progress(),
         }
 
@@ -204,6 +218,15 @@ class ForecastSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
         return forecast[
             0 if self.entity_description.key == "forecast_rest_today" else 1
         ]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:  # pyright: ignore[reportIncompatibleVariableOverride]
+        """Return the best solar day of the last twelve months, the forecast's scale."""
+        best = self.coordinator.best_solar_day
+        return {
+            "best_day": None if best is None else round(best, 1),
+            "best_day_full_year": self.coordinator.best_solar_day_full_year,
+        }
 
 
 class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]

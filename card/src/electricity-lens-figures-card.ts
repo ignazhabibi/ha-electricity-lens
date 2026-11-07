@@ -35,7 +35,7 @@ import {
 } from "./history";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { calculatingText, hasText, localizer, type Localize } from "./localize";
+import { calculatingText, durationText, hasText, localizer, type Localize } from "./localize";
 import { areaOfCategory, investmentSensors, readProgress } from "./model";
 import { cardStyles } from "./styles";
 import type {
@@ -538,13 +538,7 @@ export class ElectricityLensFiguresCard extends LensCard {
     if (typeof attributes.investment !== "number") return undefined;
     const investment = this._format(attributes.investment, "money");
     if (typeof attributes.years_left !== "number") return t("line_payback", { investment });
-    const years = attributes.years_left;
-    const count = Math.max(1, Math.round(years < 1 ? years * 12 : years));
-    const time =
-      years < 1
-        ? t(count === 1 ? "months_one" : "months_other", { count: String(count) })
-        : t(count === 1 ? "years_one" : "years_other", { count: String(count) });
-    return t("line_payback_left", { time });
+    return t("line_payback_left", { time: durationText(t, attributes.years_left) });
   }
 
   /** What a return sensor tells: how far the saving has gone beyond the investment. */

@@ -17,6 +17,8 @@ CONF_INVESTMENT: Final = "investment"
 CONF_METERS: Final = "meters"
 CONF_HEAT_METERS: Final = "heat_meters"
 CONF_HEATING: Final = "heating"
+CONF_COMPARISON: Final = "comparison"
+"""What the electric car is compared with: a combustion car, or nothing."""
 CONF_SETUP_AT: Final = "setup_at"
 """Start of the first hour after the setup: phase 2 ends, phase 3 begins."""
 CONF_BEFORE: Final = "before"
@@ -45,6 +47,11 @@ VALUE_COMBUSTION_CONSUMPTION: Final = "combustion_consumption"
 
 HEATING_GAS: Final = "gas"
 HEATING_OIL: Final = "oil"
+COMPARISON_NONE: Final = "none"
+"""Nothing to compare with, so no saving: no former heating, or no combustion car."""
+HEATING_NONE: Final = COMPARISON_NONE
+"""No former heating, as in a new build."""
+COMPARISON_COMBUSTION: Final = "combustion"
 
 # Fixed values almost nobody knows. The documentation names them.
 BOILER_EFFICIENCY: Final = 0.92

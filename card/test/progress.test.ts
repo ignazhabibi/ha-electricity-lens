@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { calculatingText, localizer } from "../src/localize";
+import { calculatingText, durationText, localizer } from "../src/localize";
 import { readProgress } from "../src/model";
 import type { FiguresInfo, HomeAssistant } from "../src/types";
 
@@ -40,4 +40,11 @@ test("the text names the progress once it is known", () => {
   assert.equal(calculatingText(t, 40), "Wird berechnet … 40 %");
   assert.equal(calculatingText(t, null), "Wird berechnet …");
   assert.equal(calculatingText(localizer("en"), 0), "Being computed … 0 %");
+});
+
+test("the time still to go is months below a year, else years", () => {
+  const t = localizer("de");
+  assert.equal(durationText(t, 0.72), "9 Monate");
+  assert.equal(durationText(t, 0.01), "1 Monat");
+  assert.equal(durationText(t, 2.4), "2 Jahre");
 });

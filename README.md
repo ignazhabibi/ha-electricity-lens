@@ -25,8 +25,8 @@ know, such as what the heat pump cost extra or what gas cost on average.
 - See at a glance whether the PV plant, heat pump, and electric car together
   have already saved more than they cost.
 - Get a notification when the heat pump has paid for itself.
-- Compare the yearly saving of each investment, for example before deciding on
-  a battery or a second wallbox.
+- Compare the yearly saving of each investment, and see which one pays off
+  fastest.
 - Keep an honest record: savings can be negative for a while, for example when
   electricity is expensive and gas is cheap, and the integration shows that.
 
@@ -125,7 +125,7 @@ Electricity Lens works with any energy dashboard that has:
   counted twice. A meter belongs to one category only.
 
 Not supported: other alternatives than a gas or oil heating and a combustion
-car, gas prices per cubic metre, solar thermal, investments from a helper,
+car, or none, gas prices per cubic metre, solar thermal, investments from a helper,
 and fetching prices from online services. Price sensors you already have can
 be used, though.
 
@@ -146,9 +146,11 @@ Home Assistant 2026.10 or newer is required.
    like.
 6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
    dashboard**, or add the cards **Electricity Lens power flow**, **Electricity
-   Lens economics**, **Electricity Lens history**, **Electricity Lens key
-   figures**, and **Electricity Lens breakdown** to a dashboard from the card
-   picker. The first two have no options but a title.
+   Lens economics**, **Electricity Lens savings**, **Electricity Lens heat
+   meters**, **Electricity Lens history**, **Electricity Lens key figures**, and
+   **Electricity Lens breakdown** to a dashboard from the card picker. Power
+   flow and economics have no options but a title, heat meters none at all.
+   The card picker names them in Home Assistant's language, English or German.
    There is no dashboard resource to add: the integration serves the cards
    itself and updates them with the integration.
 
@@ -176,21 +178,25 @@ where it stopped.
    |---|---|
    | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
    | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
-   | Former heating | Gas or oil. |
-   | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. |
+   | Former heating | Gas or oil, or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the balance, but its heat, seasonal COP, heat price, and the Heating view. |
+   | Extra cost (optional) | Extra purchase cost over a gas or oil heating, for the payback. Not with no former heating. |
 5. **Heat pump, average since the first data**:
    | Field | Description |
    |---|---|
-   | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. |
+   | Gas price or heating oil price | Average per kWh (gas) or per litre (oil). Also the current value from now on. Not with no former heating. |
    | Seasonal COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
    | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
-   | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. |
-6. **Electric car**: charging meters, and the extra purchase cost over a
-   combustion car (optional).
+   | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
+6. **Electric car**: charging meters, what it is compared with, a combustion
+   car or nothing, and the extra purchase cost over a combustion car
+   (optional). Compared with nothing, as for a second car, the car has no
+   saving, no saving sensors, and no place in the balance, but its charging
+   costs, mix, and the Charging view.
 7. **Electric car, average since the first data**: consumption of the electric
    car (measured at the wallbox, with charging losses; with several cars,
    their average), consumption of a comparable combustion car, fuel price, an
-   own tariff (optional), and a fuel price sensor (optional).
+   own tariff (optional), and a fuel price sensor (optional). Compared with
+   nothing, only the own tariff (optional).
 
 ### Changing things later
 
@@ -199,10 +205,10 @@ where it stopped.
 | Option | What it does |
 |---|---|
 | Standing charge and price levels | A new standing charge applies from the next full hour. New price levels sort the whole past again. |
+| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Changes to the energy dashboard's grid, solar, battery, or devices compute the
 household and all categories again.
-| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Categories are config subentries. On the integration page each category has
 **Reconfigure** and **Delete**, and there are buttons to add the categories not
@@ -223,8 +229,10 @@ meter computes the household again, and a category whose meters changed.
 
 ## Entities
 
-Each category is a device with three sensors; one more device holds the
-overall balance.
+Each category is a device with these sensors; one more device holds the
+overall balance. A heat pump without a former heating, or a car compared with
+nothing, saves nothing, so it has none: its figures are statistics the cards
+show.
 
 | Entity | Description |
 |---|---|
@@ -232,8 +240,8 @@ overall balance.
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
-| Solar remaining today, solar forecast tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. |
-| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, and, while the past is computed, how far it is in percent. |
+| Solar remaining today, solar forecast tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. Their attributes show the best solar day of the last twelve months, the scale of the dashboard's gauges, and whether the data covers all twelve months. |
+| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, the share of all investments the savings have covered, the years until they cover them at the yearly savings, and, while the past is computed, how far it is in percent. |
 
 ## Statistics
 
@@ -284,7 +292,9 @@ power sensor. The card follows the sensors' states, without statistics.
 The card finds the categories by itself and is built like the totals table of
 Home Assistant's energy dashboard: one row per category with what it saves per
 year on average, what it has saved, its investment, and its balance, then a row
-with the sums. Without any investment only the savings appear. A row opens its sensor, which
+with the sums. Above the table a sentence says how much of all investments is
+paid back and, once there are yearly savings, in about how long everything is
+in the plus. Without any investment only the savings appear. A row opens its sensor, which
 also says since when it counts. Its only option is a title. The card follows light and dark themes, works on
 phones and desktops, and can be used with keyboard and screen reader.
 
@@ -300,9 +310,10 @@ Where a period holds a saving but no energy, the energy shows as a dash: the
 household's figures can begin later than the savings.
 
 With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
-instead: what the alternative would have cost, less the electricity costs, and
-how much of it is solar power. The card editor offers only the categories that
-are set up.
+instead: what the alternative would have cost, less the electricity costs, how
+much of it is solar power, and how much of it the balance counts, which gives
+the benefit of solar power to the PV plant. The card editor offers only the
+categories that are set up.
 
 ### Electricity Lens heat meters
 
@@ -436,17 +447,19 @@ strategy:
 ```
 
 It has no settings. It asks the integration what the household has and shows
-only the views that fit. Each view answers one question, and each card has
-one home; only the first view repeats headline figures, always for today. The
-other views follow the energy date selection.
+only the views and cards that fit: costs by device need individual devices in
+the energy dashboard, and shares by source need solar power or price levels.
+Each view answers one question, and each card has one home; only the first
+view repeats headline figures, always for today. The other views follow the
+energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to 70 kWh, red below 25 and green from 45 kWh; costs and consumption today; each investment's payback, and once paid back its return |
+| Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to the best solar day of the last twelve months, red below about a third of it and green from about two thirds once the data covers a year; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
-| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
-| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and, with a former heating, its saving reckoned up |
+| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and, compared with a combustion car, the saving reckoned up |
 
 ### Colors
 

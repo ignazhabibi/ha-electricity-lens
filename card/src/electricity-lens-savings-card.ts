@@ -145,7 +145,9 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const alternative = addUp(values, area?.statistics.alternative_cost);
     const cost = addUp(values, area?.statistics.cost);
     const solar = addUp(values, area?.statistics.solar_saving);
-    const saving = addUp(values, area?.statistics.saving) + solar;
+    // The balance gives the benefit of solar power to the PV plant alone.
+    const inBalance = addUp(values, area?.statistics.saving);
+    const saving = inBalance + solar;
     const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
     const instead: Key =
       area?.id === "wallbox" ? "savings_instead_fuel" : heating === "oil" ? "savings_instead_oil" : "savings_instead_gas";
@@ -174,6 +176,10 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
             ? html`<tr class="quiet">
                 <th scope="row" class="name">${t("savings_solar_part")}</th>
                 <td>${fmt.value(solar, "money")}</td>
+              </tr>
+              <tr class="quiet">
+                <th scope="row" class="name">${t("savings_in_balance")}</th>
+                <td>${fmt.value(inBalance, "money")}</td>
               </tr>`
             : nothing}
         </tfoot>

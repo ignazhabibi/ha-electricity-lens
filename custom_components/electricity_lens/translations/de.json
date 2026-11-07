@@ -62,7 +62,7 @@
       },
       "heat_pump": {
         "title": "Wärmepumpe",
-        "description": "Vergleicht die Wärmepumpe mit deiner früheren Heizung.",
+        "description": "Vergleicht die Wärmepumpe mit deiner früheren Heizung, falls es eine gab.",
         "data": {
           "meters": "Stromverbrauch",
           "heat_meters": "Erzeugte Wärme (optional)",
@@ -72,6 +72,7 @@
         "data_description": {
           "meters": "Gesamtzähler, oder Heizung und Warmwasser einzeln",
           "heat_meters": "Wärmemengenzähler für dieselben Teile wie der Stromverbrauch",
+          "heating": "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, JAZ und Wärmepreis",
           "investment": "Mehrkosten der Anschaffung gegenüber einer Gas- oder Ölheizung. Für die Amortisation."
         }
       },
@@ -167,15 +168,51 @@
           "oil_price_entity": "Ersetzt den Durchschnitt ab jetzt"
         }
       },
+      "heat_pump_values_none": {
+        "title": "Durchschnitt seit {since}",
+        "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+        "data": {
+          "tariff": "Eigener Stromtarif (optional)"
+        },
+        "data_description": {
+          "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+        }
+      },
+      "heat_pump_values_none_scop": {
+        "title": "Durchschnitt seit {since}",
+        "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+        "data": {
+          "scop": "Jahresarbeitszahl (JAZ)",
+          "tariff": "Eigener Stromtarif (optional)"
+        },
+        "data_description": {
+          "scop": "Schätzt die Wärme aus dem Stromverbrauch",
+          "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+        }
+      },
+      "heat_pump_values_none_scop_until": {
+        "title": "Durchschnitt seit {since}",
+        "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+        "data": {
+          "scop": "Jahresarbeitszahl (JAZ)",
+          "tariff": "Eigener Stromtarif (optional)"
+        },
+        "data_description": {
+          "scop": "Schätzt die Wärme bis {heat_until}, dafür fehlen Messwerte",
+          "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+        }
+      },
       "wallbox": {
         "title": "E-Auto",
-        "description": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
+        "description": "Vergleicht das E-Auto mit einem Verbrenner, wenn du möchtest. Gemessen wird, was an der Wallbox geladen wird.",
         "data": {
           "meters": "Ladezähler",
+          "comparison": "Verglichen mit",
           "investment": "Mehrkosten (optional)"
         },
         "data_description": {
           "meters": "Wallbox oder Ladepunkte",
+          "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
           "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
         }
       },
@@ -195,6 +232,16 @@
           "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
           "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
         }
+      },
+      "wallbox_values_none": {
+        "title": "Durchschnitt seit {since}",
+        "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+        "data": {
+          "tariff": "Eigener Stromtarif (optional)"
+        },
+        "data_description": {
+          "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+        }
       }
     },
     "error": {
@@ -202,7 +249,8 @@
       "meters_required": "Wähle mindestens einen Zähler.",
       "heating_required": "Wähle die frühere Heizung.",
       "value_required": "Gib einen Wert über 0 an.",
-      "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
+      "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+      "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
     },
     "abort": {
       "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
@@ -210,7 +258,7 @@
       "single_instance_allowed": "Electricity Lens ist schon eingerichtet. Weitere Auswertungen fügst du auf der Integrationsseite hinzu."
     },
     "create_entry": {
-      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Die Karte »Electricity Lens« findest du im Dashboard unter »Karte hinzufügen«."
+      "default": "Die Vergangenheit wird jetzt nachgerechnet, bei mehreren Jahren an Daten kann das ein paar Minuten dauern. Das Dashboard »Electricity Lens« fügst du unter [Einstellungen › Dashboards](/config/lovelace/dashboards) › »Dashboard hinzufügen« hinzu. Seine Karten findest du auch unter »Karte hinzufügen«."
     }
   },
   "options": {
@@ -302,7 +350,8 @@
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
-        "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
+        "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -321,7 +370,7 @@
       "step": {
         "user": {
           "title": "Wärmepumpe",
-          "description": "Vergleicht die Wärmepumpe mit deiner früheren Heizung.",
+          "description": "Vergleicht die Wärmepumpe mit deiner früheren Heizung, falls es eine gab.",
           "data": {
             "meters": "Stromverbrauch",
             "heat_meters": "Erzeugte Wärme (optional)",
@@ -331,6 +380,7 @@
           "data_description": {
             "meters": "Gesamtzähler, oder Heizung und Warmwasser einzeln",
             "heat_meters": "Wärmemengenzähler für dieselben Teile wie der Stromverbrauch",
+            "heating": "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, JAZ und Wärmepreis",
             "investment": "Mehrkosten der Anschaffung gegenüber einer Gas- oder Ölheizung. Für die Amortisation."
           }
         },
@@ -355,6 +405,7 @@
           "data_description": {
             "meters": "Gesamtzähler, oder Heizung und Warmwasser einzeln",
             "heat_meters": "Wärmemengenzähler für dieselben Teile wie der Stromverbrauch",
+            "heating": "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, JAZ und Wärmepreis",
             "investment": "Mehrkosten der Anschaffung gegenüber einer Gas- oder Ölheizung. Für die Amortisation."
           }
         },
@@ -454,6 +505,40 @@
             "oil_price_entity": "Ersetzt den Durchschnitt ab jetzt"
           }
         },
+        "heat_pump_values_none": {
+          "title": "Durchschnitt seit {since}",
+          "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "heat_pump_values_none_scop": {
+          "title": "Durchschnitt seit {since}",
+          "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+          "data": {
+            "scop": "Jahresarbeitszahl (JAZ)",
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "scop": "Schätzt die Wärme aus dem Stromverbrauch",
+            "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "heat_pump_values_none_scop_until": {
+          "title": "Durchschnitt seit {since}",
+          "description": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+          "data": {
+            "scop": "Jahresarbeitszahl (JAZ)",
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "scop": "Schätzt die Wärme bis {heat_until}, dafür fehlen Messwerte",
+            "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
         "now_gas": {
           "title": "Werte ab jetzt",
           "description": "Neue Werte gelten ab der nächsten vollen Stunde. Bisher Berechnetes bleibt.",
@@ -486,6 +571,18 @@
             "oil_price_entity": "Ersetzt den Heizölpreis"
           }
         },
+        "now_none": {
+          "title": "Werte ab jetzt",
+          "description": "Neue Werte gelten ab der nächsten vollen Stunde. Bisher Berechnetes bleibt.",
+          "data": {
+            "scop": "Jahresarbeitszahl (JAZ)",
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "scop": "Schätzt die Wärme aus dem Stromverbrauch",
+            "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
         "before_gas": {
           "title": "Vor der Einrichtung",
           "description": "Durchschnittswerte für den {since} bis {until}. Änderst du sie, wird dieser Zeitraum neu berechnet.",
@@ -513,6 +610,18 @@
             "scop": "Schätzt die Wärme, wo keine gemessen wurde",
             "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
           }
+        },
+        "before_none": {
+          "title": "Vor der Einrichtung",
+          "description": "Durchschnittswerte für den {since} bis {until}. Änderst du sie, wird dieser Zeitraum neu berechnet.",
+          "data": {
+            "scop": "Jahresarbeitszahl (JAZ)",
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "scop": "Schätzt die Wärme, wo keine gemessen wurde",
+            "tariff": "Nur bei eigenem Wärmepumpentarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
         }
       },
       "error": {
@@ -520,7 +629,8 @@
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
-        "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
+        "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -539,13 +649,15 @@
       "step": {
         "user": {
           "title": "E-Auto",
-          "description": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
+          "description": "Vergleicht das E-Auto mit einem Verbrenner, wenn du möchtest. Gemessen wird, was an der Wallbox geladen wird.",
           "data": {
             "meters": "Ladezähler",
+            "comparison": "Verglichen mit",
             "investment": "Mehrkosten (optional)"
           },
           "data_description": {
             "meters": "Wallbox oder Ladepunkte",
+            "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
             "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
           }
         },
@@ -563,10 +675,12 @@
           "description": "Andere Zähler oder eine andere frühere Heizung berechnen alles neu. Mehrkosten gelten sofort.",
           "data": {
             "meters": "Ladezähler",
+            "comparison": "Verglichen mit",
             "investment": "Mehrkosten (optional)"
           },
           "data_description": {
             "meters": "Wallbox oder Ladepunkte",
+            "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
             "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
           }
         },
@@ -589,6 +703,36 @@
             "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
             "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
             "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
+          }
+        },
+        "wallbox_values_none": {
+          "title": "Durchschnitt seit {since}",
+          "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "now_none": {
+          "title": "Werte ab jetzt",
+          "description": "Neue Werte gelten ab der nächsten vollen Stunde. Bisher Berechnetes bleibt.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "before_none": {
+          "title": "Vor der Einrichtung",
+          "description": "Durchschnittswerte für den {since} bis {until}. Änderst du sie, wird dieser Zeitraum neu berechnet.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
           }
         },
         "now": {
@@ -629,7 +773,8 @@
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
-        "scop_range": "Gib eine JAZ zwischen 1 und 10 an."
+        "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -685,7 +830,8 @@
             "name": "Frühere Heizung",
             "state": {
               "gas": "Gas",
-              "oil": "Öl"
+              "oil": "Öl",
+              "none": "Keine (Neubau)"
             }
           },
           "heat_estimated": {
@@ -774,7 +920,14 @@
     "heating": {
       "options": {
         "gas": "Gas",
-        "oil": "Öl"
+        "oil": "Öl",
+        "none": "Keine (Neubau)"
+      }
+    },
+    "comparison": {
+      "options": {
+        "combustion": "Verbrenner",
+        "none": "Nichts"
       }
     },
     "statistics": {

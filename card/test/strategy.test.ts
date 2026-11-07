@@ -51,6 +51,26 @@ test("a household without solar power or categories has three views and no savin
   assert.ok(!typesOf(viewOf(all, "household")).includes("energy-solar-graph"));
 });
 
+test("without devices and a second source, no card shows a single share", () => {
+  const all = views(infoOf([]));
+
+  const cards = all.flatMap(cardsOf);
+  assert.ok(!cards.some((card) => card.stack === "consumer" || card.by === "consumer"));
+  assert.ok(!cards.some((card) => card.by === "source"));
+});
+
+test("devices bring the costs by device, price levels the shares by source", () => {
+  const device = area("device_washer", "device", { energy: ["sensor.washer"] });
+  const info = { ...infoOf([device]), levels: { cheap_until: 0.2, expensive_from: null } };
+
+  const all = views(info);
+
+  const costs = cardsOf(viewOf(all, "costs"));
+  assert.ok(costs.some((card) => card.stack === "consumer"));
+  assert.ok(costs.some((card) => card.by === "consumer"));
+  assert.ok(cardsOf(viewOf(all, "household")).some((card) => card.by === "source"));
+});
+
 test("the power flow stands on top where the grid has a power sensor", () => {
   const all = views(infoOf([], { grid: ["sensor.grid_power"], solar: [], battery: [] }));
 
@@ -60,8 +80,8 @@ test("the power flow stands on top where the grid has a power sensor", () => {
 test("heat pump and car bring their views, and the savings with them", () => {
   const all = views(
     infoOf([
-      area("heat_pump", "category", { energy: ["sensor.heat_pump"] }),
-      area("wallbox", "category", { energy: ["sensor.wallbox"] }),
+      area("heat_pump", "category", { energy: ["sensor.heat_pump"], saving: ["electricity_lens:heat_pump_saving"] }),
+      area("wallbox", "category", { energy: ["sensor.wallbox"], saving: ["electricity_lens:wallbox_saving"] }),
     ])
   );
 
@@ -75,7 +95,7 @@ test("with a PV plant the price includes solar power, and the forecast shows as 
   const sensors: Sensors = {
     categories: ["pv"],
     investments: [],
-    forecasts: [{ day: "tomorrow", entity: "sensor.electricity_lens_solar_forecast_tomorrow" }],
+    forecasts: [{ day: "tomorrow", entity: "sensor.electricity_lens_solar_forecast_tomorrow", bestDay: 3.2, fullYear: true }],
   };
 
   const all = views(infoOf([solar]), sensors);
@@ -83,8 +103,34 @@ test("with a PV plant the price includes solar power, and the forecast shows as 
   assert.ok(typesOf(viewOf(all, "household")).includes("energy-solar-graph"));
   const gauges = cardsOf(viewOf(all, "now")).filter((card) => card.type === "gauge");
   assert.deepEqual(gauges.map((card) => card.entity), ["sensor.electricity_lens_solar_forecast_tomorrow"]);
+  // A balcony plant: the gauge reaches its best day, not a large roof's.
+  assert.equal(gauges[0].max, 4);
+  assert.deepEqual(gauges[0].severity, { red: 0, yellow: 1.4, green: 2.6 });
   const price = cardsOf(viewOf(all, "costs")).find((card) => card.figure === "price");
   assert.equal(price?.name, t("strategy.price_with_solar"));
+});
+
+test("the forecast gauges have no colors before a year of solar data", () => {
+  const solar = area("solar", "solar", {}, { forecast: true });
+  const forecast = { day: "today" as const, entity: "sensor.electricity_lens_solar_remaining_today" };
+  const gauge = (extra: Partial<Sensors["forecasts"][number]>) =>
+    cardsOf(viewOf(views(infoOf([solar]), { categories: [], investments: [], forecasts: [{ ...forecast, ...extra }] }), "now")).find(
+      (card) => card.type === "gauge"
+    );
+
+  const firstMonths = gauge({ bestDay: 41.3, fullYear: false });
+  assert.equal(firstMonths?.max, 42);
+  assert.equal(firstMonths?.severity, undefined);
+  assert.equal(gauge({})?.max, undefined);
+});
+
+test("a heat pump without a former heating has its view but no saving", () => {
+  const all = views(infoOf([area("heat_pump", "category", { energy: ["sensor.heat_pump"], heat: ["electricity_lens:heat_pump_heat"] })]));
+
+  assert.ok(all.some((view) => view.path === "heating"));
+  const cards = all.flatMap(cardsOf);
+  assert.ok(!cards.some((card) => card.type === "custom:electricity-lens-savings-card"));
+  assert.ok(!cards.some((card) => card.type === "custom:electricity-lens-balance-card"));
 });
 
 test("several heat meters of the heat pump's devices share one card", () => {
