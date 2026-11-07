@@ -153,8 +153,9 @@ Home Assistant 2026.10 or newer is required.
    itself and updates them with the integration.
 
 The past is computed in the background right after setup. With several years
-of data this can take a few minutes; until then the card says that it is
-calculating.
+of data this can take a few minutes, on small hardware such as a Raspberry Pi
+longer; until then the cards say how far it is. A restart in between continues
+where it stopped.
 
 ## Configuration
 
@@ -198,6 +199,9 @@ calculating.
 | Option | What it does |
 |---|---|
 | Standing charge and price levels | A new standing charge applies from the next full hour. New price levels sort the whole past again. |
+
+Changes to the energy dashboard's grid, solar, battery, or devices compute the
+household and all categories again.
 | Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Categories are config subentries. On the integration page each category has
@@ -229,7 +233,7 @@ overall balance.
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
 | Solar remaining today, solar forecast tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. |
-| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, and the yearly savings. |
+| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, and, while the past is computed, how far it is in percent. |
 
 ## Statistics
 
@@ -511,14 +515,18 @@ actions:
 - **Heat pump or electric car are not offered**: their meters must be listed
   under *Individual devices* in the energy dashboard.
 - **A figure jumps implausibly**: a meter probably recorded a wrong reading.
-  Fix it under **Developer tools › Statistics**, then choose *Reconfigure ›
-  Recompute* for the category.
+  Fix it under **Developer tools › Statistics**, then choose *Configure ›
+  Recompute* on the integration page. It computes the household and all
+  categories again, as costs and solar power of the devices build on the
+  household. If only a category's own meter was wrong, such as a heat meter,
+  *Reconfigure › Recompute* for that category is enough.
 - **A repair issue says a meter or price sensor is missing**: it was removed.
   The category keeps its last figures, or the sensor's last price. Add it back,
   or choose another one with *Reconfigure*.
 - **No payback percentage**: enter the purchase or extra cost.
-- **The card says it is calculating for long**: download the diagnostics from
-  the integration page and open an issue with them.
+- **The card says it is calculating for long**: if its percentage no longer
+  rises, download the diagnostics from the integration page and open an issue
+  with them.
 
 ## Removal
 

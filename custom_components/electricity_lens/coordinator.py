@@ -6,7 +6,6 @@ import logging
 import math
 from collections.abc import Callable, Collection, Iterator
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import timedelta
 from time import time
 from typing import Any
@@ -32,10 +31,14 @@ from .calculation import (
     HOUR,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
+    GridPrices,
     average_price,
+    combine_grid_prices,
     effective_meters,
     electricity_prices,
+    estimated_heat,
     fuel_cost,
+    fuel_price,
     heat_pump_saving,
     heating_cost,
     household_hour,
@@ -43,6 +46,8 @@ from .calculation import (
     paid_prices,
     price_level,
     pv_saving,
+    solar_saving,
+    standing_charge_share,
     summarize,
     wallbox_distance,
     wallbox_saving,
@@ -98,33 +103,26 @@ from .sources import (
 _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(minutes=15)
-# The past is computed in chunks to keep each recorder query small.
+# The past is computed in chunks to keep each recorder query and write small.
+# Each written chunk is kept, so that a restart continues from there.
 CHUNK = 30 * 24 * HOUR
 STORAGE_VERSION = 1
 # Version 2 keeps the savings in statistics of the integration's own instead
 # of the saving sensors' statistics. Version 3 adds heat, distance, and the
 # alternative's costs per category.
 STATISTICS_VERSION = 3
-# Raised when a rule changes what the computed past looks like: everything is
-# then computed again. Version 2: prices paid, price levels that need a contrast,
-# consumers that add up to the household, and meters that run back. Version 3:
-# no hour counted twice after a failed update. Version 4: the standing charge and
-# the saving by solar power per category.
-CALCULATION_VERSION = 4
+# Raised when a rule changes what the computed past looks like, so that it is
+# computed again. The categories build on the household, so a new household
+# rule computes everything again; a new category rule only the categories,
+# which saves writing the household's many statistics. Up to version 4 both
+# were one: 2 brought prices paid, price levels that need a contrast,
+# consumers that add up to the household, and meters that run back; 3 no hour
+# counted twice after a failed update; 4 the standing charge and the saving by
+# solar power per category.
+HOUSEHOLD_CALCULATION_VERSION = 4
+CATEGORY_CALCULATION_VERSION = 4
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
-
-
-@dataclass(frozen=True, slots=True)
-class GridPrices:
-    """The electricity price of each hour over all grid connections."""
-
-    mean: list[float | None]
-    """The mean price, which values what did not come from the grid."""
-    paid: list[float | None]
-    """What a kWh imported in the hour cost."""
-    low: list[float | None]
-    high: list[float | None]
 
 
 def _hours(start: float, end: float) -> list[float]:
@@ -147,15 +145,29 @@ CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
 }
 
 
+# The figures the household keeps for each area: energy, solar power, costs,
+# solar costs, and the cheap and expensive grid power with their costs.
+HOUSEHOLD_AREA_FIGURES = 8
+
+
+def _done(state: CategoryState | HouseholdState) -> float:
+    """Return the share of the past that is computed."""
+    if not state.computing_past:
+        return 1.0
+    if state.next_hour is None or state.past_until is None or state.data_start is None:
+        return 0.0
+    start = _ceil_hour(state.data_start)
+    if (span := state.past_until - start) <= 0:
+        return 1.0
+    return min(max((state.next_hour - start) / span, 0.0), 1.0)
+
+
 def _standing_charge(state: HouseholdState, hour: float) -> float:
     """Return the standing charge of an hour: its month's share."""
     monthly = state.standing_charge.value_at(hour)
     if not isinstance(monthly, int | float):
         return 0.0
-    local = dt_util.as_local(dt_util.utc_from_timestamp(hour))
-    month = local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month = (month + timedelta(days=32)).replace(day=1)
-    return monthly / ((next_month.timestamp() - month.timestamp()) / HOUR)
+    return standing_charge_share(monthly, hour, dt_util.get_default_time_zone())
 
 
 def _number(hass: HomeAssistant, entity_id: str | None) -> float | None:
@@ -211,7 +223,9 @@ def _heat_meter_figures(
         yield f"{device_area(meter)}_alternative_cost", alternative
         yield (
             f"{device_area(meter)}_solar_saving",
-            alternative - device_costs[meter] - saving,
+            solar_saving(
+                alternative_cost=alternative, cost=device_costs[meter], saving=saving
+            ),
         )
 
 
@@ -260,6 +274,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         self._without_data: set[str] = set()
         self.forecast: tuple[float, float] | None = None
         """The solar forecast in kWh for the rest of today and for tomorrow."""
+        self.forecast_sensors = False
+        """Whether the forecast sensors exist; they follow the energy dashboard."""
 
     async def async_load(self) -> None:
         """Restore progress and record changed current values."""
@@ -282,7 +298,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 state.timelines = {}
                 state.heating = config.heating
             # Recomputing the household computes everything again.
-            fingerprint = f"{config.fingerprint}:{CALCULATION_VERSION}"
+            fingerprint = f"{config.fingerprint}:{CATEGORY_CALCULATION_VERSION}"
             if self.household.recompute is not None:
                 fingerprint += f":{self.household.recompute}"
             if state.fingerprint != fingerprint or moving_statistics:
@@ -372,9 +388,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             # No grid data yet, so there is nothing to compute.
             self._without_data = set(self.configs)
             return self._results()
+        started = time()
+        if (computing := self.progress()) is not None:
+            _LOGGER.debug("Computing the past, %s %% done", computing)
+        # The household comes first: the categories read its devices' costs
+        # from its statistics.
         await self._async_advance_household(setup, end)
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
+        if computing is not None and self.progress() is None:
+            _LOGGER.debug("Computed the past in %.0f s", time() - started)
         await async_wait_recorder(self.hass)
         await self._async_save()
         return self._results()
@@ -451,6 +474,14 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             return
         ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+        household = self.household_state.fingerprint
+        if state.household is None:
+            state.household = household
+        elif state.household != household:
+            # The category builds on the household's figures, such as what the
+            # solar power of its devices cost: computed again, it is too.
+            state.reset(state.fingerprint)
+            state.household = household
         if state.data_start is None:
             state.data_start = await async_first_hour(
                 self.hass, self._key_stats(config, setup)
@@ -461,24 +492,30 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         self._without_data.discard(subentry_id)
 
         counting_since = _ceil_hour(state.data_start)
-        computing_past = state.next_hour is None
+        # Computing the past replaces what an earlier computation wrote.
+        replace = state.next_hour is None
+        if replace:
+            state.past_until = end
         start = state.next_hour if state.next_hour is not None else counting_since
-        # A failure halfway must not count its hours again in the next update,
-        # so the state changes only once they are written.
-        progress = deepcopy(state)
-        history: dict[str, list[tuple[float, float]]] = {}
         while start < end:
             chunk_end = min(start + CHUNK, end)
+            # A failure halfway must not count its hours again in the next
+            # update, so the state changes only once they are written. Each
+            # written chunk is kept, so that a restart continues from there.
+            progress = deepcopy(state)
             rows = await self._async_compute(config, setup, progress, start, chunk_end)
-            for figure, series in rows.items():
-                history.setdefault(figure, []).extend(series)
+            await self._async_write_history(subentry_id, config, rows, replace=replace)
+            await async_wait_recorder(self.hass)
+            progress.next_hour = chunk_end
+            self.states[subentry_id] = state = progress
+            await self._async_save()
+            self.async_update_listeners()
+            replace = False
             start = chunk_end
-        await self._async_write_history(
-            subentry_id, config, history, replace=computing_past
-        )
-        await async_wait_recorder(self.hass)
-        progress.next_hour = max(start, counting_since)
-        self.states[subentry_id] = progress
+        if state.next_hour is None:
+            # Nothing to compute yet: clear what an earlier computation wrote.
+            await self._async_write_history(subentry_id, config, {}, replace=replace)
+            state.next_hour = max(start, counting_since)
 
     def _category_sources(
         self,
@@ -608,7 +645,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 add(
                     "solar_saving",
                     hour,
-                    alternative - sum(device_costs.values()) - saving,
+                    solar_saving(
+                        alternative_cost=alternative,
+                        cost=sum(device_costs.values()),
+                        saving=saving,
+                    ),
                 )
                 if len(config.heat_meters) == len(meters) > 1 and all(
                     hour in changes.get(m, {}) for m in config.heat_meters
@@ -640,7 +681,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 add(
                     "solar_saving",
                     hour,
-                    alternative - sum(device_costs.values()) - saving,
+                    solar_saving(
+                        alternative_cost=alternative,
+                        cost=sum(device_costs.values()),
+                        saving=saving,
+                    ),
                 )
             if saving:
                 state.saving += saving
@@ -699,14 +744,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         After the setup a price sensor takes precedence. While it has no value,
         its last value counts.
         """
+        sensor = last = None
         if hour >= config.setup_at and (entity := _price_entity_at(state, hour)):
-            price = entity_values.get(entity, {}).get(hour)
-            if price is not None:
-                state.last_prices[entity] = price
-                return price
-            if (last := state.last_prices.get(entity)) is not None:
-                return last
-        return value_at(config, state, VALUE_PRICE, hour) or 0.0
+            if (sensor := entity_values.get(entity, {}).get(hour)) is not None:
+                state.last_prices[entity] = sensor
+            last = state.last_prices.get(entity)
+        return fuel_price(
+            sensor=sensor,
+            last_sensor=last,
+            entered=value_at(config, state, VALUE_PRICE, hour),
+        )
 
     @staticmethod
     def _heat(
@@ -730,16 +777,15 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             state.measured_heat += heat
             state.measured_electricity += electricity
             return heat
-        scop = None
-        if state.heat_start is None:
-            scop = value_at(config, state, VALUE_SCOP, hour)
-        if scop is None and state.measured_electricity > 0:
-            scop = state.measured_heat / state.measured_electricity
-        if scop is None:
-            scop = value_at(config, state, VALUE_SCOP, hour) or 0.0
         if electricity:
             state.estimated = True
-        return electricity * scop
+        return estimated_heat(
+            electricity,
+            entered_scop=value_at(config, state, VALUE_SCOP, hour),
+            measured_heat=state.measured_heat,
+            measured_electricity=state.measured_electricity,
+            measuring=state.heat_start is not None,
+        )
 
     def _grid_prices(
         self,
@@ -786,28 +832,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             )
             energies.append(energy)
             grid_ranges.append(grid_range)
-
-        def over_grids(per_grid: list[list[float | None]]) -> list[float | None]:
-            return [
-                average_price(
-                    [prices[index] for prices in per_grid],
-                    [energy.get(hour, 0.0) for energy in energies],
-                )
-                for index, hour in enumerate(hours)
-            ]
-
-        mean = over_grids(means)
-        paid = over_grids(paids)
-        low: list[float | None] = []
-        high: list[float | None] = []
-        for index, hour in enumerate(hours):
-            known = [item[hour] for item in grid_ranges if hour in item]
-            bounds = [
-                price for price in (mean[index], paid[index]) if price is not None
-            ]
-            low.append(min([*bounds, *(item[0] for item in known)], default=None))
-            high.append(max([*bounds, *(item[1] for item in known)], default=None))
-        return GridPrices(mean=mean, paid=paid, low=low, high=high)
+        return combine_grid_prices(
+            hours, means=means, paids=paids, energies=energies, ranges=grid_ranges
+        )
 
     def _household_fingerprint(self, setup: EnergySetup) -> str:
         """Identify what changes the household's computed past.
@@ -832,7 +859,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 ),
                 "levels": list(self.household.levels),
                 "recompute": self.household.recompute,
-                "calculation": CALCULATION_VERSION,
+                "calculation": HOUSEHOLD_CALCULATION_VERSION,
                 "tariffs": sorted(
                     [sorted(config.meters), tariff]
                     for config in self.configs.values()
@@ -878,20 +905,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             if state.data_start is None:
                 return
         counting_since = _ceil_hour(state.data_start)
-        computing_past = state.next_hour is None
-        start = state.next_hour if state.next_hour is not None else counting_since
-        # As for a category: the state changes only once the hours are written.
-        progress = deepcopy(state)
-        history: dict[str, list[tuple[float, float]]] = {}
-        while start < end:
-            chunk_end = min(start + CHUNK, end)
-            rows = await self._async_compute_household(
-                setup, progress, start, chunk_end
-            )
-            for key, series in rows.items():
-                history.setdefault(key, []).extend(series)
-            start = chunk_end
-        if computing_past:
+        if state.next_hour is None:
+            state.past_until = end
             # Computing the past replaces what an earlier computation wrote,
             # including devices no longer in the energy dashboard.
             async_remove_statistics(
@@ -902,23 +917,37 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     if statistic_category(statistic_id) is None
                 ],
             )
+        start = state.next_hour if state.next_hour is not None else counting_since
         names = await self._async_household_names(setup)
         currency = self.hass.config.currency
-        for key, series in history.items():
-            async_write_statistics(
-                self.hass,
-                household_statistic_id(key),
-                names.get(key, key),
-                currency
-                if key.endswith("_cost")
-                or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
-                else "kWh",
-                series,
-                replace=False,
+        while start < end:
+            chunk_end = min(start + CHUNK, end)
+            # As for a category: the state changes only once the hours are
+            # written, and each written chunk is kept.
+            progress = deepcopy(state)
+            rows = await self._async_compute_household(
+                setup, progress, start, chunk_end
             )
-        await async_wait_recorder(self.hass)
-        progress.next_hour = max(start, counting_since)
-        self.household_state = progress
+            for key, series in rows.items():
+                async_write_statistics(
+                    self.hass,
+                    household_statistic_id(key),
+                    names.get(key, key),
+                    currency
+                    if key.endswith("_cost")
+                    or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
+                    else "kWh",
+                    series,
+                    replace=False,
+                )
+            await async_wait_recorder(self.hass)
+            progress.next_hour = chunk_end
+            self.household_state = state = progress
+            await self._async_save()
+            self.async_update_listeners()
+            start = chunk_end
+        if state.next_hour is None:
+            state.next_hour = max(start, counting_since)
 
     async def async_texts(self) -> Callable[[str], str]:
         """Return the names of areas and figures in the system language."""
@@ -1129,6 +1158,28 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                         replace=replace,
                     )
 
+    def progress(self) -> int | None:
+        """Return how far the past is computed, in percent; None once it is.
+
+        Writing the statistics takes most of the time, so each part counts with
+        the number of statistics it writes: the household with the figures of
+        each of its areas, each category with its own.
+        """
+        parts: list[tuple[float, float]] = []
+        household = self.household_state
+        if household.data_start is not None:
+            areas = len(self.setup.devices) + 2 if self.setup else 2
+            parts.append((HOUSEHOLD_AREA_FIGURES * areas, _done(household)))
+        for subentry_id, config in self.configs.items():
+            if subentry_id in self._without_data:
+                continue
+            figures = 1 + len(CATEGORY_FIGURES.get(config.category, ()))
+            parts.append((figures, _done(self.states[subentry_id])))
+        if all(done >= 1 for _, done in parts):
+            return None
+        total = sum(weight for weight, _ in parts)
+        return int(sum(weight * done for weight, done in parts) / total * 100)
+
     def current_price(
         self, config: CategoryConfig, state: CategoryState
     ) -> float | None:
@@ -1152,7 +1203,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 else self.current_price(config, state),
                 "heating": config.heating if is_heat_pump else None,
             }
-            if state.data_start is None or state.next_hour is None:
+            if (
+                state.data_start is None
+                or state.next_hour is None
+                or state.computing_past
+            ):
                 results[subentry_id] = CategoryResult(
                     calculating=subentry_id not in self._without_data, **base
                 )

@@ -44,7 +44,7 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     const title = devices.length ? devices.map((device) => device.name).join(" & ") : t("figure.heat");
     return html`<ha-card>
       <div class="header"><h2 class="title">${title}</h2></div>
-      ${waiting ? html`<p class="summary">${t(waiting)}</p>` : this._table()}
+      ${waiting ? html`<p class="summary">${this._waitingText(waiting)}</p>` : this._table()}
     </ha-card>`;
   }
 

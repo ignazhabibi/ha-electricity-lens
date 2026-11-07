@@ -130,11 +130,19 @@ async def async_setup_entry(
         "sensor", DOMAIN, f"{entry.entry_id}_forecast_today"
     ):
         registry.async_remove(old)
-    if (await async_get_energy_setup(hass)).forecasts:
+    coordinator.forecast_sensors = bool((await async_get_energy_setup(hass)).forecasts)
+    if coordinator.forecast_sensors:
         async_add_entities(
             ForecastSensor(coordinator, description, entry.entry_id)
             for description in FORECAST_SENSORS
         )
+    else:
+        # The forecast was removed from the energy dashboard.
+        for description in FORECAST_SENSORS:
+            if forecast := registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{entry.entry_id}_{description.key}"
+            ):
+                registry.async_remove(forecast)
     for subentry_id, subentry in entry.subentries.items():
         async_add_entities(
             [
@@ -151,7 +159,7 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
     """All savings minus all investments."""
 
     # The card reads these. The recorder skips them, as the categories' attributes.
-    _unrecorded_attributes = frozenset({"saved", "invested", "per_year"})
+    _unrecorded_attributes = frozenset({"saved", "invested", "per_year", "progress"})
 
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
@@ -165,12 +173,13 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # pyright: ignore[reportIncompatibleVariableOverride]
-        """Return the sums behind the balance."""
+        """Return the sums behind the balance, and how far the past is computed."""
         data = self.coordinator.data
         return {
             "saved": data.saved,
             "invested": data.invested,
             "per_year": data.per_year,
+            "progress": self.coordinator.progress(),
         }
 
 

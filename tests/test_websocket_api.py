@@ -40,6 +40,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     assert response["success"]
     result = response["result"]
     assert result["calculating"] is False
+    assert result["progress"] is None
     assert result["levels"] == {"cheap_until": 0.25, "expensive_from": None}
     areas = {area["id"]: area for area in result["areas"]}
     assert list(areas) == [

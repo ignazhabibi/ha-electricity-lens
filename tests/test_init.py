@@ -20,6 +20,7 @@ from homeassistant.helpers import (
     entity_registry as er,
     issue_registry as ir,
 )
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -28,7 +29,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
 
 from custom_components.electricity_lens import coordinator as coordinator_module
 from custom_components.electricity_lens.calculation import HOUR
-from custom_components.electricity_lens.const import DOMAIN
+from custom_components.electricity_lens.const import DOMAIN, SIGNAL_ENERGY_PREFS_UPDATED
 from custom_components.electricity_lens.coordinator import ElectricityLensCoordinator
 from custom_components.electricity_lens.models import CategoryConfig, CategoryState
 from custom_components.electricity_lens.sources import EnergyInterfaceError
@@ -292,6 +293,80 @@ async def test_progress_survives_restart(
     changes.assert_not_called()
     assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
         COUNTED * PV_PER_HOUR
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_update_computes_nothing_again(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Progress from before categories followed the household stays as it is."""
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    stored = await coordinator._store.async_load()
+    assert stored is not None
+    for category in stored["categories"].values():
+        del category["household"]
+    await coordinator._store.async_save(stored)
+
+    with patch(
+        "custom_components.electricity_lens.coordinator.async_hourly_changes"
+    ) as changes:
+        await hass.config_entries.async_reload(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+    changes.assert_not_called()
+    household = config_entry.runtime_data.household_state.fingerprint
+    for state in config_entry.runtime_data.states.values():
+        assert state.household == household
+
+
+@pytest.mark.usefixtures("energy")
+@pytest.mark.parametrize(
+    ("version", "household_again"),
+    [
+        pytest.param("CATEGORY_CALCULATION_VERSION", False, id="category_rule"),
+        pytest.param("HOUSEHOLD_CALCULATION_VERSION", True, id="household_rule"),
+    ],
+)
+async def test_new_rule_computes_what_it_changes(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    version: str,
+    household_again: bool,
+) -> None:
+    """A new category rule spares the household; a new household rule does not."""
+    # Arrange: stored figures that only computing them again corrects.
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    household = coordinator.household_state.fingerprint
+    energy = coordinator.household_state.totals["household_energy"]
+    stored = await coordinator._store.async_load()
+    assert stored is not None
+    stored["household"]["totals"]["household_energy"] += 100
+    for category in stored["categories"].values():
+        category["saving"] += 100
+    await coordinator._store.async_save(stored)
+
+    # Act
+    with patch.object(
+        coordinator_module, version, getattr(coordinator_module, version) + 1
+    ):
+        await hass.config_entries.async_reload(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+
+    # Assert: the categories are computed again, the household only for its rule.
+    coordinator = config_entry.runtime_data
+    assert (coordinator.household_state.fingerprint != household) is household_again
+    assert coordinator.household_state.totals["household_energy"] == pytest.approx(
+        energy if household_again else energy + 100
+    )
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+        COUNTED * PV_PER_HOUR
+    )
+    assert all(
+        state.household == coordinator.household_state.fingerprint
+        for state in coordinator.states.values()
     )
 
 
@@ -881,6 +956,73 @@ async def test_failed_update_counts_no_hour_twice(
     assert household_sums[-1] == pytest.approx(consumption)
 
 
+@pytest.mark.usefixtures("energy")
+async def test_restart_continues_the_past(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A restart while the past is computed continues from the last written chunk."""
+    # Arrange: four chunks each; the household is done, the PV plant's second
+    # chunk fails, as if Home Assistant stopped there.
+    entry = make_entry(("pv", PV_DATA))
+    flaky = _fails_once(coordinator_module.async_hourly_changes, 6)
+    with (
+        patch.object(coordinator_module, "CHUNK", 12 * HOUR),
+        patch.object(coordinator_module, "async_hourly_changes", flaky),
+    ):
+        await setup_entry(hass, entry)
+    state = next(iter(entry.runtime_data.states.values()))
+    assert state.next_hour == data_start.timestamp() + 12 * HOUR
+    assert state.computing_past
+    # The household's 5 areas write 8 figures each; the PV plant one, a quarter done.
+    assert entry.runtime_data.progress() == int((40 + 0.25) / 41 * 100)
+
+    # Act: start again.
+    with (
+        patch.object(coordinator_module, "CHUNK", 12 * HOUR),
+        patch.object(
+            coordinator_module,
+            "async_hourly_changes",
+            wraps=coordinator_module.async_hourly_changes,
+        ) as changes,
+    ):
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+
+    # Assert: only the PV plant's three missing chunks are computed, once each.
+    assert changes.call_count == 3
+    saving = COUNTED * PV_PER_HOUR
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
+    assert _state(hass, "sensor.pv_plant_saving").attributes["calculating"] is False
+    pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    assert pv_sums[-1] == pytest.approx(saving)
+    assert entry.runtime_data.progress() is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_progress_is_shown_while_computing(hass: HomeAssistant) -> None:
+    """The balance sensor tells how far the past is computed, after each chunk."""
+    seen: list[Any] = []
+
+    def record(event: Any) -> None:
+        if event.data["entity_id"] == "sensor.electricity_lens_balance" and (
+            new := event.data["new_state"]
+        ):
+            seen.append(new.attributes.get("progress"))
+
+    hass.bus.async_listen("state_changed", record)
+    with patch.object(coordinator_module, "CHUNK", 12 * HOUR):
+        await setup_entry(hass, make_entry(("pv", PV_DATA)))
+
+    shown = [value for value in seen if value is not None]
+    assert len(shown) >= 4
+    assert shown == sorted(shown)
+    assert 0 <= shown[0] < shown[-1] < 100
+    assert seen[-1] is None
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert balance.attributes["progress"] is None
+
+
 async def test_migration_from_future_version(hass: HomeAssistant) -> None:
     """An entry from a newer version is not touched."""
     entry = make_entry(("pv", {}), version=2)
@@ -927,3 +1069,53 @@ async def test_no_forecast_sensors_without_forecast(
 ) -> None:
     """Without a forecast there is nothing to show."""
     assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_forecast_sensors_follow_the_energy_dashboard(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """A forecast added later brings its sensors; removed, they go."""
+    await setup_entry(hass, config_entry)
+    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
+
+    with patch(
+        "custom_components.electricity_lens.coordinator.async_solar_forecast",
+        AsyncMock(return_value=(12.5, 20.25)),
+    ):
+        await set_energy_prefs(
+            hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+    assert (
+        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
+        == 12.5
+    )
+
+    await set_energy_prefs(hass, PREFS)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    assert not er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{config_entry.entry_id}_forecast_rest_today"
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_unreadable_energy_dashboard_change_only_refreshes(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """If the change cannot be read, the update reports it; nothing reloads."""
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    with (
+        patch(
+            "custom_components.electricity_lens.async_get_energy_setup",
+            side_effect=EnergyInterfaceError("moved"),
+        ),
+        patch.object(coordinator, "async_request_refresh", AsyncMock()) as refresh,
+    ):
+        async_dispatcher_send(hass, SIGNAL_ENERGY_PREFS_UPDATED)
+        await hass.async_block_till_done()
+    refresh.assert_awaited_once()
+    assert config_entry.runtime_data is coordinator

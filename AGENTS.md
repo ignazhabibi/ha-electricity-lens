@@ -31,8 +31,10 @@ affect the solution.
   savings add up to the balance. Heating and Charging show a device's saving
   with its solar power and name the part by solar power.
 - Bad readings are never filtered. They are fixed in Home Assistant's statistics
-  tools, then recomputed. New calculation rules raise `CALCULATION_VERSION`,
-  which recomputes all statistics on the next start.
+  tools, then recomputed. A new household rule raises
+  `HOUSEHOLD_CALCULATION_VERSION`, which recomputes all statistics on the next
+  start; a new rule only for the categories raises
+  `CATEGORY_CALCULATION_VERSION`, which spares the household's many statistics.
 - Distances are estimates from the charged energy and the entered consumption.
   The dashboard does not show them; the saving against a combustion car rests
   on them.

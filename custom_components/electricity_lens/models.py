@@ -119,6 +119,8 @@ class CategoryState:
     """The persisted progress of one category."""
 
     fingerprint: str = ""
+    household: str | None = None
+    """The household's fingerprint the past was computed with."""
     heating: str | None = None
     """The former heating the timelines were recorded for."""
     data_start: float | None = None
@@ -126,6 +128,8 @@ class CategoryState:
     """First hour of heat data; None without heat meters or data."""
     next_hour: float | None = None
     """Start of the next hour to compute; None before the past is computed."""
+    past_until: float | None = None
+    """End of the past being computed; its figures count once next_hour is there."""
     saving: float = 0.0
     last_prices: dict[str, float] = field(default_factory=dict[str, float])
     """Last electricity price per grid import meter, to bridge gaps."""
@@ -144,6 +148,7 @@ class CategoryState:
         self.data_start = None
         self.heat_start = None
         self.next_hour = None
+        self.past_until = None
         self.saving = 0.0
         self.last_prices = {}
         self.last_entity_price = None
@@ -151,6 +156,11 @@ class CategoryState:
         self.measured_electricity = 0.0
         self.estimated = False
         self.totals = {}
+
+    @property
+    def computing_past(self) -> bool:
+        """Return whether the past is still being computed."""
+        return _computing_past(self.next_hour, self.past_until)
 
     def timeline(self, key: str) -> Timeline:
         """Return the timeline of a value, creating it if needed."""
@@ -160,10 +170,12 @@ class CategoryState:
         """Return the state for storage."""
         return {
             "fingerprint": self.fingerprint,
+            "household": self.household,
             "heating": self.heating,
             "data_start": self.data_start,
             "heat_start": self.heat_start,
             "next_hour": self.next_hour,
+            "past_until": self.past_until,
             "saving": self.saving,
             "last_prices": self.last_prices,
             "last_entity_price": self.last_entity_price,
@@ -181,10 +193,12 @@ class CategoryState:
         """Restore the state from storage."""
         return cls(
             fingerprint=data.get("fingerprint", ""),
+            household=data.get("household"),
             heating=data.get("heating"),
             data_start=data.get("data_start"),
             heat_start=data.get("heat_start"),
             next_hour=data.get("next_hour"),
+            past_until=data.get("past_until"),
             saving=float(data.get("saving", 0.0)),
             last_prices=dict(data.get("last_prices", {})),
             last_entity_price=data.get("last_entity_price"),
@@ -233,6 +247,8 @@ class HouseholdState:
     data_start: float | None = None
     next_hour: float | None = None
     """Start of the next hour to compute; None before the past is computed."""
+    past_until: float | None = None
+    """End of the past being computed; its figures count once next_hour is there."""
     totals: dict[str, float] = field(default_factory=dict[str, float])
     """Cumulative value of each figure, keyed like household_hour's result."""
     last_prices: dict[str, float] = field(default_factory=dict[str, float])
@@ -247,10 +263,16 @@ class HouseholdState:
         self.fingerprint = fingerprint
         self.data_start = None
         self.next_hour = None
+        self.past_until = None
         self.totals = {}
         self.last_prices = {}
         self.debts = {}
         self.recent_prices = []
+
+    @property
+    def computing_past(self) -> bool:
+        """Return whether the past is still being computed."""
+        return _computing_past(self.next_hour, self.past_until)
 
     def as_dict(self) -> dict[str, Any]:
         """Return the state for storage."""
@@ -258,6 +280,7 @@ class HouseholdState:
             "fingerprint": self.fingerprint,
             "data_start": self.data_start,
             "next_hour": self.next_hour,
+            "past_until": self.past_until,
             "totals": self.totals,
             "last_prices": self.last_prices,
             "standing_charge": self.standing_charge.as_list(),
@@ -272,12 +295,24 @@ class HouseholdState:
             fingerprint=data.get("fingerprint", ""),
             data_start=data.get("data_start"),
             next_hour=data.get("next_hour"),
+            past_until=data.get("past_until"),
             totals=_numbers(data.get("totals")),
             last_prices=_numbers(data.get("last_prices")),
             standing_charge=Timeline.from_list(data.get("standing_charge", [])),
             debts=_numbers(data.get("debts")),
             recent_prices=[list(row) for row in data.get("recent_prices", [])],
         )
+
+
+def _computing_past(next_hour: float | None, past_until: float | None) -> bool:
+    """Return whether the past up to past_until is not computed yet.
+
+    The past is computed in chunks, and each chunk is kept, so that a restart
+    continues where it stopped. Its figures count only once it is complete.
+    """
+    if next_hour is None:
+        return True
+    return past_until is not None and next_hour < past_until
 
 
 def settings_hash(relevant: Mapping[str, Any]) -> str:

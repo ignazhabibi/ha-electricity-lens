@@ -392,6 +392,31 @@ async def test_removed_device_loses_its_statistics(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_energy_dashboard_change_computes_the_categories_again(
+    hass: HomeAssistant,
+) -> None:
+    """The categories build on the household, so they are computed again with it."""
+    # Arrange: savings that only computing them again corrects.
+    entry = make_entry(("pv", PV_DATA), ("heat_pump", HEAT_PUMP_DATA))
+    await setup_entry(hass, entry)
+    coordinator = entry.runtime_data
+    expected = {key: state.saving for key, state in coordinator.states.items()}
+    for state in coordinator.states.values():
+        state.saving += 100
+
+    # Act: the energy dashboard loses a device.
+    await set_energy_prefs(
+        hass, {**PREFS, "device_consumption": PREFS["device_consumption"][:2]}
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_wait_recording_done(hass)
+
+    # Assert
+    for key, state in coordinator.states.items():
+        assert state.saving == pytest.approx(expected[key])
+
+
+@pytest.mark.usefixtures("energy")
 async def test_recompute_computes_everything(
     hass: HomeAssistant, data_start: datetime
 ) -> None:

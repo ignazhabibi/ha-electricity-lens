@@ -105,10 +105,21 @@ async def async_setup_entry(
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    async def _energy_prefs_updated() -> None:
+        """Compute what changed; add or remove the forecast sensors."""
+        try:
+            forecasts = bool((await async_get_energy_setup(hass)).forecasts)
+        except EnergyInterfaceError:
+            forecasts = coordinator.forecast_sensors
+        if forecasts != coordinator.forecast_sensors:
+            hass.config_entries.async_schedule_reload(entry.entry_id)
+        else:
+            await coordinator.async_request_refresh()
+
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, SIGNAL_ENERGY_PREFS_UPDATED, coordinator.async_request_refresh
+            hass, SIGNAL_ENERGY_PREFS_UPDATED, _energy_prefs_updated
         )
     )
     # Computing the past can take a moment, so setup does not wait for it.
