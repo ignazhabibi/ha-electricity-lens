@@ -189,9 +189,15 @@ def import_hourly_mean(
 
 
 async def set_energy_prefs(hass: HomeAssistant, prefs: dict[str, Any]) -> None:
-    """Configure the energy dashboard."""
+    """Configure the energy dashboard and wait until its sensors exist.
+
+    The energy integration adds its cost sensors in the background. A test that
+    ends before them would add them while Home Assistant stops, which leaves a
+    timer of the entity registry behind.
+    """
     manager = await async_get_manager(hass)
     await manager.async_update(prefs)  # type: ignore[arg-type]
+    await hass.async_block_till_done()
 
 
 @pytest.fixture
