@@ -450,15 +450,16 @@ other views follow the energy date selection.
 
 ### Colors
 
-All cards share one color system built on Home Assistant's energy colors, so
-themes that change those change the cards too:
+All cards share one color system built on Home Assistant's energy and graph
+colors, so themes that change those change the cards too:
 
 - Solar power is the solar color. Grid power is one family: cheap is light,
   normal is the grid color, expensive is dark. The feed-in is the return
   color and shows below the line.
-- A device that belongs to a category wears its color everywhere: the heat
-  pump's devices red (the gas color), the car's green. Other devices take a
-  fixed order of quiet colors; "Other" is grey.
+- Devices take Home Assistant's graph colors in the order of the energy
+  dashboard, as in its own graph of individual devices. The heat pump has
+  one fixed red of its own, never the gas color; the car has the color of
+  its device. "Other" is grey.
 - A battery has the energy dashboard's battery colors: one while it gives
   power, one while it takes it.
 - Bars are amounts. Prices and ratios are thin dashed grey lines on the right

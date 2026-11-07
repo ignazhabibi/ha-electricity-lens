@@ -603,10 +603,10 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
         display: flex;
         justify-content: space-between;
         gap: 8px;
-        font-size: 14px;
+        font-size: var(--ha-font-size-m, 14px);
       }
       .bar-line {
-        font-size: 12px;
+        font-size: var(--ha-font-size-s, 12px);
       }
       .track {
         height: 12px;
@@ -656,7 +656,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
         display: flex;
         flex-wrap: wrap;
         gap: 4px 16px;
-        font-size: 12px;
+        font-size: var(--ha-font-size-s, 12px);
         color: var(--secondary-text-color);
       }
     `,

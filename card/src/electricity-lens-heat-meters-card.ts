@@ -7,8 +7,8 @@ import { html, type TemplateResult } from "lit";
 
 import { consumerColors, palette } from "./colors";
 import { heatDevices } from "./history-figures";
-import { PeriodSumsCard, addUp, tableStyles } from "./period-sums-card";
-import { cardStyles } from "./styles";
+import { PeriodSumsCard, addUp } from "./period-sums-card";
+import { cardStyles, tableStyles } from "./styles";
 
 export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
   static getStubConfig(): Record<string, never> {
@@ -60,7 +60,8 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     return html`<table>
       <thead>
         <tr>
-          <th scope="col" colspan="2" class="name">${t("meters_consumer")}</th>
+          <th class="swatch-cell"></th>
+            <th scope="col" class="name">${t("meters_consumer")}</th>
           <th scope="col">${t("figure.heat")}</th>
           <th scope="col">${t("meters_electricity")}</th>
           <th scope="col">${t("figure.scop")}</th>
@@ -83,7 +84,8 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
       </tbody>
       <tfoot>
         <tr>
-          <th scope="row" colspan="2" class="name">${t("savings_total")}</th>
+          <td class="swatch-cell"></td>
+            <th scope="row" class="name">${t("savings_total")}</th>
           <td>${fmt.value(heat, "energy")}</td>
           <td>${fmt.value(energy, "energy")}</td>
           <td>${ratio(heat, energy)}</td>

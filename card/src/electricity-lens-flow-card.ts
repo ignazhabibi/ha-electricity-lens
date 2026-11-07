@@ -205,7 +205,7 @@ export class ElectricityLensFlowCard extends LensCard {
         padding: 4px 16px 0;
       }
       .label {
-        font-size: 12px;
+        font-size: var(--ha-font-size-s, 12px);
         color: var(--secondary-text-color);
       }
       .track {
@@ -241,8 +241,9 @@ export class ElectricityLensFlowCard extends LensCard {
       .lists {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 0 24px;
-        padding: 12px 16px 12px;
+        /* Stacked on a phone, the two lists stay apart. */
+        gap: 12px 24px;
+        padding: 12px 16px 16px;
       }
       ul {
         list-style: none;
@@ -255,9 +256,10 @@ export class ElectricityLensFlowCard extends LensCard {
         align-items: center;
         gap: 8px;
         width: 100%;
-        padding: 4px 0;
+        padding: 8px 0;
         font: inherit;
-        font-size: 14px;
+        font-size: var(--ha-font-size-m, 14px);
+        line-height: var(--ha-line-height-normal, 20px);
         color: var(--primary-text-color);
         text-align: start;
       }
@@ -273,9 +275,9 @@ export class ElectricityLensFlowCard extends LensCard {
       }
       .dot {
         flex: none;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
+        width: 12px;
+        height: 12px;
+        border-radius: var(--ha-border-radius-circle, 50%);
       }
       .name {
         flex: 1;

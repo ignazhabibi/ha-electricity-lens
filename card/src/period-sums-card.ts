@@ -4,7 +4,7 @@
 // compared period too, if they show it. What they show follows from the sums
 // in each card.
 
-import { css, type PropertyValues, type TemplateResult } from "lit";
+import { type PropertyValues, type TemplateResult } from "lit";
 
 import { followEnergyDate } from "./energy-date";
 import { formatter, type Format } from "./format";
@@ -216,79 +216,3 @@ export abstract class PeriodSumsCard extends LensCard {
 
   protected abstract render(): TemplateResult;
 }
-
-export const tableStyles = css`
-  .note {
-    margin: 0;
-    padding: var(--ha-space-1, 4px) var(--ha-space-4, 16px) 0;
-    font-size: var(--ha-font-size-s, 12px);
-    line-height: 16px;
-    color: var(--secondary-text-color);
-  }
-  table {
-    width: 100%;
-    margin-top: 8px;
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
-    color: var(--primary-text-color);
-  }
-  th,
-  td {
-    padding: 12px 8px;
-    text-align: end;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--divider-color);
-  }
-  th:first-child,
-  td:first-child {
-    padding-inline-start: 16px;
-  }
-  th:last-child,
-  td:last-child {
-    padding-inline-end: 16px;
-  }
-  thead th {
-    padding-block: 8px;
-    font-size: var(--ha-font-size-s, 12px);
-    font-weight: var(--ha-font-weight-medium, 500);
-    color: var(--secondary-text-color);
-  }
-  .name {
-    width: 100%;
-    text-align: start;
-    white-space: normal;
-  }
-  .swatch-cell {
-    width: 32px;
-    line-height: 0;
-  }
-  .swatch {
-    display: inline-block;
-    width: 32px;
-    height: 16px;
-    border-radius: 4px;
-    border: 1px solid var(--color);
-    background: color-mix(in srgb, var(--color) 50%, transparent);
-    box-sizing: border-box;
-  }
-  tfoot th,
-  tfoot td {
-    border-bottom: none;
-    font-weight: var(--ha-font-weight-medium, 500);
-  }
-  tbody tr:last-child th,
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-  tfoot tr:first-child th,
-  tfoot tr:first-child td {
-    border-top: 1px solid var(--divider-color);
-  }
-  .quiet th,
-  .quiet td {
-    padding-block-start: 0;
-    font-size: var(--ha-font-size-s, 12px);
-    font-weight: var(--ha-font-weight-normal, 400);
-    color: var(--secondary-text-color);
-  }
-`;

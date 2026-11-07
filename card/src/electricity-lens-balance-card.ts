@@ -1,7 +1,7 @@
 // Dashboard card of the Electricity Lens integration. It needs no options but a title: it
 // finds the integration's sensors by itself and renders from the states the
 // frontend already has, so it appears without loading delay. The integration
-// computes every figure; the card lays them out as Home Assistant's totals table.
+// computes every figure; the card lays them out in the tables of the other cards.
 
 import { css, html, nothing, type TemplateResult } from "lit";
 
@@ -11,7 +11,7 @@ import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
 import { calculatingText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readBalance, readCategories } from "./model";
-import { cardStyles } from "./styles";
+import { cardStyles, tableStyles } from "./styles";
 import type { Category, FiguresInfo, HomeAssistant } from "./types";
 
 interface BalanceCardConfig {
@@ -26,7 +26,7 @@ interface RowFigures {
   saving: number | null;
   investment?: number;
   balance: number | null;
-  /** The category of a row with a bullet; a row without one is the sums. */
+  /** The category of a row with a swatch; a row without one is the sums. */
   category?: Category;
 }
 
@@ -123,15 +123,13 @@ export class ElectricityLensBalanceCard extends LensCard {
         <table>
           <thead>
             <tr>
-              <th class="bullet-cell"></th>
+              <th class="swatch-cell"></th>
               <th class="name" scope="col">${t("column_area")}</th>
-              ${columns.perYear
-                ? html`<th class="number per-year" scope="col">${t("column_per_year")}</th>`
-                : nothing}
-              <th class="number" scope="col">${t("column_saving")}</th>
+              ${columns.perYear ? html`<th class="per-year" scope="col">${t("column_per_year")}</th>` : nothing}
+              <th scope="col">${t("column_saving")}</th>
               ${columns.invested
-                ? html`<th class="number" scope="col">${t("column_investment")}</th>
-                    <th class="number" scope="col">${t("column_balance")}</th>`
+                ? html`<th scope="col">${t("column_investment")}</th>
+                    <th scope="col">${t("column_balance")}</th>`
                 : nothing}
             </tr>
           </thead>
@@ -151,6 +149,8 @@ export class ElectricityLensBalanceCard extends LensCard {
                 known
               )
             )}
+          </tbody>
+          <tfoot>
             ${this._row(
               {
                 name: t("total"),
@@ -162,7 +162,7 @@ export class ElectricityLensBalanceCard extends LensCard {
               },
               columns
             )}
-          </tbody>
+          </tfoot>
         </table>
       </div>
       ${calculating ? html`<p class="note">${calculatingText(t, balance.progress)}</p>` : nothing}
@@ -181,23 +181,23 @@ export class ElectricityLensBalanceCard extends LensCard {
       style=${color ? `--color: ${color}` : ""}
       @click=${() => this._moreInfo(entityId)}
     >
-      <td class="bullet-cell">
-        ${category ? html`<span class="bullet" aria-hidden="true"></span>` : nothing}
+      <td class="swatch-cell">
+        ${category ? html`<span class="swatch" aria-hidden="true"></span>` : nothing}
       </td>
-      <th class="name" scope="row" title=${name}>
+      <th class="name" scope="row">
         <button type="button">${name}</button>
       </th>
       ${columns.perYear
-        ? html`<td class="number per-year">
+        ? html`<td class="per-year">
             ${perYear === null
               ? "–"
               : this._localize("average", { amount: this._money(perYear) })}
           </td>`
         : nothing}
-      <td class="number">${this._money(saving)}</td>
+      <td>${this._money(saving)}</td>
       ${columns.invested
-        ? html`<td class="number">${this._money(investment)}</td>
-            <td class="number">${this._money(balance, true)}</td>`
+        ? html`<td>${this._money(investment)}</td>
+            <td>${this._money(balance, true)}</td>`
         : nothing}
     </tr>`;
   }
@@ -214,10 +214,8 @@ export class ElectricityLensBalanceCard extends LensCard {
 
   static styles = [
     cardStyles,
+    tableStyles,
     css`
-      ha-card {
-        container-type: inline-size;
-      }
       .pv {
         --color: var(--electricity-lens-pv-color);
       }
@@ -227,63 +225,15 @@ export class ElectricityLensBalanceCard extends LensCard {
       .wallbox {
         --color: var(--electricity-lens-wallbox-color);
       }
-      /* The table of Home Assistant's totals card. */
       .table {
         overflow-x: auto;
       }
-      table {
-        width: 100%;
-        border-spacing: 0;
-        white-space: nowrap;
-        font-size: var(--ha-font-size-m, 14px);
-        line-height: var(--ha-line-height-normal, 20px);
-        color: var(--primary-text-color);
-      }
-      thead tr {
-        height: 56px;
-      }
-      tbody tr {
-        height: 52px;
+      /* Each row opens its sensor's dialog. */
+      tr[class] {
         cursor: pointer;
       }
-      tbody tr:hover {
+      tr[class]:hover {
         background-color: rgba(var(--rgb-primary-text-color), 0.04);
-      }
-      th,
-      td {
-        box-sizing: border-box;
-        padding: 0 16px;
-        border-bottom: 1px solid var(--divider-color);
-        font-weight: var(--ha-font-weight-normal, 400);
-        text-align: start;
-      }
-      thead th {
-        font-weight: var(--ha-font-weight-medium, 500);
-      }
-      tbody tr:last-child > * {
-        border-bottom: none;
-      }
-      .total > * {
-        font-weight: var(--ha-font-weight-medium, 500);
-      }
-      .bullet-cell {
-        width: 48px;
-        padding-inline-end: 0;
-      }
-      .bullet {
-        display: block;
-        box-sizing: border-box;
-        width: 32px;
-        height: 16px;
-        border-radius: var(--ha-border-radius-sm, 4px);
-        border: 1px solid var(--color);
-        background: color-mix(in srgb, var(--color) 50%, transparent);
-      }
-      .name {
-        max-width: 0;
-        min-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
       /* Reaches the row by keyboard and for screen readers; the row takes the click. */
       button {
@@ -294,11 +244,6 @@ export class ElectricityLensBalanceCard extends LensCard {
         outline: 2px solid var(--primary-color);
         outline-offset: 2px;
       }
-      .number {
-        width: 1%;
-        text-align: end;
-        font-variant-numeric: tabular-nums;
-      }
       .note {
         margin: 0;
         padding: 0 16px 12px;
@@ -306,22 +251,10 @@ export class ElectricityLensBalanceCard extends LensCard {
         line-height: 16px;
         color: var(--secondary-text-color);
       }
-      /* A phone, or half a column: the names need the room of the yearly figure and the bullets. */
+      /* A phone, or half a column: the names need the room of the yearly figure. */
       @container (max-width: 480px) {
-        .per-year,
-        .bullet-cell {
+        .per-year {
           display: none;
-        }
-        th.number,
-        td.number {
-          padding: 0 8px;
-        }
-        th.number:last-child,
-        td.number:last-child {
-          padding-inline-end: 16px;
-        }
-        .name {
-          padding-inline-end: 8px;
         }
       }
     `,
