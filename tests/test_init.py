@@ -10,7 +10,6 @@ import pytest
 from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.statistics import (
     get_metadata,
-    statistics_during_period,
 )
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -49,6 +48,7 @@ from .conftest import (
     make_entry,
     set_energy_prefs,
     setup_entry,
+    statistic_sums,
 )
 
 COUNTED = HOURS - 1
@@ -145,27 +145,13 @@ async def test_devices(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert entity.config_subentry_id in config_entry.subentries
 
 
-async def _sums(hass: HomeAssistant, statistic_id: str, start: datetime) -> list[float]:
-    rows = await get_instance(hass).async_add_executor_job(
-        statistics_during_period,
-        hass,
-        start,
-        None,
-        {statistic_id},
-        "hour",
-        None,
-        {"sum"},
-    )
-    return [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportReturnType, reportTypedDictNotRequiredAccess]
-
-
 @pytest.mark.usefixtures("energy")
 async def test_history_is_written(
     hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
 ) -> None:
     """The computed past becomes a statistic of the integration's own."""
     await setup_entry(hass, config_entry)
-    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
     assert sums[0] == pytest.approx(PV_PER_HOUR)
 
@@ -173,7 +159,7 @@ async def test_history_is_written(
     assert pv.attributes["statistic_id"] == "electricity_lens:pv_saving"
     assert "state_class" not in pv.attributes
     # The sensor keeps no statistics of its own.
-    assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
+    assert await statistic_sums(hass, "sensor.pv_plant_saving", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -183,21 +169,25 @@ async def test_heat_distance_and_alternative_costs(
     """Heat pump and car keep heat, distance, and what the alternative cost."""
     await setup_entry(hass, config_entry)
     heat = HP_KWH * 4.0
-    assert (await _sums(hass, "electricity_lens:heat_pump_heat", data_start))[
+    assert (await statistic_sums(hass, "electricity_lens:heat_pump_heat", data_start))[
         -1
     ] == pytest.approx(COUNTED * heat)
     assert (
-        await _sums(hass, "electricity_lens:heat_pump_alternative_cost", data_start)
+        await statistic_sums(
+            hass, "electricity_lens:heat_pump_alternative_cost", data_start
+        )
     )[-1] == pytest.approx(COUNTED * heat / 0.92 * 0.10)
     distance = 1.0 / 20 * 100
-    assert (await _sums(hass, "electricity_lens:wallbox_distance", data_start))[
-        -1
-    ] == pytest.approx(COUNTED * distance)
-    assert (await _sums(hass, "electricity_lens:wallbox_alternative_cost", data_start))[
-        -1
-    ] == pytest.approx(COUNTED * distance * 7 / 100 * 1.80)
+    assert (
+        await statistic_sums(hass, "electricity_lens:wallbox_distance", data_start)
+    )[-1] == pytest.approx(COUNTED * distance)
+    assert (
+        await statistic_sums(
+            hass, "electricity_lens:wallbox_alternative_cost", data_start
+        )
+    )[-1] == pytest.approx(COUNTED * distance * 7 / 100 * 1.80)
     # The PV plant keeps only its saving.
-    assert await _sums(hass, "electricity_lens:pv_heat", data_start) == []
+    assert await statistic_sums(hass, "electricity_lens:pv_heat", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -220,7 +210,7 @@ async def test_new_hours_continue_the_history(
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
 
-    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx((COUNTED + 2) * PV_PER_HOUR)
     assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
         (COUNTED + 2) * PV_PER_HOUR
@@ -243,7 +233,7 @@ async def test_statistics_move_from_the_sensors(
     await coordinator._store.async_save(stored)
     import_hourly(hass, "sensor.pv_plant_saving", data_start, [0.0, 1.0], unit="EUR")
     await async_wait_recording_done(hass)
-    assert await _sums(hass, "sensor.pv_plant_saving", data_start)
+    assert await statistic_sums(hass, "sensor.pv_plant_saving", data_start)
 
     with patch(
         "custom_components.electricity_lens.coordinator.async_hourly_changes",
@@ -253,8 +243,8 @@ async def test_statistics_move_from_the_sensors(
         await hass.async_block_till_done(wait_background_tasks=True)
         await async_wait_recording_done(hass)
     changes.assert_called()
-    assert await _sums(hass, "sensor.pv_plant_saving", data_start) == []
-    sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    assert await statistic_sums(hass, "sensor.pv_plant_saving", data_start) == []
+    sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
 
 
@@ -264,19 +254,21 @@ async def test_removed_category_loses_its_statistics(
 ) -> None:
     """Removing a category removes its saving statistic; removing all, all."""
     await setup_entry(hass, config_entry)
-    assert await _sums(hass, "electricity_lens:wallbox_saving", data_start)
+    assert await statistic_sums(hass, "electricity_lens:wallbox_saving", data_start)
     hass.config_entries.async_remove_subentry(
         config_entry, _subentry(config_entry, "wallbox").subentry_id
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
-    assert await _sums(hass, "electricity_lens:wallbox_saving", data_start) == []
-    assert await _sums(hass, "electricity_lens:pv_saving", data_start)
+    assert (
+        await statistic_sums(hass, "electricity_lens:wallbox_saving", data_start) == []
+    )
+    assert await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
 
     await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     await async_wait_recording_done(hass)
-    assert await _sums(hass, "electricity_lens:pv_saving", data_start) == []
+    assert await statistic_sums(hass, "electricity_lens:pv_saving", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -540,22 +532,8 @@ async def test_missing_meter_raises_issue(
     """A meter removed from the energy dashboard raises a repair issue."""
     await setup_entry(hass, config_entry)
     before = float(_state(hass, "sensor.electric_car_saving").state)
-    await set_energy_prefs(
-        hass,
-        {
-            "device_consumption": [
-                device
-                for device in PREFS["device_consumption"]
-                if device["stat_consumption"] != "sensor.wallbox"
-            ]
-        },
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
-    subentry_id = next(
-        s.subentry_id
-        for s in config_entry.subentries.values()
-        if s.subentry_type == "wallbox"
-    )
+    await _break_wallbox_meter(hass)
+    subentry_id = _subentry(config_entry, "wallbox").subentry_id
     issue = ir.async_get(hass).async_get_issue(DOMAIN, f"missing_meter_{subentry_id}")
     assert issue is not None
     assert issue.translation_placeholders == {
@@ -729,11 +707,7 @@ async def test_solar_removed_raises_issue(
     await setup_entry(hass, config_entry)
     await set_energy_prefs(hass, {"energy_sources": PREFS["energy_sources"][:1]})
     await hass.async_block_till_done(wait_background_tasks=True)
-    subentry_id = next(
-        s.subentry_id
-        for s in config_entry.subentries.values()
-        if s.subentry_type == "pv"
-    )
+    subentry_id = _subentry(config_entry, "pv").subentry_id
     issue = ir.async_get(hass).async_get_issue(DOMAIN, f"missing_meter_{subentry_id}")
     assert issue is not None
     assert issue.translation_placeholders == {"category": "pv", "meters": "solar"}
@@ -946,13 +920,15 @@ async def test_failed_update_counts_no_hour_twice(
     assert coordinator.last_update_success
     saving = COUNTED * PV_PER_HOUR
     assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
-    pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    pv_sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert pv_sums[-1] == pytest.approx(saving)
     consumption = COUNTED * (1.0 - 0.5 + 2.0)
     assert coordinator.household_state.totals["household_energy"] == pytest.approx(
         consumption
     )
-    household_sums = await _sums(hass, "electricity_lens:household_energy", data_start)
+    household_sums = await statistic_sums(
+        hass, "electricity_lens:household_energy", data_start
+    )
     assert household_sums[-1] == pytest.approx(consumption)
 
 
@@ -994,7 +970,7 @@ async def test_restart_continues_the_past(
     saving = COUNTED * PV_PER_HOUR
     assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
     assert _state(hass, "sensor.pv_plant_saving").attributes["calculating"] is False
-    pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    pv_sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert pv_sums[-1] == pytest.approx(saving)
     assert entry.runtime_data.progress() is None
 

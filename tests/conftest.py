@@ -9,12 +9,16 @@ from typing import Any
 
 import pytest
 from homeassistant.components.energy.data import async_get_manager
+from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import async_import_statistics
+from homeassistant.components.recorder.statistics import (
+    async_import_statistics,
+    statistics_during_period,
+)
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
@@ -186,6 +190,23 @@ def import_hourly_mean(
             for index, value in enumerate(values)
         ],
     )
+
+
+async def statistic_sums(
+    hass: HomeAssistant, statistic_id: str, start: datetime
+) -> list[float]:
+    """Return a statistic's hourly sums from start on."""
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        start,
+        None,
+        {statistic_id},
+        "hour",
+        None,
+        {"sum"},
+    )
+    return [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportReturnType, reportTypedDictNotRequiredAccess]
 
 
 async def set_energy_prefs(hass: HomeAssistant, prefs: dict[str, Any]) -> None:
