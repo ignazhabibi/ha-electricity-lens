@@ -521,26 +521,6 @@ async def async_end_of_data(hass: HomeAssistant, stat_id: str) -> float | None:
     return float(stat_rows[0]["start"]) + HOUR  # pyright: ignore[reportTypedDictNotRequiredAccess]
 
 
-async def async_last_value(hass: HomeAssistant, entity_id: str) -> float | None:
-    """Return an entity's numeric state, or its last recorded value.
-
-    At startup an entity may not be loaded yet; its long-term statistics are.
-    """
-    if (state := hass.states.get(entity_id)) is not None:
-        try:
-            return float(state.state)
-        except ValueError:
-            pass
-    rows = await get_instance(hass).async_add_executor_job(
-        get_last_statistics, hass, 1, entity_id, False, {"mean", "state"}
-    )
-    for row in rows.get(entity_id, []):
-        for key in ("mean", "state"):
-            if isinstance(value := row.get(key), int | float):
-                return float(value)
-    return None
-
-
 def category_statistic_id(category: str, figure: str) -> str:
     """Return the id of the statistic that holds a figure of a category."""
     return f"{DOMAIN}:{category}_{figure}"

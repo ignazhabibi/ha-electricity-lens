@@ -726,53 +726,6 @@ async def test_meter_without_data(hass: HomeAssistant, data_start: datetime) -> 
     assert wallbox.attributes["calculating"] is False
 
 
-async def test_migration(hass: HomeAssistant, data_start: datetime) -> None:
-    """Categories of version 1.1 move to the phases of version 1.2."""
-    assert await async_setup_component(hass, "energy", {})
-    await set_energy_prefs(hass, PREFS)
-    hass.states.async_set("input_number.pv_cost", "12174.5")
-    # The fuel price sensor is not loaded yet; its statistics are.
-    import_hourly_mean(hass, "sensor.diesel", data_start, [1.65])
-    await async_wait_recording_done(hass)
-    entry = make_entry(
-        ("pv", {"investment_entity": "input_number.pv_cost"}),
-        (
-            "heat_pump",
-            {
-                "meters": ["sensor.heat_pump"],
-                "scop": 3.8,
-                "gas_price": 0.1,
-                "gas_price_entity": "sensor.gas_price",
-                "boiler_efficiency": 92,
-                "investment": 13000,
-                "commissioned": "2024-09-01",
-            },
-        ),
-        (
-            "wallbox",
-            {
-                "meters": ["sensor.wallbox"],
-                "fuel_price": 0,
-                "fuel_price_entity": "sensor.diesel",
-            },
-        ),
-        minor_version=1,
-    )
-    await setup_entry(hass, entry)
-    assert entry.minor_version == 2
-    pv = _subentry(entry, "pv").data
-    assert pv["investment"] == 12174.5
-    heat_pump = _subentry(entry, "heat_pump").data
-    assert heat_pump["heating"] == "gas"
-    assert heat_pump["investment"] == 13000
-    assert heat_pump["before"] == {"price": 0.1, "scop": 3.8}
-    assert heat_pump["current"]["price_entity"] == "sensor.gas_price"
-    assert "commissioned" not in heat_pump
-    wallbox = _subentry(entry, "wallbox").data
-    assert wallbox["before"]["price"] == 1.65
-    assert wallbox["before"]["ev_consumption"] == 20.0
-
-
 def _paired_heat_pump() -> tuple[str, dict[str, Any]]:
     return _heat_pump(
         meters=["sensor.heat_pump", "sensor.washer"],
@@ -999,11 +952,21 @@ async def test_progress_is_shown_while_computing(hass: HomeAssistant) -> None:
     assert balance.attributes["progress"] is None
 
 
-async def test_migration_from_future_version(hass: HomeAssistant) -> None:
-    """An entry from a newer version is not touched."""
-    entry = make_entry(("pv", {}), version=2)
+@pytest.mark.parametrize(
+    ("version", "minor_version"),
+    [pytest.param(2, 2, id="newer"), pytest.param(1, 1, id="before_0_12")],
+)
+async def test_entries_of_other_versions_are_refused(
+    hass: HomeAssistant, version: int, minor_version: int
+) -> None:
+    """An entry this version cannot read is not set up and not touched."""
+    entry = make_entry(("pv", {}), version=version, minor_version=minor_version)
     entry.add_to_hass(hass)
+
     assert not await hass.config_entries.async_setup(entry.entry_id)
+
+    assert entry.state is ConfigEntryState.MIGRATION_ERROR
+    assert (entry.version, entry.minor_version) == (version, minor_version)
 
 
 async def test_forecast_sensors(hass: HomeAssistant) -> None:
