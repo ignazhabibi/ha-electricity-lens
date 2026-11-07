@@ -150,6 +150,7 @@ Home Assistant 2026.10 or newer is required.
    meters**, **Electricity Lens history**, **Electricity Lens key figures**, and
    **Electricity Lens breakdown** to a dashboard from the card picker. Power
    flow and economics have no options but a title, heat meters none at all.
+   The card picker names them in Home Assistant's language, English or German.
    There is no dashboard resource to add: the integration serves the cards
    itself and updates them with the integration.
 
@@ -301,9 +302,10 @@ Where a period holds a saving but no energy, the energy shows as a dash: the
 household's figures can begin later than the savings.
 
 With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
-instead: what the alternative would have cost, less the electricity costs, and
-how much of it is solar power. The card editor offers only the categories that
-are set up.
+instead: what the alternative would have cost, less the electricity costs, how
+much of it is solar power, and how much of it the balance counts, which gives
+the benefit of solar power to the PV plant. The card editor offers only the
+categories that are set up.
 
 ### Electricity Lens heat meters
 

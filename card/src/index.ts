@@ -10,31 +10,32 @@ import { ElectricityLensHistoryCard } from "./electricity-lens-history-card";
 import { ElectricityLensSavingsCard } from "./electricity-lens-savings-card";
 import { ElectricityLensFiguresCardEditor } from "./figures-editor";
 import { ElectricityLensHistoryCardEditor } from "./history-editor";
+import { localizer } from "./localize";
 import { registerCards } from "./register";
 import { ElectricityLensSavingsCardEditor } from "./savings-editor";
 import { ElectricityLensDashboardStrategy } from "./strategy";
+
+// The card picker has no hass to ask; Home Assistant sets the page's language.
+const t = localizer(document.documentElement.lang || navigator.language || "en");
 
 registerCards([
   {
     tag: "electricity-lens-flow-card",
     card: ElectricityLensFlowCard,
-    name: "Electricity Lens power flow",
-    description:
-      "Where the power comes from right now and where it goes, as two bars, from the energy dashboard's power sensors.",
+    name: t("picker.flow"),
+    description: t("picker.flow.description"),
   },
   {
     tag: "electricity-lens-balance-card",
     card: ElectricityLensBalanceCard,
-    name: "Electricity Lens economics",
-    description:
-      "What your PV plant, heat pump, and electric car have saved, against what they cost.",
+    name: t("picker.economics"),
+    description: t("picker.economics.description"),
   },
   {
     tag: "electricity-lens-savings-card",
     card: ElectricityLensSavingsCard,
-    name: "Electricity Lens savings",
-    description:
-      "What solar power, the heat pump, and the electric car saved in the selected period, as a table, or one area's saving reckoned up. Follows the energy date selection.",
+    name: t("picker.savings"),
+    description: t("picker.savings.description"),
     editor: {
       tag: "electricity-lens-savings-card-editor",
       element: ElectricityLensSavingsCardEditor,
@@ -43,16 +44,14 @@ registerCards([
   {
     tag: "electricity-lens-heat-meters-card",
     card: ElectricityLensHeatMetersCard,
-    name: "Electricity Lens heat meters",
-    description:
-      "Heat, electricity, and seasonal COP of each of the heat pump's meters in the selected period. Follows the energy date selection.",
+    name: t("picker.heat_meters"),
+    description: t("picker.heat_meters.description"),
   },
   {
     tag: "electricity-lens-history-card",
     card: ElectricityLensHistoryCard,
-    name: "Electricity Lens history",
-    description:
-      "Savings, consumption, or costs per period as bars, stacked by source or consumer, with lines. Follows the energy date selection.",
+    name: t("picker.history"),
+    description: t("picker.history.description"),
     editor: {
       tag: "electricity-lens-history-card-editor",
       element: ElectricityLensHistoryCardEditor,
@@ -61,9 +60,8 @@ registerCards([
   {
     tag: "electricity-lens-figures-card",
     card: ElectricityLensFiguresCard,
-    name: "Electricity Lens key figures",
-    description:
-      "One key figure for a period: costs, solar share, cheap grid power, savings, or any statistic or entity.",
+    name: t("picker.figures"),
+    description: t("picker.figures.description"),
     editor: {
       tag: "electricity-lens-figures-card-editor",
       element: ElectricityLensFiguresCardEditor,
@@ -72,9 +70,8 @@ registerCards([
   {
     tag: "electricity-lens-breakdown-card",
     card: ElectricityLensBreakdownCard,
-    name: "Electricity Lens breakdown",
-    description:
-      "Shares for a period as a ring or bars: the electricity mix, consumption or costs by consumer, or any statistics.",
+    name: t("picker.breakdown"),
+    description: t("picker.breakdown.description"),
     editor: {
       tag: "electricity-lens-breakdown-card-editor",
       element: ElectricityLensBreakdownCardEditor,
@@ -84,8 +81,7 @@ registerCards([
   {
     type: "electricity-lens",
     element: ElectricityLensDashboardStrategy,
-    name: "Electricity Lens",
-    description:
-      "A finished electricity dashboard with costs, electricity mix, solar, heat pump, car, and the balance.",
+    name: t("picker.dashboard"),
+    description: t("picker.dashboard.description"),
   },
 ]);
