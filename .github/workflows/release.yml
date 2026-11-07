@@ -23,7 +23,8 @@ jobs:
     - uses: actions/setup-python@v7
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+    # uv installs Home Assistant and its test stack faster than pip, and caches it.
+    - uses: astral-sh/setup-uv@v10.3.3
     - uses: actions/setup-node@v5
       with:
         node-version: ${{ env.NODE_VERSION }}
@@ -31,8 +32,7 @@ jobs:
         cache-dependency-path: card/package-lock.json
     - name: Install
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[dev]'
+        uv pip install --system '.[dev]'
         npm --prefix card ci
     - name: Quality check
       run: python scripts/quality_check.py

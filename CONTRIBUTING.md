@@ -22,8 +22,8 @@ python scripts/quality_check.py
 pre-commit run --all-files
 ```
 
-The gate runs Ruff, Pyright, pytest, and the card's type check, and regenerates
-the translations and the card. It also checks that:
+The gate runs Ruff, Pyright, pytest on all CPU cores, and the card's type check,
+and regenerates the translations and the card. It also checks that:
 
 - each integration module exceeds 95% line coverage, and `config_flow.py`
   stays at 100%;
@@ -41,7 +41,8 @@ Both are committed, because HACS installs exactly what is published.
 - **Translations:** edit `scripts/translations.py`, then run it.
 - **Card:** edit `card/src/`, then run `npm --prefix card run build`.
 
-The key figures' arithmetic, the power flow, and the history chart have tests in `card/test/`, run with
+The sums over a period, the key figures' arithmetic, the history chart's stacks,
+the power flow, and the dashboard's views have tests in `card/test/`, run with
 `npm --prefix card test` and by the quality gate.
 
 ## Python

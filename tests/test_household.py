@@ -8,7 +8,6 @@ import pytest
 from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.statistics import (
     get_metadata,
-    statistics_during_period,
 )
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -31,6 +30,7 @@ from .conftest import (
     make_entry,
     set_energy_prefs,
     setup_entry,
+    statistic_sums,
 )
 
 COUNTED = HOURS - 1
@@ -44,18 +44,7 @@ OTHER = CONSUMPTION - sum(DEVICES.values())
 
 
 async def _total(hass: HomeAssistant, key: str, start: datetime) -> float | None:
-    statistic_id = f"electricity_lens:{key}"
-    rows = await get_instance(hass).async_add_executor_job(
-        statistics_during_period,
-        hass,
-        start,
-        None,
-        {statistic_id},
-        "hour",
-        None,
-        {"sum"},
-    )
-    sums = [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportTypedDictNotRequiredAccess]
+    sums = await statistic_sums(hass, f"electricity_lens:{key}", start)
     return sums[-1] if sums else None
 
 

@@ -26,6 +26,9 @@ COMMANDS = (
         "-m",
         "pytest",
         "-q",
+        # pytest-xdist comes, pinned, with pytest-homeassistant-custom-component.
+        "-n",
+        "auto",
         f"--cov={INTEGRATION_PATH}",
         "--cov-report=term-missing",
         f"--cov-report=json:{COVERAGE_REPORT}",

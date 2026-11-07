@@ -4,25 +4,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { Palette } from "../src/colors";
 import { powerFlow, powerSensors, readKw } from "../src/flow";
 import type { FigureArea, FiguresInfo } from "../src/types";
-
-const colors: Palette = {
-  solar: "solar",
-  grid: "grid",
-  cheap: "cheap",
-  expensive: "expensive",
-  export: "export",
-  batteryOut: "battery-out",
-  batteryIn: "battery-in",
-  standing: "standing",
-  heat: "heat",
-  car: "car",
-  other: "other",
-  line: "line",
-  consumers: ["c1", "c2", "c3"],
-};
+import { colors } from "./palette";
 
 const area = (id: string, kind: FigureArea["kind"], energy: string[], power: string[] = [], extra: Partial<FigureArea> = {}): FigureArea => ({
   id,

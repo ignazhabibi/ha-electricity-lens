@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
 from homeassistant.components.energy.data import async_get_manager
+from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import async_import_statistics
+from homeassistant.components.recorder.statistics import (
+    async_import_statistics,
+    statistics_during_period,
+)
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
@@ -29,6 +34,10 @@ from custom_components.electricity_lens.const import (
     CATEGORY_WALLBOX,
     DOMAIN,
 )
+
+# The Home Assistant test plugin logs every SQL statement of the recorder. Each
+# test then formats thousands of records, which costs a third of the run time.
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 HOURS = 48
 GRID_PRICE = 0.30
@@ -183,10 +192,33 @@ def import_hourly_mean(
     )
 
 
+async def statistic_sums(
+    hass: HomeAssistant, statistic_id: str, start: datetime
+) -> list[float]:
+    """Return a statistic's hourly sums from start on."""
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        start,
+        None,
+        {statistic_id},
+        "hour",
+        None,
+        {"sum"},
+    )
+    return [row["sum"] for row in rows.get(statistic_id, [])]  # pyright: ignore[reportReturnType, reportTypedDictNotRequiredAccess]
+
+
 async def set_energy_prefs(hass: HomeAssistant, prefs: dict[str, Any]) -> None:
-    """Configure the energy dashboard."""
+    """Configure the energy dashboard and wait until its sensors exist.
+
+    The energy integration adds its cost sensors in the background. A test that
+    ends before them would add them while Home Assistant stops, which leaves a
+    timer of the entity registry behind.
+    """
     manager = await async_get_manager(hass)
     await manager.async_update(prefs)  # type: ignore[arg-type]
+    await hass.async_block_till_done()
 
 
 @pytest.fixture
