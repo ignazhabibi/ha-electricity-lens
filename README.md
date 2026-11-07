@@ -25,8 +25,8 @@ know, such as what the heat pump cost extra or what gas cost on average.
 - See at a glance whether the PV plant, heat pump, and electric car together
   have already saved more than they cost.
 - Get a notification when the heat pump has paid for itself.
-- Compare the yearly saving of each investment, for example before deciding on
-  a battery or a second wallbox.
+- Compare the yearly saving of each investment, and see which one pays off
+  fastest.
 - Keep an honest record: savings can be negative for a while, for example when
   electricity is expensive and gas is cheap, and the integration shows that.
 
@@ -146,9 +146,10 @@ Home Assistant 2026.10 or newer is required.
    like.
 6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
    dashboard**, or add the cards **Electricity Lens power flow**, **Electricity
-   Lens economics**, **Electricity Lens history**, **Electricity Lens key
-   figures**, and **Electricity Lens breakdown** to a dashboard from the card
-   picker. The first two have no options but a title.
+   Lens economics**, **Electricity Lens savings**, **Electricity Lens heat
+   meters**, **Electricity Lens history**, **Electricity Lens key figures**, and
+   **Electricity Lens breakdown** to a dashboard from the card picker. Power
+   flow and economics have no options but a title, heat meters none at all.
    There is no dashboard resource to add: the integration serves the cards
    itself and updates them with the integration.
 
@@ -199,10 +200,10 @@ where it stopped.
 | Option | What it does |
 |---|---|
 | Standing charge and price levels | A new standing charge applies from the next full hour. New price levels sort the whole past again. |
+| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Changes to the energy dashboard's grid, solar, battery, or devices compute the
 household and all categories again.
-| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
 Categories are config subentries. On the integration page each category has
 **Reconfigure** and **Delete**, and there are buttons to add the categories not
