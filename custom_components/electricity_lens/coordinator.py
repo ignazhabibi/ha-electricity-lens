@@ -106,12 +106,16 @@ STORAGE_VERSION = 1
 # of the saving sensors' statistics. Version 3 adds heat, distance, and the
 # alternative's costs per category.
 STATISTICS_VERSION = 3
-# Raised when a rule changes what the computed past looks like: everything is
-# then computed again. Version 2: prices paid, price levels that need a contrast,
-# consumers that add up to the household, and meters that run back. Version 3:
-# no hour counted twice after a failed update. Version 4: the standing charge and
-# the saving by solar power per category.
-CALCULATION_VERSION = 4
+# Raised when a rule changes what the computed past looks like, so that it is
+# computed again. The categories build on the household, so a new household
+# rule computes everything again; a new category rule only the categories,
+# which saves writing the household's many statistics. Up to version 4 both
+# were one: 2 brought prices paid, price levels that need a contrast,
+# consumers that add up to the household, and meters that run back; 3 no hour
+# counted twice after a failed update; 4 the standing charge and the saving by
+# solar power per category.
+HOUSEHOLD_CALCULATION_VERSION = 4
+CATEGORY_CALCULATION_VERSION = 4
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
@@ -300,7 +304,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 state.timelines = {}
                 state.heating = config.heating
             # Recomputing the household computes everything again.
-            fingerprint = f"{config.fingerprint}:{CALCULATION_VERSION}"
+            fingerprint = f"{config.fingerprint}:{CATEGORY_CALCULATION_VERSION}"
             if self.household.recompute is not None:
                 fingerprint += f":{self.household.recompute}"
             if state.fingerprint != fingerprint or moving_statistics:
@@ -871,7 +875,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 ),
                 "levels": list(self.household.levels),
                 "recompute": self.household.recompute,
-                "calculation": CALCULATION_VERSION,
+                "calculation": HOUSEHOLD_CALCULATION_VERSION,
                 "tariffs": sorted(
                     [sorted(config.meters), tariff]
                     for config in self.configs.values()

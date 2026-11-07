@@ -320,6 +320,56 @@ async def test_update_computes_nothing_again(
 
 
 @pytest.mark.usefixtures("energy")
+@pytest.mark.parametrize(
+    ("version", "household_again"),
+    [
+        pytest.param("CATEGORY_CALCULATION_VERSION", False, id="category_rule"),
+        pytest.param("HOUSEHOLD_CALCULATION_VERSION", True, id="household_rule"),
+    ],
+)
+async def test_new_rule_computes_what_it_changes(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    version: str,
+    household_again: bool,
+) -> None:
+    """A new category rule spares the household; a new household rule does not."""
+    # Arrange: stored figures that only computing them again corrects.
+    await setup_entry(hass, config_entry)
+    coordinator = config_entry.runtime_data
+    household = coordinator.household_state.fingerprint
+    energy = coordinator.household_state.totals["household_energy"]
+    stored = await coordinator._store.async_load()
+    assert stored is not None
+    stored["household"]["totals"]["household_energy"] += 100
+    for category in stored["categories"].values():
+        category["saving"] += 100
+    await coordinator._store.async_save(stored)
+
+    # Act
+    with patch.object(
+        coordinator_module, version, getattr(coordinator_module, version) + 1
+    ):
+        await hass.config_entries.async_reload(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+
+    # Assert: the categories are computed again, the household only for its rule.
+    coordinator = config_entry.runtime_data
+    assert (coordinator.household_state.fingerprint != household) is household_again
+    assert coordinator.household_state.totals["household_energy"] == pytest.approx(
+        energy if household_again else energy + 100
+    )
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+        COUNTED * PV_PER_HOUR
+    )
+    assert all(
+        state.household == coordinator.household_state.fingerprint
+        for state in coordinator.states.values()
+    )
+
+
+@pytest.mark.usefixtures("energy")
 async def test_phases(hass: HomeAssistant, data_start: datetime) -> None:
     """Before the setup the averages count, after it the current values."""
     setup_at = (data_start + timedelta(hours=24)).timestamp()
