@@ -19,6 +19,7 @@ export type Figure =
   | "self_consumption"
   | "export"
   | "saving"
+  | "battery_saving"
   | "heat"
   | "alternative_cost"
   | "scop"
@@ -57,6 +58,7 @@ const NEEDS: Record<Figure, string[]> = {
   self_consumption: ["self_used", "energy"],
   export: ["export"],
   saving: ["saving"],
+  battery_saving: ["battery_saving"],
   heat: ["heat"],
   alternative_cost: ["alternative_cost"],
   scop: ["heat", "energy"],
@@ -332,6 +334,8 @@ export function valueOf(
     }
     case "alternative_cost":
       return { value: sum("alternative_cost"), unit: "money" };
+    case "battery_saving":
+      return { value: sum("battery_saving"), unit: "money" };
     case "scop": {
       const heat = sum("heat");
       if (heat === null || !energy) return { value: null, unit: "number" };

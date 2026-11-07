@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
 from math import log1p
 
-from .const import BOILER_EFFICIENCY, HEATING_OIL, OIL_KWH_PER_LITRE
+from .const import FUELS
 
 HOUR = 3600.0
 DAY = 24 * HOUR
@@ -228,15 +228,46 @@ def pv_saving(
     return self_used * price + export_revenue
 
 
+def battery_saving(
+    *,
+    solar: float,
+    export: float,
+    battery_out: float,
+    battery_in: float,
+    price: float,
+    feed_in_price: float,
+) -> float:
+    """Return what the battery added to the PV plant's saving in one hour.
+
+    Compared with the same PV plant without a battery: the solar power it
+    stored would have been fed in, what it charged from the grid would not
+    have been bought, and what it gave would have come from the grid, or not
+    have been fed in. The hour's statistics do not say which power went where,
+    so the battery is taken to charge from solar power first and to give to
+    the house first. The PV plant's saving minus this is what it saved
+    without the battery, so the two add up to the PV plant's saving.
+    """
+    solar_to_battery = min(battery_in, max(solar, 0.0))
+    grid_to_battery = battery_in - solar_to_battery
+    solar_to_grid = min(export, max(solar - solar_to_battery, 0.0))
+    battery_to_grid = min(battery_out, max(export - solar_to_grid, 0.0))
+    battery_to_house = battery_out - battery_to_grid
+    return (
+        battery_to_house * price
+        + battery_to_grid * feed_in_price
+        - solar_to_battery * feed_in_price
+        - grid_to_battery * price
+    )
+
+
 def heating_cost(heat: float, heating: str, price: float) -> float:
     """Return what the former heating would have paid for this heat.
 
-    Gas is priced per kWh, heating oil per litre. The efficiency is fixed.
+    The price is per unit of its fuel, such as a kWh of gas or a litre of oil.
+    Energy content and efficiency are fixed.
     """
-    fuel = heat / BOILER_EFFICIENCY
-    if heating == HEATING_OIL:
-        fuel /= OIL_KWH_PER_LITRE
-    return fuel * price
+    fuel = FUELS[heating]
+    return heat / fuel.efficiency / fuel.kwh_per_unit * price
 
 
 def heat_pump_saving(

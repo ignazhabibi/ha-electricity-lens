@@ -57,7 +57,7 @@ export function savingsRows(
       }
     } else if (category.category === "heat_pump") {
       rows.push({
-        name: category.heating === "oil" ? "savings_oil" : "savings_gas",
+        name: `savings_${category.heating ?? "gas"}`,
         color: colors.heat ?? CSS_COLORS.heat,
         plus: saving,
         minus: [],
@@ -149,8 +149,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const inBalance = addUp(values, area?.statistics.saving);
     const saving = inBalance + solar;
     const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
-    const instead: Key =
-      area?.id === "wallbox" ? "savings_instead_fuel" : heating === "oil" ? "savings_instead_oil" : "savings_instead_gas";
+    const instead: Key = area?.id === "wallbox" ? "savings_instead_fuel" : `savings_instead_${heating ?? "gas"}`;
     const hasSolar = Math.abs(solar) >= 0.005;
     return html`<table>
         <tbody>

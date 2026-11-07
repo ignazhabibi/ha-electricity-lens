@@ -68,6 +68,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "distance",
             "alternative_cost": "comparison costs",
             "solar_saving": "saving by solar power",
+            "battery_saving": "battery saving",
             "saving": "saving",
         },
         "pv": {
@@ -80,6 +81,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "title": "Average since {since}",
             "gas": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
             "oil": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
+            "lpg": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
+            "pellets": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
+            "district_heating": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
+            "electric": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
             "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
             "wallbox": "For the time since {since}, Home Assistant knows neither fuel prices nor consumptions. Enter averages. They also apply from now on, until you change them.",
             "wallbox_none": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
@@ -113,6 +118,10 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Purchase cost (optional)", "For the payback"),
+            "battery_investment": (
+                "Battery purchase cost (optional)",
+                "For the battery's own payback. The PV plant's counts both, so leave the battery out above",
+            ),
             "standing_charge": (
                 "Standing charge per month (optional)",
                 "As on the electricity bill; shared evenly over the hours of the month",
@@ -139,6 +148,16 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "gas_price": ("Gas price", "Unit price on the gas bill"),
             "oil_price": ("Heating oil price", "Average price per litre"),
+            "lpg_price": ("LPG price", "Average price per litre"),
+            "pellets_price": ("Pellet price", "Average price per kilogram"),
+            "district_heating_price": (
+                "District heating price",
+                "Unit price per kWh on the heating bill",
+            ),
+            "electric_price": (
+                "Heating electricity price",
+                "Unit price per kWh of the former heating tariff",
+            ),
             "fuel_price": ("Fuel price", None),
             "scop": (
                 "Seasonal COP",
@@ -154,6 +173,22 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "oil_price_entity": (
                 "Heating oil price sensor (optional)",
+                "Replaces the average from now on",
+            ),
+            "lpg_price_entity": (
+                "LPG price sensor (optional)",
+                "Replaces the average from now on",
+            ),
+            "pellets_price_entity": (
+                "Pellet price sensor (optional)",
+                "Replaces the average from now on",
+            ),
+            "district_heating_price_entity": (
+                "District heating price sensor (optional)",
+                "Replaces the average from now on",
+            ),
+            "electric_price_entity": (
+                "Heating electricity price sensor (optional)",
                 "Replaces the average from now on",
             ),
             "fuel_price_entity": (
@@ -172,7 +207,7 @@ TEXTS: dict[str, dict[str, Any]] = {
         "overrides": {
             "heat_pump_investment": (
                 "Extra cost (optional)",
-                "Extra purchase cost over a gas or oil heating. For the payback.",
+                "Extra purchase cost over the former heating. For the payback.",
             ),
             "wallbox_investment": (
                 "Extra cost (optional)",
@@ -203,12 +238,36 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Heating oil price sensor (optional)",
                 "Replaces the heating oil price",
             ),
+            "now_lpg_price_entity": (
+                "LPG price sensor (optional)",
+                "Replaces the LPG price",
+            ),
+            "now_pellets_price_entity": (
+                "Pellet price sensor (optional)",
+                "Replaces the pellet price",
+            ),
+            "now_district_heating_price_entity": (
+                "District heating price sensor (optional)",
+                "Replaces the district heating price",
+            ),
+            "now_electric_price_entity": (
+                "Heating electricity price sensor (optional)",
+                "Replaces the heating electricity price",
+            ),
             "now_fuel_price_entity": (
                 "Fuel price sensor (optional)",
                 "Replaces the fuel price",
             ),
         },
-        "heating": {"gas": "Gas", "oil": "Oil", "none": "None (new build)"},
+        "heating": {
+            "gas": "Gas",
+            "oil": "Oil",
+            "lpg": "LPG",
+            "pellets": "Pellets",
+            "district_heating": "District heating",
+            "electric": "Electric heating",
+            "none": "None (new build)",
+        },
         "comparison": {"combustion": "Combustion car", "none": "Nothing"},
         "errors": {
             "levels_order": "Expensive must be above cheap.",
@@ -337,6 +396,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "Strecke",
             "alternative_cost": "Vergleichskosten",
             "solar_saving": "Ersparnis durch PV-Strom",
+            "battery_saving": "Ersparnis durch Batterie",
             "saving": "Ersparnis",
         },
         "pv": {
@@ -349,6 +409,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "title": "Durchschnitt seit {since}",
             "gas": "Für die Zeit seit dem {since} kennt Home Assistant deine Gaspreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "oil": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizölpreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "lpg": "Für die Zeit seit dem {since} kennt Home Assistant deine Flüssiggaspreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "pellets": "Für die Zeit seit dem {since} kennt Home Assistant deine Pelletpreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "district_heating": "Für die Zeit seit dem {since} kennt Home Assistant deine Fernwärmepreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "electric": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizstrompreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
             "wallbox": "Für die Zeit seit dem {since} kennt Home Assistant weder Spritpreise noch Verbräuche. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "wallbox_none": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
@@ -382,6 +446,10 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Anschaffungskosten (optional)", "Für die Amortisation"),
+            "battery_investment": (
+                "Anschaffungskosten der Batterie (optional)",
+                "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+            ),
             "standing_charge": (
                 "Grundpreis pro Monat (optional)",
                 "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
@@ -408,6 +476,16 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "gas_price": ("Gaspreis", "Arbeitspreis laut Gasrechnung"),
             "oil_price": ("Heizölpreis", "Durchschnittlicher Literpreis"),
+            "lpg_price": ("Flüssiggaspreis", "Durchschnittlicher Literpreis"),
+            "pellets_price": ("Pelletpreis", "Durchschnittlicher Preis pro Kilogramm"),
+            "district_heating_price": (
+                "Fernwärmepreis",
+                "Arbeitspreis pro kWh laut Wärmeabrechnung",
+            ),
+            "electric_price": (
+                "Heizstrompreis",
+                "Arbeitspreis pro kWh des früheren Heizstromtarifs",
+            ),
             "fuel_price": ("Spritpreis", None),
             "scop": (
                 "Jahresarbeitszahl (JAZ)",
@@ -423,6 +501,22 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "oil_price_entity": (
                 "Heizölpreis-Sensor (optional)",
+                "Ersetzt den Durchschnitt ab jetzt",
+            ),
+            "lpg_price_entity": (
+                "Flüssiggaspreis-Sensor (optional)",
+                "Ersetzt den Durchschnitt ab jetzt",
+            ),
+            "pellets_price_entity": (
+                "Pelletpreis-Sensor (optional)",
+                "Ersetzt den Durchschnitt ab jetzt",
+            ),
+            "district_heating_price_entity": (
+                "Fernwärmepreis-Sensor (optional)",
+                "Ersetzt den Durchschnitt ab jetzt",
+            ),
+            "electric_price_entity": (
+                "Heizstrompreis-Sensor (optional)",
                 "Ersetzt den Durchschnitt ab jetzt",
             ),
             "fuel_price_entity": (
@@ -441,7 +535,7 @@ TEXTS: dict[str, dict[str, Any]] = {
         "overrides": {
             "heat_pump_investment": (
                 "Mehrkosten (optional)",
-                "Mehrkosten der Anschaffung gegenüber einer Gas- oder Ölheizung. Für die Amortisation.",
+                "Mehrkosten der Anschaffung gegenüber der früheren Heizung. Für die Amortisation.",
             ),
             "wallbox_investment": (
                 "Mehrkosten (optional)",
@@ -472,12 +566,36 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Heizölpreis-Sensor (optional)",
                 "Ersetzt den Heizölpreis",
             ),
+            "now_lpg_price_entity": (
+                "Flüssiggaspreis-Sensor (optional)",
+                "Ersetzt den Flüssiggaspreis",
+            ),
+            "now_pellets_price_entity": (
+                "Pelletpreis-Sensor (optional)",
+                "Ersetzt den Pelletpreis",
+            ),
+            "now_district_heating_price_entity": (
+                "Fernwärmepreis-Sensor (optional)",
+                "Ersetzt den Fernwärmepreis",
+            ),
+            "now_electric_price_entity": (
+                "Heizstrompreis-Sensor (optional)",
+                "Ersetzt den Heizstrompreis",
+            ),
             "now_fuel_price_entity": (
                 "Spritpreis-Sensor (optional)",
                 "Ersetzt den Spritpreis",
             ),
         },
-        "heating": {"gas": "Gas", "oil": "Öl", "none": "Keine (Neubau)"},
+        "heating": {
+            "gas": "Gas",
+            "oil": "Öl",
+            "lpg": "Flüssiggas",
+            "pellets": "Pellets",
+            "district_heating": "Fernwärme",
+            "electric": "Stromheizung",
+            "none": "Keine (Neubau)",
+        },
         "comparison": {"combustion": "Verbrenner", "none": "Nichts"},
         "errors": {
             "levels_order": "Teuer muss über günstig liegen.",
@@ -619,7 +737,7 @@ def household_step(t: dict[str, Any], title: str, description: str) -> dict[str,
 def pv_steps(t: dict[str, Any]) -> dict[str, Any]:
     """Return the PV step and its variant without feed-in."""
     title = t["categories"]["pv"]
-    block = fields(t, ["investment"])
+    block = fields(t, ["investment", "battery_investment"])
     return {
         "pv": form(title, t["pv"]["description"], block),
         "pv_no_export": form(
@@ -655,7 +773,7 @@ def heat_pump_values_steps(t: dict[str, Any], prefix: str) -> dict[str, Any]:
     estimates the heat. Without a former heating there is no price to ask for.
     """
     steps: dict[str, Any] = {}
-    for heating in ("gas", "oil", "none"):
+    for heating in t["heating"]:
         compared = heating != "none"
         price, entity = f"{heating}_price", f"{heating}_price_entity"
         priced = [price] if compared else []
@@ -749,7 +867,9 @@ def subentry_steps(t: dict[str, Any], category: str) -> dict[str, Any]:
             **pv_steps(t),
             "reconfigure": menu(t, ["investment", "recompute"]),
             "investment": form(
-                t["investment"]["title"], None, fields(t, ["investment"])
+                t["investment"]["title"],
+                None,
+                fields(t, ["investment", "battery_investment"]),
             ),
             "recompute": recompute,
         }

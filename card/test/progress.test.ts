@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { calculatingText, durationText, localizer } from "../src/localize";
-import { readProgress } from "../src/model";
+import { readCategories, readProgress } from "../src/model";
 import type { FiguresInfo, HomeAssistant } from "../src/types";
 
 const hass = (progress: unknown): HomeAssistant =>
@@ -47,4 +47,20 @@ test("the time still to go is months below a year, else years", () => {
   assert.equal(durationText(t, 0.72), "9 Monate");
   assert.equal(durationText(t, 0.01), "1 Monat");
   assert.equal(durationText(t, 2.4), "2 Jahre");
+});
+
+test("the PV plant's battery is read from its saving sensor", () => {
+  const pv = (battery: unknown): HomeAssistant =>
+    ({
+      entities: {
+        "sensor.pv_saving": { entity_id: "sensor.pv_saving", platform: "electricity_lens", translation_key: "saving" },
+      },
+      states: {
+        "sensor.pv_saving": { state: "1200", attributes: { category: "pv", battery } },
+      },
+    }) as unknown as HomeAssistant;
+
+  const [withBattery] = readCategories(pv({ saving: 300, investment: 5000, per_year: 250, payback: 6, years_left: 18.8 }));
+  assert.deepEqual(withBattery.battery, { saving: 300, investment: 5000, perYear: 250, payback: 6, yearsLeft: 18.8 });
+  assert.equal(readCategories(pv(undefined))[0].battery, null);
 });

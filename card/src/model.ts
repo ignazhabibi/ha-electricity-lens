@@ -2,14 +2,17 @@
 
 import type {
   BalanceFigures,
+  BatteryFigures,
   Category,
   CategoryFigures,
   FiguresInfo,
+  Heating,
   HomeAssistant,
 } from "./types";
 
 export const DOMAIN = "electricity_lens";
 const ORDER: Category[] = ["pv", "heat_pump", "wallbox"];
+const HEATINGS: Heating[] = ["gas", "oil", "lpg", "pellets", "district_heating", "electric"];
 
 const number = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -53,15 +56,28 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       perYear: value(siblings(entry.device_id, "saving_per_year")?.entity_id),
       countingSince: date(attributes.counting_since),
       entityId: entry.entity_id,
-      heating:
-        attributes.heating === "gas" || attributes.heating === "oil"
-          ? attributes.heating
-          : null,
+      heating: HEATINGS.includes(attributes.heating as Heating) ? (attributes.heating as Heating) : null,
+      battery: readBattery(attributes.battery),
     });
   }
   return figures.sort(
     (a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category)
   );
+}
+
+/** The battery's figures from the PV plant's saving sensor, if it has one. */
+function readBattery(value: unknown): BatteryFigures | null {
+  if (typeof value !== "object" || value === null) return null;
+  const battery = value as Record<string, unknown>;
+  const saving = number(battery.saving);
+  if (saving === null) return null;
+  return {
+    saving,
+    investment: number(battery.investment),
+    perYear: number(battery.per_year),
+    payback: number(battery.payback),
+    yearsLeft: number(battery.years_left),
+  };
 }
 
 /** The categories with an investment, and the sensors about it. */

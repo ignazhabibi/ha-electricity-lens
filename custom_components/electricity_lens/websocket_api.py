@@ -138,12 +138,17 @@ async def async_figures(
         }
         if CATEGORY_PV in categories:
             solar["saving"] = [saving_statistic_id(CATEGORY_PV)]
+            if setup.batteries:
+                # The battery's part of the PV plant's saving.
+                solar["battery_saving"] = [
+                    category_statistic_id(CATEGORY_PV, "battery_saving")
+                ]
         areas.append(
             {
                 **area("solar", "solar", text("area_solar"), **solar),
                 "forecast": bool(setup.forecasts),
                 "investment": CATEGORY_PV in categories
-                and bool(categories[CATEGORY_PV][1].investment),
+                and bool(categories[CATEGORY_PV][1].total_investment),
             }
         )
     parents = {device.stat: device.included_in for device in setup.devices}

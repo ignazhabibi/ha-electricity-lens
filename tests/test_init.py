@@ -745,7 +745,7 @@ async def test_prices_from_entities_battery_and_heat_meter(
     await async_wait_recording_done(hass)
 
     entry = make_entry(
-        ("pv", {"setup_at": 0}),
+        ("pv", {"setup_at": 0, "battery_investment": 5000}),
         _heat_pump(
             heat_meters=["sensor.heat"],
             current={"price": 0.10, "price_entity": "sensor.gas_price"},
@@ -754,9 +754,20 @@ async def test_prices_from_entities_battery_and_heat_meter(
     await setup_entry(hass, entry)
 
     pv_per_hour = (2.0 - 0.5 + 0.3 - 0.4) * 0.25 + 0.05
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
-        COUNTED * pv_per_hour
-    )
+    pv = _state(hass, "sensor.pv_plant_saving")
+    assert float(pv.state) == pytest.approx(COUNTED * pv_per_hour)
+    # The battery stores solar power that would have earned 0.10 per kWh fed
+    # in, and gives power that would have cost 0.25.
+    battery_per_hour = 0.3 * 0.25 - 0.4 * 0.10
+    battery = pv.attributes["battery"]
+    assert battery["saving"] == pytest.approx(COUNTED * battery_per_hour)
+    assert battery["investment"] == 5000
+    assert battery["payback"] == pytest.approx(COUNTED * battery_per_hour / 50)
+    assert battery["per_year"] is None
+    # The PV plant's payback counts its battery.
+    assert pv.attributes["investment"] == 5000
+    sums = await statistic_sums(hass, "electricity_lens:pv_battery_saving", data_start)
+    assert sums[-1] == pytest.approx(COUNTED * battery_per_hour)
     hp_per_hour = 2.2 / 0.92 * 0.12 - 0.5 * 0.25
     heat_pump = _state(hass, "sensor.heat_pump_saving")
     assert float(heat_pump.state) == pytest.approx(COUNTED * hp_per_hour)

@@ -28,6 +28,8 @@ interface RowFigures {
   balance: number | null;
   /** The category of a row with a swatch; a row without one is the sums. */
   category?: Category;
+  /** A part of the row above, such as the PV plant's battery. */
+  part?: boolean;
 }
 
 /** The columns this household needs. */
@@ -135,8 +137,8 @@ export class ElectricityLensBalanceCard extends LensCard {
             </tr>
           </thead>
           <tbody>
-            ${categories.map((category) =>
-              this._row(
+            ${categories.map(
+              (category) => html`${this._row(
                 {
                   name: t(`category.${category.category}`),
                   entityId: category.entityId,
@@ -148,7 +150,20 @@ export class ElectricityLensBalanceCard extends LensCard {
                 },
                 columns,
                 known
-              )
+              )}${category.battery && !category.calculating
+                ? this._row(
+                    {
+                      name: t("battery_part"),
+                      entityId: category.entityId,
+                      perYear: category.battery.perYear,
+                      saving: category.battery.saving,
+                      investment: category.battery.investment ?? undefined,
+                      balance: category.battery.saving - (category.battery.investment ?? 0),
+                      part: true,
+                    },
+                    columns
+                  )
+                : nothing}`
             )}
           </tbody>
           <tfoot>
@@ -191,10 +206,10 @@ export class ElectricityLensBalanceCard extends LensCard {
     columns: Columns,
     known?: Map<string, string>
   ): TemplateResult {
-    const { name, entityId, perYear, saving, investment, balance, category } = figures;
+    const { name, entityId, perYear, saving, investment, balance, category, part } = figures;
     const color = category ? known?.get(category) : undefined;
     return html`<tr
-      class=${category ?? "total"}
+      class=${category ?? (part ? "part" : "total")}
       style=${color ? `--color: ${color}` : ""}
       @click=${() => this._moreInfo(entityId)}
     >
@@ -244,6 +259,14 @@ export class ElectricityLensBalanceCard extends LensCard {
       }
       .table {
         overflow-x: auto;
+      }
+      /* A part of the row above: indented and quieter, as its share. */
+      .part .name,
+      .part td {
+        color: var(--secondary-text-color);
+      }
+      .part .name {
+        padding-inline-start: 16px;
       }
       /* Each row opens its sensor's dialog. */
       tr[class] {

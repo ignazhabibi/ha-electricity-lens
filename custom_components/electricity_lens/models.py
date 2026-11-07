@@ -15,6 +15,7 @@ from .const import (
     CATEGORY_WALLBOX,
     COMPARISON_COMBUSTION,
     COMPARISON_NONE,
+    CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
     CONF_CHEAP_UNTIL,
     CONF_COMPARISON,
@@ -66,6 +67,8 @@ class CategoryConfig:
 
     category: str
     investment: float | None = None
+    battery_investment: float | None = None
+    """The PV plant's battery on its own, beside the plant's investment."""
     meters: tuple[str, ...] = ()
     heat_meters: tuple[str, ...] = ()
     heating: str = HEATING_GAS
@@ -81,11 +84,13 @@ class CategoryConfig:
     def from_data(cls, category: str, data: Mapping[str, Any]) -> CategoryConfig:
         """Create from subentry data."""
         investment = data.get(CONF_INVESTMENT)
+        battery = data.get(CONF_BATTERY_INVESTMENT)
         current: Mapping[str, Any] = data.get(CONF_CURRENT) or {}
         recompute = data.get(CONF_RECOMPUTE)
         return cls(
             category=category,
             investment=float(investment) if investment is not None else None,
+            battery_investment=float(battery) if battery is not None else None,
             meters=tuple(data.get(CONF_METERS, ())),
             heat_meters=tuple(data.get(CONF_HEAT_METERS, ())),
             heating=data.get(CONF_HEATING, HEATING_GAS),
@@ -96,6 +101,13 @@ class CategoryConfig:
             price_entity=current.get(VALUE_PRICE_ENTITY) or None,
             recompute=float(recompute) if recompute is not None else None,
         )
+
+    @property
+    def total_investment(self) -> float | None:
+        """Return what the category cost: a PV plant with its battery."""
+        if self.investment is None and self.battery_investment is None:
+            return None
+        return (self.investment or 0.0) + (self.battery_investment or 0.0)
 
     @property
     def values(self) -> tuple[str, ...]:
@@ -153,6 +165,8 @@ class CategoryState:
     data_start: float | None = None
     heat_start: float | None = None
     """First hour of heat data; None without heat meters or data."""
+    battery_start: float | None = None
+    """First hour the PV plant's battery charged or gave; None without one."""
     next_hour: float | None = None
     """Start of the next hour to compute; None before the past is computed."""
     past_until: float | None = None
@@ -174,6 +188,7 @@ class CategoryState:
         self.fingerprint = fingerprint
         self.data_start = None
         self.heat_start = None
+        self.battery_start = None
         self.next_hour = None
         self.past_until = None
         self.saving = 0.0
@@ -201,6 +216,7 @@ class CategoryState:
             "heating": self.heating,
             "data_start": self.data_start,
             "heat_start": self.heat_start,
+            "battery_start": self.battery_start,
             "next_hour": self.next_hour,
             "past_until": self.past_until,
             "saving": self.saving,
@@ -224,6 +240,7 @@ class CategoryState:
             heating=data.get("heating"),
             data_start=data.get("data_start"),
             heat_start=data.get("heat_start"),
+            battery_start=data.get("battery_start"),
             next_hour=data.get("next_hour"),
             past_until=data.get("past_until"),
             saving=float(data.get("saving", 0.0)),
@@ -349,6 +366,18 @@ def settings_hash(relevant: Mapping[str, Any]) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class BatteryResult:
+    """The battery's part of the PV plant: its saving and payback."""
+
+    saving: float
+    investment: float | None
+    per_year: float | None
+    payback: float | None
+    years_left: float | None
+    counting_since: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class CategoryResult:
     """What the sensors and the card show for one category."""
 
@@ -368,6 +397,8 @@ class CategoryResult:
     heat_estimated: bool | None = None
     compared: bool = True
     """Whether it saves: without a comparison it stays out of the balance."""
+    battery: BatteryResult | None = None
+    """The PV plant's battery, whose saving is part of the plant's."""
 
     @property
     def balance_ready(self) -> bool:
