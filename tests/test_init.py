@@ -130,6 +130,8 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert balance.attributes["saved"] == pytest.approx(total)
     assert balance.attributes["invested"] == 19000
     assert balance.attributes["per_year"] is None
+    assert balance.attributes["payback"] == pytest.approx(total / 19000 * 100)
+    assert balance.attributes["years_left"] is None
 
 
 @pytest.mark.usefixtures("energy")

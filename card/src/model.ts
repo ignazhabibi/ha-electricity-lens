@@ -102,6 +102,8 @@ export function readBalance(hass: HomeAssistant): BalanceFigures | null {
     saved: number(state.attributes.saved) ?? 0,
     invested: number(state.attributes.invested) ?? 0,
     perYear: number(state.attributes.per_year),
+    payback: number(state.attributes.payback),
+    yearsLeft: number(state.attributes.years_left),
     progress: number(state.attributes.progress),
     entityId: entry!.entity_id,
   };

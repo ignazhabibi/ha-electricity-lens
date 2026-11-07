@@ -235,7 +235,7 @@ overall balance.
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
 | Solar remaining today, solar forecast tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. Their attributes show the best solar day of the last twelve months, the scale of the dashboard's gauges, and whether the data covers all twelve months. |
-| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, and, while the past is computed, how far it is in percent. |
+| Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, the share of all investments the savings have covered, the years until they cover them at the yearly savings, and, while the past is computed, how far it is in percent. |
 
 ## Statistics
 
@@ -286,7 +286,9 @@ power sensor. The card follows the sensors' states, without statistics.
 The card finds the categories by itself and is built like the totals table of
 Home Assistant's energy dashboard: one row per category with what it saves per
 year on average, what it has saved, its investment, and its balance, then a row
-with the sums. Without any investment only the savings appear. A row opens its sensor, which
+with the sums. Above the table a sentence says how much of all investments is
+paid back and, once there are yearly savings, in about how long everything is
+in the plus. Without any investment only the savings appear. A row opens its sensor, which
 also says since when it counts. Its only option is a title. The card follows light and dark themes, works on
 phones and desktops, and can be used with keyboard and screen reader.
 

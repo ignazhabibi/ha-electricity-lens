@@ -391,3 +391,22 @@ class PaybackData:
         if self.balance is None or None in yearly:
             return None
         return sum(value or 0.0 for value in yearly)
+
+    @property
+    def payback(self) -> float | None:
+        """Return the share of all investments the savings have covered, in percent."""
+        if self.balance is None or self.invested <= 0:
+            return None
+        return self.saved / self.invested * 100
+
+    @property
+    def years_left(self) -> float | None:
+        """Return the years until all savings cover all investments.
+
+        At the yearly savings, as for each category; None once the balance is
+        in the plus, or while there is no yearly figure to go by.
+        """
+        balance, per_year = self.balance, self.per_year
+        if balance is None or balance >= 0 or per_year is None or per_year <= 0:
+            return None
+        return -balance / per_year

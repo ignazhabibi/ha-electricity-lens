@@ -159,7 +159,9 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
     """All savings minus all investments."""
 
     # The card reads these. The recorder skips them, as the categories' attributes.
-    _unrecorded_attributes = frozenset({"saved", "invested", "per_year", "progress"})
+    _unrecorded_attributes = frozenset(
+        {"saved", "invested", "per_year", "payback", "years_left", "progress"}
+    )
 
     def __init__(self, coordinator: ElectricityLensCoordinator, entry_id: str) -> None:
         """Initialize the sensor."""
@@ -179,6 +181,8 @@ class BalanceSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[rep
             "saved": data.saved,
             "invested": data.invested,
             "per_year": data.per_year,
+            "payback": data.payback,
+            "years_left": data.years_left,
             "progress": self.coordinator.progress(),
         }
 

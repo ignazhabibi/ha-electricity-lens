@@ -42,6 +42,12 @@ export interface BalanceFigures {
   invested: number;
   /** All yearly savings; null until every category has one. */
   perYear: number | null;
+  /** The share of all investments the savings have covered, in percent;
+   * null without an investment. */
+  payback: number | null;
+  /** The years until the savings cover all investments; null once they do,
+   * or before there are yearly savings. */
+  yearsLeft: number | null;
   /** How far the past is computed, in percent; null once it is. */
   progress: number | null;
   entityId: string;

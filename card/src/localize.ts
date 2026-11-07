@@ -21,6 +21,9 @@ const en = {
   average: "Ø {amount}",
   line_payback: "of {investment}",
   line_payback_left: "about {time} left",
+  summary_paid_back: "Paid back: the savings cover all investments.",
+  summary_payback: "{percent} paid back.",
+  summary_payback_left: "{percent} paid back, about {time} to go.",
   line_return: "Total {amount}",
   return_value: "{rate} % a year",
   months_one: "1 month",
@@ -263,6 +266,9 @@ const de: Record<Key, string> = {
   average: "Ø {amount}",
   line_payback: "von {investment}",
   line_payback_left: "noch etwa {time}",
+  summary_paid_back: "Amortisiert: Die Ersparnis deckt alle Investitionen.",
+  summary_payback: "Zu {percent} amortisiert.",
+  summary_payback_left: "Zu {percent} amortisiert, noch etwa {time} bis ins Plus.",
   line_return: "Gesamt {amount}",
   return_value: "{rate} % p. a.",
   months_one: "1 Monat",
@@ -493,6 +499,14 @@ export function localizer(language: string): Localize {
   const texts = languages[language.split("-")[0]] ?? en;
   return (key, values = {}) =>
     texts[key].replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? "");
+}
+
+/** A time still to go: months below a year, else years. */
+export function durationText(t: Localize, years: number): string {
+  const count = Math.max(1, Math.round(years < 1 ? years * 12 : years));
+  return years < 1
+    ? t(count === 1 ? "months_one" : "months_other", { count: String(count) })
+    : t(count === 1 ? "years_one" : "years_other", { count: String(count) });
 }
 
 /** What to say while the integration computes the past, with how far it is. */

@@ -9,10 +9,10 @@ import { consumerColors, palette } from "./colors";
 import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { calculatingText, localizer, type Localize } from "./localize";
+import { calculatingText, durationText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles, tableStyles } from "./styles";
-import type { Category, FiguresInfo, HomeAssistant } from "./types";
+import type { BalanceFigures, Category, FiguresInfo, HomeAssistant } from "./types";
 
 interface BalanceCardConfig {
   title?: string;
@@ -119,6 +119,7 @@ export class ElectricityLensBalanceCard extends LensCard {
     };
     return html`<ha-card>
       ${title}
+      ${!calculating ? this._summary(balance) : nothing}
       <div class="table">
         <table>
           <thead>
@@ -167,6 +168,22 @@ export class ElectricityLensBalanceCard extends LensCard {
       </div>
       ${calculating ? html`<p class="note">${calculatingText(t, balance.progress)}</p>` : nothing}
     </ha-card>`;
+  }
+
+  /** Whether everything together is paid back, and if not, when. */
+  private _summary(balance: BalanceFigures): TemplateResult | typeof nothing {
+    const t = this._localize;
+    if (balance.payback === null) return nothing;
+    if (balance.payback >= 100) return html`<p class="summary">${t("summary_paid_back")}</p>`;
+    // Rounded down: 99.6 % is not yet paid back.
+    const percent = numberFormat(this.hass?.locale, { style: "percent", maximumFractionDigits: 0 }).format(
+      Math.floor(balance.payback) / 100
+    );
+    const text =
+      balance.yearsLeft === null
+        ? t("summary_payback", { percent })
+        : t("summary_payback_left", { percent, time: durationText(t, balance.yearsLeft) });
+    return html`<p class="summary">${text}</p>`;
   }
 
   private _row(

@@ -359,9 +359,15 @@ def test_balance_figures() -> None:
     assert data.saved == pytest.approx(13000)
     assert data.invested == pytest.approx(19000)
     assert data.per_year == pytest.approx(2500)
+    # All together: 13000 of 19000 paid back, 6000 to go at 2500 a year.
+    assert data.payback == pytest.approx(13000 / 19000 * 100)
+    assert data.years_left == pytest.approx(2.4)
+    assert PaybackData({"a": paid}).years_left is None
 
     young = CategoryResult(category="wallbox", calculating=False, saving=10)
     assert PaybackData({"a": paid, "c": young}).per_year is None
+    assert PaybackData({"b": paying, "c": young}).years_left is None
+    assert PaybackData({"c": young}).payback is None
 
     assert paying.balance == pytest.approx(-8000)
     assert young.balance == pytest.approx(10)
