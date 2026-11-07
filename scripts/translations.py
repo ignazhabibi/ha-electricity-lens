@@ -75,13 +75,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             "no_export": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.",
         },
         "heat_pump": "Compares the heat pump with your former heating, if there was one.",
-        "wallbox": "Compares the electric car with a combustion car. What is charged at the wallbox is measured.",
+        "wallbox": "Compares the electric car with a combustion car, if you like. What is charged at the wallbox is measured.",
         "values": {
             "title": "Average since {since}",
             "gas": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
             "oil": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
             "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
             "wallbox": "For the time since {since}, Home Assistant knows neither fuel prices nor consumptions. Enter averages. They also apply from now on, until you change them.",
+            "wallbox_none": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
         },
         "now": {
             "title": "Values from now on",
@@ -178,6 +179,10 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Extra purchase cost over a combustion car. For the payback.",
             ),
             "wallbox_meters": ("Charging meters", "Wallbox or charging points"),
+            "comparison": (
+                "Compared with",
+                "Nothing, as for a second car: no saving, but charging costs and mix",
+            ),
             "wallbox_tariff": (
                 "Own electricity tariff (optional)",
                 "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
@@ -204,13 +209,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
         },
         "heating": {"gas": "Gas", "oil": "Oil", "none": "None (new build)"},
+        "comparison": {"combustion": "Combustion car", "none": "Nothing"},
         "errors": {
             "levels_order": "Expensive must be above cheap.",
             "meters_required": "Choose at least one meter.",
             "heating_required": "Choose the former heating.",
             "value_required": "Enter a value above 0.",
             "scop_range": "Enter a seasonal COP between 1 and 10.",
-            "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty.",
+            "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty.",
         },
         "aborts": {
             "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
@@ -338,13 +344,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             "no_export": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.",
         },
         "heat_pump": "Vergleicht die Wärmepumpe mit deiner früheren Heizung, falls es eine gab.",
-        "wallbox": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
+        "wallbox": "Vergleicht das E-Auto mit einem Verbrenner, wenn du möchtest. Gemessen wird, was an der Wallbox geladen wird.",
         "values": {
             "title": "Durchschnitt seit {since}",
             "gas": "Für die Zeit seit dem {since} kennt Home Assistant deine Gaspreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "oil": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizölpreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
             "wallbox": "Für die Zeit seit dem {since} kennt Home Assistant weder Spritpreise noch Verbräuche. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
+            "wallbox_none": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
         },
         "now": {
             "title": "Werte ab jetzt",
@@ -441,6 +448,10 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation.",
             ),
             "wallbox_meters": ("Ladezähler", "Wallbox oder Ladepunkte"),
+            "comparison": (
+                "Verglichen mit",
+                "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
+            ),
             "wallbox_tariff": (
                 "Eigener Stromtarif (optional)",
                 "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
@@ -467,13 +478,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
         },
         "heating": {"gas": "Gas", "oil": "Öl", "none": "Keine (Neubau)"},
+        "comparison": {"combustion": "Verbrenner", "none": "Nichts"},
         "errors": {
             "levels_order": "Teuer muss über günstig liegen.",
             "meters_required": "Wähle mindestens einen Zähler.",
             "heating_required": "Wähle die frühere Heizung.",
             "value_required": "Gib einen Wert über 0 an.",
             "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
-            "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer.",
+            "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer.",
         },
         "aborts": {
             "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
@@ -626,8 +638,12 @@ def meters_block(t: dict[str, Any], category: str) -> dict[str, Any]:
         )
     return fields(
         t,
-        ["meters", "investment"],
-        {"meters": "wallbox_meters", "investment": "wallbox_investment"},
+        ["meters", "comparison", "investment"],
+        {
+            "meters": "wallbox_meters",
+            "comparison": "comparison",
+            "investment": "wallbox_investment",
+        },
     )
 
 
@@ -682,13 +698,20 @@ def wallbox_values_block(
     return fields(t, keys, overrides)
 
 
-def wallbox_values_step(t: dict[str, Any]) -> dict[str, Any]:
-    """Return the car's values form of the setup."""
-    return form(
-        t["values"]["title"],
-        t["values"]["wallbox"],
-        wallbox_values_block(t, entity=True, now=False),
-    )
+def wallbox_values_steps(t: dict[str, Any]) -> dict[str, Any]:
+    """Return the car's values forms of the setup, with and without a comparison."""
+    return {
+        "wallbox_values": form(
+            t["values"]["title"],
+            t["values"]["wallbox"],
+            wallbox_values_block(t, entity=True, now=False),
+        ),
+        "wallbox_values_none": form(
+            t["values"]["title"],
+            t["values"]["wallbox_none"],
+            fields(t, ["tariff"], {"tariff": "wallbox_tariff"}),
+        ),
+    }
 
 
 def config_steps(t: dict[str, Any]) -> dict[str, Any]:
@@ -706,7 +729,7 @@ def config_steps(t: dict[str, Any]) -> dict[str, Any]:
         "wallbox": form(
             t["categories"]["wallbox"], t["wallbox"], meters_block(t, "wallbox")
         ),
-        "wallbox_values": wallbox_values_step(t),
+        **wallbox_values_steps(t),
     }
 
 
@@ -744,7 +767,12 @@ def subentry_steps(t: dict[str, Any], category: str) -> dict[str, Any]:
         for prefix in ("heat_pump_values", "now", "before"):
             steps |= heat_pump_values_steps(t, prefix)
     else:
-        steps["wallbox_values"] = wallbox_values_step(t)
+        steps |= wallbox_values_steps(t)
+        tariff = fields(t, ["tariff"], {"tariff": "wallbox_tariff"})
+        steps["now_none"] = form(t["now"]["title"], t["now"]["description"], tariff)
+        steps["before_none"] = form(
+            t["before"]["title"], t["before"]["description"], tariff
+        )
         steps["now"] = form(
             t["now"]["title"],
             t["now"]["description"],
@@ -863,6 +891,7 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
         "selector": {
             "categories": {"options": t["categories"]},
             "heating": {"options": t["heating"]},
+            "comparison": {"options": t["comparison"]},
             "statistics": {"options": t["statistics"]},
         },
     }

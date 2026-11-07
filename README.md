@@ -124,8 +124,8 @@ Electricity Lens works with any energy dashboard that has:
   energy dashboard marks as included in another selected meter are not
   counted twice. A meter belongs to one category only.
 
-Not supported: other alternatives than a gas or oil heating, or none, and a
-combustion car, gas prices per cubic metre, solar thermal, investments from a helper,
+Not supported: other alternatives than a gas or oil heating and a combustion
+car, or none, gas prices per cubic metre, solar thermal, investments from a helper,
 and fetching prices from online services. Price sensors you already have can
 be used, though.
 
@@ -187,12 +187,16 @@ where it stopped.
    | Seasonal COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
    | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
    | Gas or oil price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
-6. **Electric car**: charging meters, and the extra purchase cost over a
-   combustion car (optional).
+6. **Electric car**: charging meters, what it is compared with, a combustion
+   car or nothing, and the extra purchase cost over a combustion car
+   (optional). Compared with nothing, as for a second car, the car has no
+   saving, no saving sensors, and no place in the balance, but its charging
+   costs, mix, and the Charging view.
 7. **Electric car, average since the first data**: consumption of the electric
    car (measured at the wallbox, with charging losses; with several cars,
    their average), consumption of a comparable combustion car, fuel price, an
-   own tariff (optional), and a fuel price sensor (optional).
+   own tariff (optional), and a fuel price sensor (optional). Compared with
+   nothing, only the own tariff (optional).
 
 ### Changing things later
 
@@ -226,8 +230,9 @@ meter computes the household again, and a category whose meters changed.
 ## Entities
 
 Each category is a device with these sensors; one more device holds the
-overall balance. A heat pump without a former heating saves nothing, so it has
-none: its heat and the figures built on it are statistics the cards show.
+overall balance. A heat pump without a former heating, or a car compared with
+nothing, saves nothing, so it has none: its figures are statistics the cards
+show.
 
 | Entity | Description |
 |---|---|
@@ -454,7 +459,7 @@ energy date selection.
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and, with a former heating, its saving reckoned up |
-| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and the saving reckoned up |
+| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and, compared with a combustion car, the saving reckoned up |
 
 ### Colors
 

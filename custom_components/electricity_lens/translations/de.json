@@ -204,13 +204,15 @@
       },
       "wallbox": {
         "title": "E-Auto",
-        "description": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
+        "description": "Vergleicht das E-Auto mit einem Verbrenner, wenn du möchtest. Gemessen wird, was an der Wallbox geladen wird.",
         "data": {
           "meters": "Ladezähler",
+          "comparison": "Verglichen mit",
           "investment": "Mehrkosten (optional)"
         },
         "data_description": {
           "meters": "Wallbox oder Ladepunkte",
+          "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
           "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
         }
       },
@@ -230,6 +232,16 @@
           "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
           "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
         }
+      },
+      "wallbox_values_none": {
+        "title": "Durchschnitt seit {since}",
+        "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+        "data": {
+          "tariff": "Eigener Stromtarif (optional)"
+        },
+        "data_description": {
+          "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+        }
       }
     },
     "error": {
@@ -238,7 +250,7 @@
       "heating_required": "Wähle die frühere Heizung.",
       "value_required": "Gib einen Wert über 0 an.",
       "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
-      "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
+      "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
     },
     "abort": {
       "no_energy_dashboard": "Richte zuerst im [Energie-Dashboard](/config/energy) den Netzbezug mit Strompreis ein. Danach kannst du Electricity Lens hinzufügen.",
@@ -339,7 +351,7 @@
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
-        "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -618,7 +630,7 @@
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
-        "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -637,13 +649,15 @@
       "step": {
         "user": {
           "title": "E-Auto",
-          "description": "Vergleicht das E-Auto mit einem Verbrenner. Gemessen wird, was an der Wallbox geladen wird.",
+          "description": "Vergleicht das E-Auto mit einem Verbrenner, wenn du möchtest. Gemessen wird, was an der Wallbox geladen wird.",
           "data": {
             "meters": "Ladezähler",
+            "comparison": "Verglichen mit",
             "investment": "Mehrkosten (optional)"
           },
           "data_description": {
             "meters": "Wallbox oder Ladepunkte",
+            "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
             "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
           }
         },
@@ -661,10 +675,12 @@
           "description": "Andere Zähler oder eine andere frühere Heizung berechnen alles neu. Mehrkosten gelten sofort.",
           "data": {
             "meters": "Ladezähler",
+            "comparison": "Verglichen mit",
             "investment": "Mehrkosten (optional)"
           },
           "data_description": {
             "meters": "Wallbox oder Ladepunkte",
+            "comparison": "Nichts, etwa bei einem Zweitwagen: keine Ersparnis, aber Ladekosten und Strommix",
             "investment": "Mehrkosten der Anschaffung gegenüber einem Verbrenner. Für die Amortisation."
           }
         },
@@ -687,6 +703,36 @@
             "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
             "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
             "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
+          }
+        },
+        "wallbox_values_none": {
+          "title": "Durchschnitt seit {since}",
+          "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "now_none": {
+          "title": "Werte ab jetzt",
+          "description": "Neue Werte gelten ab der nächsten vollen Stunde. Bisher Berechnetes bleibt.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          }
+        },
+        "before_none": {
+          "title": "Vor der Einrichtung",
+          "description": "Durchschnittswerte für den {since} bis {until}. Änderst du sie, wird dieser Zeitraum neu berechnet.",
+          "data": {
+            "tariff": "Eigener Stromtarif (optional)"
+          },
+          "data_description": {
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
           }
         },
         "now": {
@@ -728,7 +774,7 @@
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
         "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
-        "investment_without_comparison": "Ohne frühere Heizung gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
+        "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer."
       },
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
@@ -876,6 +922,12 @@
         "gas": "Gas",
         "oil": "Öl",
         "none": "Keine (Neubau)"
+      }
+    },
+    "comparison": {
+      "options": {
+        "combustion": "Verbrenner",
+        "none": "Nichts"
       }
     },
     "statistics": {

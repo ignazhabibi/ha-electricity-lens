@@ -439,6 +439,64 @@ async def test_reconfigure_without_former_heating(hass: HomeAssistant) -> None:
     assert _data(entry, "heat_pump")["before"] == {"scop": 3.9}
 
 
+async def test_add_car_without_comparison(hass: HomeAssistant) -> None:
+    """A car compared with nothing asks only for its own tariff."""
+    entry = make_entry(("heat_pump", HEAT_PUMP_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "wallbox"), context={"source": SOURCE_USER}
+    )
+    assert _options(result, "comparison") == ["combustion", "none"]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {**WALLBOX_METERS, "comparison": "none", "investment": 5000},
+    )
+    assert result["errors"] == {"investment": "investment_without_comparison"}
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {**WALLBOX_METERS, "comparison": "none"}
+    )
+    assert result["step_id"] == "wallbox_values_none"
+    assert _fields(result) == ["tariff"]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"tariff": 0.25}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(wait_background_tasks=True)
+    data = _data(entry, "wallbox")
+    assert data["comparison"] == "none"
+    assert data["before"] == data["current"] == {"tariff": 0.25}
+    assert hass.states.get("sensor.electric_car_saving") is None
+
+
+async def test_reconfigure_car_without_comparison(hass: HomeAssistant) -> None:
+    """Compared with nothing, the car's values are only its tariff."""
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await _reconfigure(hass, entry, "wallbox", "meters")
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {**WALLBOX_METERS, "comparison": "none"}
+    )
+    assert result["step_id"] == "wallbox_values_none"
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {})
+    assert result["reason"] == "recomputing"
+    assert _data(entry, "wallbox")["current"] == {}
+
+    result = await _reconfigure(hass, entry, "wallbox", "now")
+    assert result["step_id"] == "now_none"
+    assert _fields(result) == ["tariff"]
+    await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"tariff": 0.22}
+    )
+    assert _data(entry, "wallbox")["current"] == {"tariff": 0.22}
+
+    result = await _reconfigure(hass, entry, "wallbox", "before")
+    assert result["step_id"] == "before_none"
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"tariff": 0.21}
+    )
+    assert _data(entry, "wallbox")["before"] == {"tariff": 0.21}
+
+
 async def test_add_pv(hass: HomeAssistant) -> None:
     """The PV plant is added in one step."""
     entry = make_entry(("wallbox", WALLBOX_DATA))

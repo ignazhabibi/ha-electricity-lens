@@ -27,7 +27,11 @@ from .calculation import (
     effective_meters,
 )
 from .const import CATEGORY_HEAT_PUMP, CATEGORY_PV, DOMAIN
-from .coordinator import CATEGORY_FIGURES, ElectricityLensCoordinator
+from .coordinator import (
+    CATEGORY_FIGURES,
+    UNCOMPARED_FIGURES,
+    ElectricityLensCoordinator,
+)
 from .sources import (
     EnergyInterfaceError,
     async_get_energy_setup,
@@ -188,8 +192,7 @@ async def async_figures(
                         if config.is_compared
                         else {
                             figure: [category_statistic_id(category, figure)]
-                            for figure in CATEGORY_FIGURES[category]
-                            if figure not in ("alternative_cost", "solar_saving")
+                            for figure in UNCOMPARED_FIGURES[category]
                         }
                     ),
                     **(

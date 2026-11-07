@@ -15,6 +15,7 @@ from .conftest import (
     HEAT_PUMP_DATA,
     PREFS,
     PV_DATA,
+    WALLBOX_DATA,
     make_entry,
     set_energy_prefs,
     setup_entry,
@@ -213,6 +214,24 @@ async def test_figures_without_former_heating(
     washer = areas["device_sensor_washer"]["statistics"]
     assert washer["heat"] == ["sensor.hot_water"]
     assert "saving" not in washer
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_car_without_comparison(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A car compared with nothing has its costs and mix, but no distance."""
+    entry = make_entry(
+        ("wallbox", {**WALLBOX_DATA, "comparison": "none", "before": {}, "current": {}})
+    )
+    await setup_entry(hass, entry)
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    statistics = areas["wallbox"]["statistics"]
+    assert statistics["cost"]
+    assert not {"saving", "distance", "alternative_cost", "solar_saving"} & set(
+        statistics
+    )
 
 
 @pytest.mark.usefixtures("energy")

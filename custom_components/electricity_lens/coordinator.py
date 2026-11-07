@@ -140,6 +140,12 @@ CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
     CATEGORY_HEAT_PUMP: ("heat", "alternative_cost", "solar_saving"),
     CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving"),
 }
+# Of them, those without a comparison: the heat. A car's distance only serves
+# the comparison with a combustion car.
+UNCOMPARED_FIGURES: dict[str, tuple[str, ...]] = {
+    CATEGORY_HEAT_PUMP: ("heat",),
+    CATEGORY_WALLBOX: (),
+}
 
 
 # The figures the household keeps for each area: energy, solar power, costs,

@@ -46,8 +46,11 @@ from .const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_PV,
     CATEGORY_WALLBOX,
+    COMPARISON_COMBUSTION,
+    COMPARISON_NONE,
     CONF_BEFORE,
     CONF_CHEAP_UNTIL,
+    CONF_COMPARISON,
     CONF_CURRENT,
     CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
@@ -86,7 +89,7 @@ PRICE_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
         HEATING_GAS: ("gas_price", "gas_price_entity"),
         HEATING_OIL: ("oil_price", "oil_price_entity"),
     },
-    CATEGORY_WALLBOX: {HEATING_GAS: ("fuel_price", "fuel_price_entity")},
+    CATEGORY_WALLBOX: {COMPARISON_COMBUSTION: ("fuel_price", "fuel_price_entity")},
 }
 # Without a format of its own, a language gets the date no one can misread.
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
@@ -213,6 +216,16 @@ def investment_schema(hass: HomeAssistant) -> probatio.Schema:
     )
 
 
+def alternative(category: str, data: Mapping[str, Any]) -> str:
+    """Return what a heat pump or car is compared with.
+
+    The heat pump's former heating, a combustion car, or none.
+    """
+    if category == CATEGORY_HEAT_PUMP:
+        return data.get(CONF_HEATING) or HEATING_GAS
+    return data.get(CONF_COMPARISON) or COMPARISON_COMBUSTION
+
+
 def meters_schema(
     hass: HomeAssistant, category: str, setup: EnergySetup, taken: Iterable[str]
 ) -> probatio.Schema:
@@ -233,6 +246,17 @@ def meters_schema(
                 translation_key=CONF_HEATING,
             )
         )
+    else:
+        # Most compare with a combustion car; a second car may have nothing.
+        fields[probatio.Optional(CONF_COMPARISON, default=COMPARISON_COMBUSTION)] = (
+            SelectSelector(
+                SelectSelectorConfig(
+                    options=[COMPARISON_COMBUSTION, COMPARISON_NONE],
+                    mode=SelectSelectorMode.LIST,
+                    translation_key=CONF_COMPARISON,
+                )
+            )
+        )
     fields[probatio.Optional(CONF_INVESTMENT)] = _number(hass.config.currency, step=1)
     return probatio.Schema(fields)
 
@@ -245,7 +269,7 @@ def validate_meters(category: str, user_input: Mapping[str, Any]) -> dict[str, s
     if category == CATEGORY_HEAT_PUMP and not user_input.get(CONF_HEATING):
         errors[CONF_HEATING] = "heating_required"
     if (
-        user_input.get(CONF_HEATING) == HEATING_NONE
+        alternative(category, user_input) == COMPARISON_NONE
         and user_input.get(CONF_INVESTMENT) is not None
     ):
         # Without a comparison there is no saving to pay an extra cost back.
@@ -259,6 +283,8 @@ def meters_data(category: str, user_input: Mapping[str, Any]) -> dict[str, Any]:
     if category == CATEGORY_HEAT_PUMP:
         data[CONF_HEAT_METERS] = list(user_input.get(CONF_HEAT_METERS, []))
         data[CONF_HEATING] = user_input[CONF_HEATING]
+    else:
+        data[CONF_COMPARISON] = alternative(category, user_input)
     if (investment := user_input.get(CONF_INVESTMENT)) is not None:
         data[CONF_INVESTMENT] = investment
     return data
@@ -281,7 +307,7 @@ def values_schema(
     prices = PRICE_FIELDS[category].get(heating)
     unit = "kWh" if category == CATEGORY_HEAT_PUMP and heating == HEATING_GAS else "l"
     fields: dict[Any, Any] = {}
-    if category == CATEGORY_WALLBOX:
+    if category == CATEGORY_WALLBOX and prices is not None:
         fields[probatio.Required(VALUE_EV_CONSUMPTION)] = _number(
             "kWh/100 km", maximum=100, step=0.1
         )
@@ -580,10 +606,12 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
         """Ask for the car's averages since its data begins."""
         return await self._async_values(CATEGORY_WALLBOX, user_input)
 
+    async_step_wallbox_values_none = async_step_wallbox_values
+
     async def _async_values(
         self, category: str, user_input: dict[str, Any] | None
     ) -> ConfigFlowResult:
-        heating = self._data.get(CONF_HEATING, HEATING_GAS)
+        heating = alternative(category, self._data)
         errors: dict[str, str] = {}
         if user_input is not None and not (
             errors := validate_values(category, heating, user_input)
@@ -639,11 +667,22 @@ def _values_step(
     heating and whether, and why, the seasonal COP is asked.
     """
     if category == CATEGORY_WALLBOX:
-        return "wallbox_values"
+        return "wallbox_values_none" if heating == COMPARISON_NONE else "wallbox_values"
     step = f"heat_pump_values_{heating}"
     if scop:
         step += "_scop_until" if heat_start else "_scop"
     return step
+
+
+def _reconfigure_step(step: str, category: str, heating: str) -> str:
+    """Return the step id of the values from now on or before the setup.
+
+    The heat pump's name the former heating; the car's say whether it is
+    compared with a combustion car.
+    """
+    if category == CATEGORY_HEAT_PUMP:
+        return f"{step}_{heating}"
+    return f"{step}_none" if heating == COMPARISON_NONE else step
 
 
 class CategorySubentryFlow(ConfigSubentryFlow):
@@ -755,7 +794,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         meters that now need a seasonal COP; it replaces all values.
         """
         category = self._category
-        heating = self._data.get(CONF_HEATING, HEATING_GAS)
+        heating = alternative(category, self._data)
         errors: dict[str, str] = {}
         if user_input is not None and not (
             errors := validate_values(category, heating, user_input)
@@ -793,6 +832,8 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         return await self._async_values_form(
             user_input, reconfigure=self.source == "reconfigure"
         )
+
+    async_step_wallbox_values_none = async_step_wallbox_values
 
     async def async_step_heat_pump_values_gas(
         self, user_input: dict[str, Any] | None = None
@@ -882,7 +923,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         """Change the values that apply from the next full hour."""
         subentry = self._get_reconfigure_subentry()
         category = self._category
-        heating = subentry.data.get(CONF_HEATING, HEATING_GAS)
+        heating = alternative(category, subentry.data)
         # From now on the seasonal COP is needed only without heat meters.
         scop = category == CATEGORY_HEAT_PUMP and not subentry.data.get(
             CONF_HEAT_METERS
@@ -909,7 +950,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             ),
         )
         return self.async_show_form(
-            step_id=f"now_{heating}" if category == CATEGORY_HEAT_PUMP else "now",
+            step_id=_reconfigure_step("now", category, heating),
             data_schema=schema,
             errors=errors,
         )
@@ -924,7 +965,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         """Change the averages for the time before the setup."""
         subentry = self._get_reconfigure_subentry()
         category = self._category
-        heating = subentry.data.get(CONF_HEATING, HEATING_GAS)
+        heating = alternative(category, subentry.data)
         scop = self._uses_scop(subentry.data)
         errors: dict[str, str] = {}
         if user_input is not None and not (
@@ -950,7 +991,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             ),
         )
         return self.async_show_form(
-            step_id=f"before_{heating}" if category == CATEGORY_HEAT_PUMP else "before",
+            step_id=_reconfigure_step("before", category, heating),
             data_schema=schema,
             errors=errors,
             description_placeholders={
@@ -982,9 +1023,12 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             }
             data.update(meters_data(category, user_input))
             await self._async_take_meters(data)
-            heating_changed = data.get(CONF_HEATING) != subentry.data.get(CONF_HEATING)
+            # Another former heating or comparison asks for its values.
+            compared_changed = alternative(category, data) != alternative(
+                category, subentry.data
+            )
             scop_missing = self._scop and not self._uses_scop(subentry.data)
-            if heating_changed or scop_missing:
+            if compared_changed or scop_missing:
                 return await self._async_values_form(None, reconfigure=True)
             return self._async_save(data, "recomputing", {})
         schema = self.add_suggested_values_to_schema(

@@ -13,8 +13,11 @@ from .calculation import Timeline
 from .const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_WALLBOX,
+    COMPARISON_COMBUSTION,
+    COMPARISON_NONE,
     CONF_BEFORE,
     CONF_CHEAP_UNTIL,
+    CONF_COMPARISON,
     CONF_CURRENT,
     CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
@@ -66,6 +69,8 @@ class CategoryConfig:
     meters: tuple[str, ...] = ()
     heat_meters: tuple[str, ...] = ()
     heating: str = HEATING_GAS
+    comparison: str = COMPARISON_COMBUSTION
+    """What the electric car is compared with."""
     setup_at: float = 0.0
     before: Mapping[str, float] = field(default_factory=dict[str, float])
     current: Mapping[str, float] = field(default_factory=dict[str, float])
@@ -84,6 +89,7 @@ class CategoryConfig:
             meters=tuple(data.get(CONF_METERS, ())),
             heat_meters=tuple(data.get(CONF_HEAT_METERS, ())),
             heating=data.get(CONF_HEATING, HEATING_GAS),
+            comparison=data.get(CONF_COMPARISON, COMPARISON_COMBUSTION),
             setup_at=float(data.get(CONF_SETUP_AT, 0.0)),
             before=_numbers(data.get(CONF_BEFORE)),
             current=_numbers(current),
@@ -101,11 +107,14 @@ class CategoryConfig:
         """Return whether the category is compared with what it replaced.
 
         Only then does it save. A heat pump without a former heating, as in a
-        new build, still has its heat, seasonal COP, and heat price.
+        new build, still has its heat, seasonal COP, and heat price; an
+        electric car without a combustion car its charging costs and mix.
         """
-        return not (
-            self.category == CATEGORY_HEAT_PUMP and self.heating == HEATING_NONE
-        )
+        if self.category == CATEGORY_HEAT_PUMP:
+            return self.heating != HEATING_NONE
+        if self.category == CATEGORY_WALLBOX:
+            return self.comparison != COMPARISON_NONE
+        return True
 
     @property
     def fingerprint(self) -> str:
@@ -119,6 +128,12 @@ class CategoryConfig:
             "meters": sorted(self.meters),
             "heat_meters": sorted(self.heat_meters),
             "heating": self.heating,
+            # Only when set, so that the cars compared as before keep their past.
+            **(
+                {"comparison": self.comparison}
+                if self.comparison != COMPARISON_COMBUSTION
+                else {}
+            ),
             "setup_at": self.setup_at,
             "before": dict(sorted(self.before.items())),
             "recompute": self.recompute,

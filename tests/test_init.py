@@ -250,6 +250,45 @@ async def test_heat_pump_without_former_heating(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_car_without_comparison(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A car compared with nothing has no distance, saving, or saving sensors."""
+    entry = make_entry(
+        ("pv", PV_DATA),
+        (
+            "wallbox",
+            {**WALLBOX_DATA, "comparison": "none", "before": {}, "current": {}},
+        ),
+    )
+    await setup_entry(hass, entry)
+    for figure in ("saving", "distance", "alternative_cost", "solar_saving"):
+        assert (
+            await statistic_sums(hass, f"electricity_lens:wallbox_{figure}", data_start)
+            == []
+        )
+    assert hass.states.get("sensor.electric_car_saving") is None
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert float(balance.state) == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
+
+
+def test_comparison_keeps_the_past_of_cars_compared_as_before() -> None:
+    """A car compared with a combustion car keeps its fingerprint."""
+    data = dict(WALLBOX_DATA)
+    before = CategoryConfig.from_data("wallbox", data).fingerprint
+    assert (
+        CategoryConfig.from_data(
+            "wallbox", {**data, "comparison": "combustion"}
+        ).fingerprint
+        == before
+    )
+    assert (
+        CategoryConfig.from_data("wallbox", {**data, "comparison": "none"}).fingerprint
+        != before
+    )
+
+
+@pytest.mark.usefixtures("energy")
 async def test_new_hours_continue_the_history(
     hass: HomeAssistant, config_entry: MockConfigEntry, data_start: datetime
 ) -> None:

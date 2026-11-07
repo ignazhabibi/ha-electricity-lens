@@ -204,13 +204,15 @@
       },
       "wallbox": {
         "title": "Electric car",
-        "description": "Compares the electric car with a combustion car. What is charged at the wallbox is measured.",
+        "description": "Compares the electric car with a combustion car, if you like. What is charged at the wallbox is measured.",
         "data": {
           "meters": "Charging meters",
+          "comparison": "Compared with",
           "investment": "Extra cost (optional)"
         },
         "data_description": {
           "meters": "Wallbox or charging points",
+          "comparison": "Nothing, as for a second car: no saving, but charging costs and mix",
           "investment": "Extra purchase cost over a combustion car. For the payback."
         }
       },
@@ -230,6 +232,16 @@
           "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
           "fuel_price_entity": "Replaces the average from now on"
         }
+      },
+      "wallbox_values_none": {
+        "title": "Average since {since}",
+        "description": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
+        "data": {
+          "tariff": "Own electricity tariff (optional)"
+        },
+        "data_description": {
+          "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+        }
       }
     },
     "error": {
@@ -238,7 +250,7 @@
       "heating_required": "Choose the former heating.",
       "value_required": "Enter a value above 0.",
       "scop_range": "Enter a seasonal COP between 1 and 10.",
-      "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
+      "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
     },
     "abort": {
       "no_energy_dashboard": "First set up the grid import with an electricity price in the [energy dashboard](/config/energy). Then you can add Electricity Lens.",
@@ -339,7 +351,7 @@
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
         "scop_range": "Enter a seasonal COP between 1 and 10.",
-        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
+        "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -618,7 +630,7 @@
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
         "scop_range": "Enter a seasonal COP between 1 and 10.",
-        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
+        "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -637,13 +649,15 @@
       "step": {
         "user": {
           "title": "Electric car",
-          "description": "Compares the electric car with a combustion car. What is charged at the wallbox is measured.",
+          "description": "Compares the electric car with a combustion car, if you like. What is charged at the wallbox is measured.",
           "data": {
             "meters": "Charging meters",
+            "comparison": "Compared with",
             "investment": "Extra cost (optional)"
           },
           "data_description": {
             "meters": "Wallbox or charging points",
+            "comparison": "Nothing, as for a second car: no saving, but charging costs and mix",
             "investment": "Extra purchase cost over a combustion car. For the payback."
           }
         },
@@ -661,10 +675,12 @@
           "description": "Other meters or another former heating compute everything again. The extra cost applies at once.",
           "data": {
             "meters": "Charging meters",
+            "comparison": "Compared with",
             "investment": "Extra cost (optional)"
           },
           "data_description": {
             "meters": "Wallbox or charging points",
+            "comparison": "Nothing, as for a second car: no saving, but charging costs and mix",
             "investment": "Extra purchase cost over a combustion car. For the payback."
           }
         },
@@ -687,6 +703,36 @@
             "combustion_consumption": "What a comparable combustion car would have used",
             "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
             "fuel_price_entity": "Replaces the average from now on"
+          }
+        },
+        "wallbox_values_none": {
+          "title": "Average since {since}",
+          "description": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
+          "data": {
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+          }
+        },
+        "now_none": {
+          "title": "Values from now on",
+          "description": "New values apply from the next full hour. What was computed stays.",
+          "data": {
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+          }
+        },
+        "before_none": {
+          "title": "Before the setup",
+          "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
+          "data": {
+            "tariff": "Own electricity tariff (optional)"
+          },
+          "data_description": {
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
           }
         },
         "now": {
@@ -728,7 +774,7 @@
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
         "scop_range": "Enter a seasonal COP between 1 and 10.",
-        "investment_without_comparison": "Without a former heating there is no saving to pay back an extra cost. Leave it empty."
+        "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
@@ -876,6 +922,12 @@
         "gas": "Gas",
         "oil": "Oil",
         "none": "None (new build)"
+      }
+    },
+    "comparison": {
+      "options": {
+        "combustion": "Combustion car",
+        "none": "Nothing"
       }
     },
     "statistics": {
