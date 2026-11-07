@@ -107,10 +107,6 @@ UPDATE_INTERVAL = timedelta(minutes=15)
 # Each written chunk is kept, so that a restart continues from there.
 CHUNK = 30 * 24 * HOUR
 STORAGE_VERSION = 1
-# Version 2 keeps the savings in statistics of the integration's own instead
-# of the saving sensors' statistics. Version 3 adds heat, distance, and the
-# alternative's costs per category.
-STATISTICS_VERSION = 3
 # Raised when a rule changes what the computed past looks like, so that it is
 # computed again. The categories build on the household, so a new household
 # rule computes everything again; a new category rule only the categories,
@@ -281,10 +277,6 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         """Restore progress and record changed current values."""
         stored = await self._store.async_load() or {}
         stored_categories: dict[str, Any] = stored.get("categories", {})
-        moving_statistics = (
-            bool(stored_categories)
-            and stored.get("statistics_version", 1) < STATISTICS_VERSION
-        )
         valid_from = next_full_hour()
         self.household_state = HouseholdState.from_dict(stored.get("household", {}))
         self.household_state.standing_charge.set(
@@ -301,7 +293,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             fingerprint = f"{config.fingerprint}:{CATEGORY_CALCULATION_VERSION}"
             if self.household.recompute is not None:
                 fingerprint += f":{self.household.recompute}"
-            if state.fingerprint != fingerprint or moving_statistics:
+            if state.fingerprint != fingerprint:
                 state.reset(fingerprint)
             for key in config.values:
                 state.timeline(key).set(config.current.get(key), valid_from)
@@ -329,30 +321,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             if (category := statistic_category(statistic_id)) is not None
             and category not in configured
         ]
-        if moving_statistics:
-            # The past is computed again into the new statistics; the saving
-            # sensors' own statistics would only confuse.
-            stale += self._saving_entities()
         async_remove_statistics(self.hass, stale)
         await self._async_save()
         self.data = self._results()
 
-    def _saving_entities(self) -> list[str]:
-        registry = er.async_get(self.hass)
-        return [
-            entity_id
-            for subentry_id in self.config_entry.subentries
-            if (
-                entity_id := registry.async_get_entity_id(
-                    Platform.SENSOR, DOMAIN, f"{subentry_id}_saving"
-                )
-            )
-        ]
-
     async def _async_save(self) -> None:
         await self._store.async_save(
             {
-                "statistics_version": STATISTICS_VERSION,
                 "household": self.household_state.as_dict(),
                 "categories": {
                     subentry_id: state.as_dict()
