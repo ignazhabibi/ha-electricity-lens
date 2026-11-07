@@ -98,7 +98,8 @@ from .sources import (
 _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(minutes=15)
-# The past is computed in chunks to keep each recorder query small.
+# The past is computed in chunks to keep each recorder query and write small.
+# Each written chunk is kept, so that a restart continues from there.
 CHUNK = 30 * 24 * HOUR
 STORAGE_VERSION = 1
 # Version 2 keeps the savings in statistics of the integration's own instead
@@ -461,24 +462,29 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         self._without_data.discard(subentry_id)
 
         counting_since = _ceil_hour(state.data_start)
-        computing_past = state.next_hour is None
+        # Computing the past replaces what an earlier computation wrote.
+        replace = state.next_hour is None
+        if replace:
+            state.past_until = end
         start = state.next_hour if state.next_hour is not None else counting_since
-        # A failure halfway must not count its hours again in the next update,
-        # so the state changes only once they are written.
-        progress = deepcopy(state)
-        history: dict[str, list[tuple[float, float]]] = {}
         while start < end:
             chunk_end = min(start + CHUNK, end)
+            # A failure halfway must not count its hours again in the next
+            # update, so the state changes only once they are written. Each
+            # written chunk is kept, so that a restart continues from there.
+            progress = deepcopy(state)
             rows = await self._async_compute(config, setup, progress, start, chunk_end)
-            for figure, series in rows.items():
-                history.setdefault(figure, []).extend(series)
+            await self._async_write_history(subentry_id, config, rows, replace=replace)
+            await async_wait_recorder(self.hass)
+            progress.next_hour = chunk_end
+            self.states[subentry_id] = state = progress
+            await self._async_save()
+            replace = False
             start = chunk_end
-        await self._async_write_history(
-            subentry_id, config, history, replace=computing_past
-        )
-        await async_wait_recorder(self.hass)
-        progress.next_hour = max(start, counting_since)
-        self.states[subentry_id] = progress
+        if state.next_hour is None:
+            # Nothing to compute yet: clear what an earlier computation wrote.
+            await self._async_write_history(subentry_id, config, {}, replace=replace)
+            state.next_hour = max(start, counting_since)
 
     def _category_sources(
         self,
@@ -878,20 +884,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             if state.data_start is None:
                 return
         counting_since = _ceil_hour(state.data_start)
-        computing_past = state.next_hour is None
-        start = state.next_hour if state.next_hour is not None else counting_since
-        # As for a category: the state changes only once the hours are written.
-        progress = deepcopy(state)
-        history: dict[str, list[tuple[float, float]]] = {}
-        while start < end:
-            chunk_end = min(start + CHUNK, end)
-            rows = await self._async_compute_household(
-                setup, progress, start, chunk_end
-            )
-            for key, series in rows.items():
-                history.setdefault(key, []).extend(series)
-            start = chunk_end
-        if computing_past:
+        if state.next_hour is None:
+            state.past_until = end
             # Computing the past replaces what an earlier computation wrote,
             # including devices no longer in the energy dashboard.
             async_remove_statistics(
@@ -902,23 +896,36 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     if statistic_category(statistic_id) is None
                 ],
             )
+        start = state.next_hour if state.next_hour is not None else counting_since
         names = await self._async_household_names(setup)
         currency = self.hass.config.currency
-        for key, series in history.items():
-            async_write_statistics(
-                self.hass,
-                household_statistic_id(key),
-                names.get(key, key),
-                currency
-                if key.endswith("_cost")
-                or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
-                else "kWh",
-                series,
-                replace=False,
+        while start < end:
+            chunk_end = min(start + CHUNK, end)
+            # As for a category: the state changes only once the hours are
+            # written, and each written chunk is kept.
+            progress = deepcopy(state)
+            rows = await self._async_compute_household(
+                setup, progress, start, chunk_end
             )
-        await async_wait_recorder(self.hass)
-        progress.next_hour = max(start, counting_since)
-        self.household_state = progress
+            for key, series in rows.items():
+                async_write_statistics(
+                    self.hass,
+                    household_statistic_id(key),
+                    names.get(key, key),
+                    currency
+                    if key.endswith("_cost")
+                    or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
+                    else "kWh",
+                    series,
+                    replace=False,
+                )
+            await async_wait_recorder(self.hass)
+            progress.next_hour = chunk_end
+            self.household_state = state = progress
+            await self._async_save()
+            start = chunk_end
+        if state.next_hour is None:
+            state.next_hour = max(start, counting_since)
 
     async def async_texts(self) -> Callable[[str], str]:
         """Return the names of areas and figures in the system language."""
@@ -1152,7 +1159,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 else self.current_price(config, state),
                 "heating": config.heating if is_heat_pump else None,
             }
-            if state.data_start is None or state.next_hour is None:
+            if (
+                state.data_start is None
+                or state.next_hour is None
+                or state.computing_past
+            ):
                 results[subentry_id] = CategoryResult(
                     calculating=subentry_id not in self._without_data, **base
                 )

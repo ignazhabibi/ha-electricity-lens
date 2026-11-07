@@ -881,6 +881,46 @@ async def test_failed_update_counts_no_hour_twice(
     assert household_sums[-1] == pytest.approx(consumption)
 
 
+@pytest.mark.usefixtures("energy")
+async def test_restart_continues_the_past(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A restart while the past is computed continues from the last written chunk."""
+    # Arrange: four chunks each; the household is done, the PV plant's second
+    # chunk fails, as if Home Assistant stopped there.
+    entry = make_entry(("pv", PV_DATA))
+    flaky = _fails_once(coordinator_module.async_hourly_changes, 6)
+    with (
+        patch.object(coordinator_module, "CHUNK", 12 * HOUR),
+        patch.object(coordinator_module, "async_hourly_changes", flaky),
+    ):
+        await setup_entry(hass, entry)
+    state = next(iter(entry.runtime_data.states.values()))
+    assert state.next_hour == data_start.timestamp() + 12 * HOUR
+    assert state.computing_past
+
+    # Act: start again.
+    with (
+        patch.object(coordinator_module, "CHUNK", 12 * HOUR),
+        patch.object(
+            coordinator_module,
+            "async_hourly_changes",
+            wraps=coordinator_module.async_hourly_changes,
+        ) as changes,
+    ):
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_wait_recording_done(hass)
+
+    # Assert: only the PV plant's three missing chunks are computed, once each.
+    assert changes.call_count == 3
+    saving = COUNTED * PV_PER_HOUR
+    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
+    assert _state(hass, "sensor.pv_plant_saving").attributes["calculating"] is False
+    pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
+    assert pv_sums[-1] == pytest.approx(saving)
+
+
 async def test_migration_from_future_version(hass: HomeAssistant) -> None:
     """An entry from a newer version is not touched."""
     entry = make_entry(("pv", {}), version=2)
