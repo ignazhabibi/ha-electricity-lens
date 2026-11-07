@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
@@ -29,6 +30,10 @@ from custom_components.electricity_lens.const import (
     CATEGORY_WALLBOX,
     DOMAIN,
 )
+
+# The Home Assistant test plugin logs every SQL statement of the recorder. Each
+# test then formats thousands of records, which costs a third of the run time.
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 HOURS = 48
 GRID_PRICE = 0.30
