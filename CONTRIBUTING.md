@@ -22,8 +22,8 @@ python scripts/quality_check.py
 pre-commit run --all-files
 ```
 
-The gate runs Ruff, Pyright, pytest, and the card's type check, and regenerates
-the translations and the card. It also checks that:
+The gate runs Ruff, Pyright, pytest on all CPU cores, and the card's type check,
+and regenerates the translations and the card. It also checks that:
 
 - each integration module exceeds 95% line coverage, and `config_flow.py`
   stays at 100%;
