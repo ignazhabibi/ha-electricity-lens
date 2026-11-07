@@ -13,6 +13,7 @@ from custom_components.electricity_lens.calculation import (
     YEAR,
     Timeline,
     average_price,
+    battery_saving,
     combine_grid_prices,
     effective_meters,
     electricity_prices,
@@ -108,6 +109,38 @@ def test_pv_saving() -> None:
     assert pv_saving(
         solar=5, export=2, battery_out=1, battery_in=1.5, price=0.3, export_revenue=0.16
     ) == pytest.approx(2.5 * 0.3 + 0.16)
+
+
+def test_battery_saving() -> None:
+    """The battery against the same PV plant without it, hour by hour."""
+    price, feed_in = 0.30, 0.08
+
+    def saving(**flows: float) -> float:
+        return battery_saving(price=price, feed_in_price=feed_in, **flows)
+
+    # Noon: it stores solar power that would have been fed in.
+    noon = {"solar": 5.0, "export": 1.0, "battery_out": 0.0, "battery_in": 3.0}
+    assert saving(**noon) == pytest.approx(-3 * feed_in)
+    # Evening: what it gives would have come from the grid.
+    evening = {"solar": 0.0, "export": 0.0, "battery_out": 3.0, "battery_in": 0.0}
+    assert saving(**evening) == pytest.approx(3 * price)
+    # Charged from the grid, or fed in from the battery.
+    from_grid = {"solar": 0.0, "export": 0.0, "battery_out": 0.0, "battery_in": 2.0}
+    assert saving(**from_grid) == pytest.approx(-2 * price)
+    to_grid = {"solar": 0.0, "export": 2.0, "battery_out": 2.0, "battery_in": 0.0}
+    assert saving(**to_grid) == pytest.approx(2 * feed_in)
+    # With the battery's part taken out, the PV plant saves as without one: the
+    # stored solar power fed in, what the battery gave bought.
+    total = pv_saving(price=price, export_revenue=1.0 * feed_in, **noon)
+    without = pv_saving(
+        solar=5.0,
+        export=4.0,
+        battery_out=0.0,
+        battery_in=0.0,
+        price=price,
+        export_revenue=4.0 * feed_in,
+    )
+    assert total - saving(**noon) == pytest.approx(without)
 
 
 def test_heating_cost() -> None:

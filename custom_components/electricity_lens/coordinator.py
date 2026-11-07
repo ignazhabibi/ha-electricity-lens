@@ -33,6 +33,7 @@ from .calculation import (
     LEVEL_EXPENSIVE,
     GridPrices,
     average_price,
+    battery_saving,
     combine_grid_prices,
     effective_meters,
     electricity_prices,
@@ -69,6 +70,7 @@ from .const import (
     VALUE_TARIFF,
 )
 from .models import (
+    BatteryResult,
     CategoryConfig,
     CategoryResult,
     CategoryState,
@@ -115,9 +117,10 @@ STORAGE_VERSION = 1
 # were one: 2 brought prices paid, price levels that need a contrast,
 # consumers that add up to the household, and meters that run back; 3 no hour
 # counted twice after a failed update; 4 the standing charge and the saving by
-# solar power per category.
+# solar power per category. Categories: 5 the battery's part of the PV plant's
+# saving.
 HOUSEHOLD_CALCULATION_VERSION = 4
-CATEGORY_CALCULATION_VERSION = 4
+CATEGORY_CALCULATION_VERSION = 5
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
 
@@ -137,6 +140,7 @@ def next_full_hour() -> float:
 
 # The figures each category keeps besides its saving.
 CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
+    CATEGORY_PV: ("battery_saving",),
     CATEGORY_HEAT_PUMP: ("heat", "alternative_cost", "solar_saving"),
     CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving"),
 }
@@ -601,6 +605,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             self._add_pv_hours(
                 setup=setup,
                 state=state,
+                add=add,
                 hours=hours,
                 changes=changes,
                 entity_values=entity_values,
@@ -703,6 +708,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         *,
         setup: EnergySetup,
         state: CategoryState,
+        add: Callable[[str, float, float], None],
         hours: list[float],
         changes: dict[str, dict[float, float]],
         entity_values: dict[str, dict[float, float]],
@@ -722,14 +728,17 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             if source.export_stat is not None
         }
         for index, hour in enumerate(hours):
+            solar = sum(change(stat, hour) for stat in setup.solar)
+            export = sum(change(stat, hour) for stat in export_prices)
+            battery_out = sum(change(b.discharge_stat, hour) for b in setup.batteries)
+            battery_in = sum(change(b.charge_stat, hour) for b in setup.batteries)
+            price = prices.mean[index] or 0.0
             if saving := pv_saving(
-                solar=sum(change(stat, hour) for stat in setup.solar),
-                export=sum(change(stat, hour) for stat in export_prices),
-                battery_out=sum(
-                    change(b.discharge_stat, hour) for b in setup.batteries
-                ),
-                battery_in=sum(change(b.charge_stat, hour) for b in setup.batteries),
-                price=prices.mean[index] or 0.0,
+                solar=solar,
+                export=export,
+                battery_out=battery_out,
+                battery_in=battery_in,
+                price=price,
                 export_revenue=sum(
                     change(stat, hour) * (rates[index] or 0.0)
                     for stat, rates in export_prices.items()
@@ -737,6 +746,21 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             ):
                 state.saving += saving
                 history.append((hour, state.saving))
+            if battery_in or battery_out:
+                if state.battery_start is None:
+                    state.battery_start = hour
+                add(
+                    "battery_saving",
+                    hour,
+                    battery_saving(
+                        solar=solar,
+                        export=export,
+                        battery_out=battery_out,
+                        battery_in=battery_in,
+                        price=price,
+                        feed_in_price=_feed_in_price(export_prices, index),
+                    ),
+                )
 
     def _fuel_price(
         self,
@@ -1179,12 +1203,22 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         for subentry_id, config in self.configs.items():
             if subentry_id in self._without_data:
                 continue
-            figures = 1 + len(CATEGORY_FIGURES.get(config.category, ()))
-            parts.append((figures, _done(self.states[subentry_id])))
+            # A car compared with nothing writes no statistics of its own.
+            if figures := len(self._written_figures(config)):
+                parts.append((figures, _done(self.states[subentry_id])))
         if all(done >= 1 for _, done in parts):
             return None
         total = sum(weight for weight, _ in parts)
         return int(sum(weight * done for weight, done in parts) / total * 100)
+
+    def _written_figures(self, config: CategoryConfig) -> tuple[str, ...]:
+        """Return the statistics a category writes: its saving and figures."""
+        if config.category == CATEGORY_PV:
+            has_battery = self.setup is not None and bool(self.setup.batteries)
+            return ("saving", "battery_saving") if has_battery else ("saving",)
+        if not config.is_compared:
+            return UNCOMPARED_FIGURES[config.category]
+        return ("saving", *CATEGORY_FIGURES[config.category])
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState
@@ -1203,7 +1237,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             is_heat_pump = config.category == CATEGORY_HEAT_PUMP
             base: dict[str, Any] = {
                 "category": config.category,
-                "investment": config.investment,
+                "investment": config.total_investment,
                 "price": None
                 if config.category == CATEGORY_PV
                 else self.current_price(config, state),
@@ -1224,7 +1258,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 saving=state.saving,
                 counting_since=counting_since,
                 until=state.next_hour,
-                investment=config.investment,
+                investment=config.total_investment,
             )
             results[subentry_id] = CategoryResult(
                 calculating=False,
@@ -1236,6 +1270,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 counting_since=dt_util.utc_from_timestamp(counting_since),
                 yearly_from=dt_util.utc_from_timestamp(summary.yearly_from),
                 heat_estimated=state.estimated if is_heat_pump else None,
+                battery=_battery_result(config, state),
                 **base,
             )
         return PaybackData(results)
@@ -1292,6 +1327,45 @@ def _grid_sums(hass: HomeAssistant, grid: GridSource) -> set[str]:
         _compensation_stat(hass, grid),
     )
     return {stat for stat in stats if stat is not None}
+
+
+def _battery_result(
+    config: CategoryConfig, state: CategoryState
+) -> BatteryResult | None:
+    """Return the battery's part of the PV plant, counted from its first hour."""
+    if (
+        config.category != CATEGORY_PV
+        or state.battery_start is None
+        or state.next_hour is None
+    ):
+        return None
+    saving = state.totals.get("battery_saving", 0.0)
+    summary = summarize(
+        saving=saving,
+        counting_since=state.battery_start,
+        until=state.next_hour,
+        investment=config.battery_investment,
+    )
+    return BatteryResult(
+        saving=saving,
+        investment=config.battery_investment,
+        per_year=summary.per_year,
+        payback=summary.payback,
+        years_left=summary.years_left,
+        counting_since=dt_util.utc_from_timestamp(state.battery_start),
+    )
+
+
+def _feed_in_price(export_prices: dict[str, list[float | None]], index: int) -> float:
+    """Return the feed-in compensation per kWh of an hour, also without feed-in.
+
+    The battery's solar power would have been fed in even in an hour in which
+    nothing was. With several feed-in meters, the mean of their prices counts.
+    """
+    rates = [
+        value for rates in export_prices.values() if (value := rates[index]) is not None
+    ]
+    return sum(rates) / len(rates) if rates else 0.0
 
 
 def _export_prices(

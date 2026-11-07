@@ -48,6 +48,7 @@ from .const import (
     CATEGORY_WALLBOX,
     COMPARISON_COMBUSTION,
     COMPARISON_NONE,
+    CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
     CONF_CHEAP_UNTIL,
     CONF_COMPARISON,
@@ -208,11 +209,16 @@ def household_data(user_input: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def investment_schema(hass: HomeAssistant) -> probatio.Schema:
-    """Return the form of the PV plant."""
-    return probatio.Schema(
-        {probatio.Optional(CONF_INVESTMENT): _number(hass.config.currency, step=1)}
-    )
+def investment_schema(hass: HomeAssistant, setup: EnergySetup) -> probatio.Schema:
+    """Return the form of the PV plant, with its battery where there is one."""
+    fields: dict[Any, Any] = {
+        probatio.Optional(CONF_INVESTMENT): _number(hass.config.currency, step=1)
+    }
+    if setup.batteries:
+        fields[probatio.Optional(CONF_BATTERY_INVESTMENT)] = _number(
+            hass.config.currency, step=1
+        )
+    return probatio.Schema(fields)
 
 
 def alternative(category: str, data: Mapping[str, Any]) -> str:
@@ -531,7 +537,7 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self._async_add(CATEGORY_PV, dict(user_input))
         return self.async_show_form(
             step_id=_pv_step(self._setup),
-            data_schema=investment_schema(self.hass),
+            data_schema=investment_schema(self.hass, self._setup),
             description_placeholders={
                 "since": format_date(
                     self.hass,
@@ -728,7 +734,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
                 return await self._async_create(dict(user_input))
             return self.async_show_form(
                 step_id=_pv_step(self._setup),
-                data_schema=investment_schema(self.hass),
+                data_schema=investment_schema(self.hass, self._setup),
                 description_placeholders={
                     "since": format_date(
                         self.hass,
@@ -868,13 +874,13 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             data = {
                 key: value
                 for key, value in subentry.data.items()
-                if key != CONF_INVESTMENT
+                if key not in (CONF_INVESTMENT, CONF_BATTERY_INVESTMENT)
             }
             return self._async_save({**data, **user_input}, "investment_saved", {})
         return self.async_show_form(
             step_id="investment",
             data_schema=self.add_suggested_values_to_schema(
-                investment_schema(self.hass), subentry.data
+                investment_schema(self.hass, self._setup), subentry.data
             ),
         )
 

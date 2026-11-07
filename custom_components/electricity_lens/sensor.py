@@ -250,6 +250,7 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
             "years_left",
             "surplus",
             "surplus_percent",
+            "battery",
         }
     )
 
@@ -305,4 +306,14 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
         if result.heating is not None:
             attributes["heating"] = result.heating
             attributes["heat_estimated"] = result.heat_estimated
+        if (battery := result.battery) is not None:
+            # The battery's part of the PV plant's saving, with its own payback.
+            attributes["battery"] = {
+                "saving": battery.saving,
+                "investment": battery.investment,
+                "per_year": battery.per_year,
+                "payback": battery.payback,
+                "years_left": battery.years_left,
+                "counting_since": battery.counting_since.isoformat(),
+            }
         return attributes

@@ -69,6 +69,17 @@ export interface CategoryFigures {
   countingSince: Date | null;
   entityId: string;
   heating: Heating | null;
+  /** The PV plant's battery, whose saving is part of the plant's. */
+  battery: BatteryFigures | null;
+}
+
+/** The battery's part of the PV plant, as the integration computed it. */
+export interface BatteryFigures {
+  saving: number;
+  investment: number | null;
+  perYear: number | null;
+  payback: number | null;
+  yearsLeft: number | null;
 }
 
 /** One area of `electricity_lens/figures`: where each of its figures is kept. */

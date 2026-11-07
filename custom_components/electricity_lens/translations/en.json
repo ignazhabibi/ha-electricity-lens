@@ -44,20 +44,24 @@
         "title": "PV plant",
         "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
-          "investment": "Purchase cost (optional)"
+          "investment": "Purchase cost (optional)",
+          "battery_investment": "Battery purchase cost (optional)"
         },
         "data_description": {
-          "investment": "For the payback"
+          "investment": "For the payback",
+          "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
         }
       },
       "pv_no_export": {
         "title": "PV plant",
         "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
-          "investment": "Purchase cost (optional)"
+          "investment": "Purchase cost (optional)",
+          "battery_investment": "Battery purchase cost (optional)"
         },
         "data_description": {
-          "investment": "For the payback"
+          "investment": "For the payback",
+          "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
         }
       },
       "heat_pump": {
@@ -492,20 +496,24 @@
           "title": "PV plant",
           "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
-            "investment": "Purchase cost (optional)"
+            "investment": "Purchase cost (optional)",
+            "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
-            "investment": "For the payback"
+            "investment": "For the payback",
+            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
           }
         },
         "pv_no_export": {
           "title": "PV plant",
           "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
-            "investment": "Purchase cost (optional)"
+            "investment": "Purchase cost (optional)",
+            "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
-            "investment": "For the payback"
+            "investment": "For the payback",
+            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
           }
         },
         "reconfigure": {
@@ -518,10 +526,12 @@
         "investment": {
           "title": "Purchase cost",
           "data": {
-            "investment": "Purchase cost (optional)"
+            "investment": "Purchase cost (optional)",
+            "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
-            "investment": "For the payback"
+            "investment": "For the payback",
+            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
           }
         },
         "recompute": {
@@ -1449,6 +1459,7 @@
         "distance": "distance",
         "alternative_cost": "comparison costs",
         "solar_saving": "saving by solar power",
+        "battery_saving": "battery saving",
         "saving": "saving"
       }
     }

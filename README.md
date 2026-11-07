@@ -78,7 +78,7 @@ replaced.
 
 | Category | Saving | Compared with |
 |---|---|---|
-| PV plant | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received. A home battery counts as part of the PV plant. | No PV plant: all electricity from the grid, no feed-in. |
+| PV plant | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received. A home battery counts as part of the PV plant; its part of the saving is shown on its own. | No PV plant: all electricity from the grid, no feed-in. |
 | Heat pump | What the former heating would have cost for the same heat, minus what the heat pump's electricity cost. | The former heating, with the fixed values below. Heat comes from heat meters where they measured, otherwise from electricity × seasonal COP. |
 | Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. |
 
@@ -86,6 +86,14 @@ replaced.
   saving. The benefit of solar power belongs to the PV plant alone; heat pump
   and electric car pay for all their electricity at the price of that hour,
   even when the sun delivered it.
+- **The battery's part.** Of the PV plant's saving, the battery's is what it
+  adds to the same PV plant without it: what it gives, valued at the hour's
+  electricity price or, when fed in, the feed-in compensation, minus the solar
+  power it stores at the feed-in compensation it did not earn and the grid
+  power it charges at the hour's price. The rest is what the PV plant saved
+  without the battery, so the two add up to the PV plant's saving. An hour's
+  statistics do not say which power went where, so the battery is taken to
+  charge from solar power first and to give to the house first.
 - **Prices at the time of use.** The electricity price of each hour is what the
   energy dashboard charged for it, so dynamic tariffs are handled hour by
   hour. With several tariffs, such as day and night, the average of the hour
@@ -184,7 +192,10 @@ where it stopped.
    | Standing charge per month | As on the electricity bill. Shared evenly over the hours of its month and added to the grid costs. The first value applies from the beginning. |
    | Cheap up to | Grid power at this price per kWh or below counts as cheap, if the last 24 hours also had a higher price. |
    | Expensive from | Grid power at this price per kWh or above counts as expensive, if the last 24 hours also had a lower price. Without levels there is only solar and grid power. |
-3. **PV plant**: since when it counts, and the purchase cost (optional).
+3. **PV plant**: since when it counts, and the purchase cost (optional). With a
+   battery in the energy dashboard, its purchase cost too (optional), for its
+   own payback; the PV plant's payback counts both, so enter the plant's cost
+   without the battery.
 4. **Heat pump**:
    | Field | Description |
    |---|---|
@@ -234,7 +245,7 @@ set up yet; they lead through the same steps as the setup.
 | Averages before the setup | Corrects the averages of the time before the setup. That time is computed again. |
 | Meters and extra cost | Other meters or another former heating compute everything again; another former heating asks for its prices. The extra cost applies at once. |
 | Recompute | Computes the category again with the current data, for example after you fixed a wrong reading in the statistics. All values stay. |
-| Purchase cost (PV plant) | Applies at once. |
+| Purchase cost (PV plant) | The plant's and the battery's. Applies at once. |
 
 Changes in the energy dashboard are followed automatically. A new or removed
 meter computes the household again, and a category whose meters changed.
@@ -248,7 +259,7 @@ show.
 
 | Entity | Description |
 |---|---|
-| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. |
+| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. The PV plant's has its battery's part, with its saving, investment, yearly saving, payback, years left, and since when it counts. |
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
@@ -272,6 +283,7 @@ example in the *Statistics graph* card, under their names such as
 | `electricity_lens:grid_import_cost`, `…grid_feed_in`, `…grid_standing_charge` | What the imports cost, what the feed-in earned, and the standing charge |
 | `electricity_lens:grid_cheap_saving` | What cheap grid power saved against the normal price (with a cheap level only) |
 | `electricity_lens:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
+| `electricity_lens:pv_battery_saving` | The battery's part of the PV plant's saving |
 | `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost`, `…heat_pump_solar_saving` | The heat pump's heat (measured or estimated), what the former heating would have cost for it, and what its solar power adds to its saving |
 | `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost`, `…wallbox_solar_saving` | The distance charged, what a combustion car would have paid for fuel, and what its solar power adds to its saving |
 
@@ -306,7 +318,7 @@ Home Assistant's energy dashboard: one row per category with what it saves per
 year on average, what it has saved, its investment, and its balance, then a row
 with the sums. Above the table a sentence says how much of all investments is
 paid back and, once there are yearly savings, in about how long everything is
-in the plus. Without any investment only the savings appear. A row opens its sensor, which
+in the plus. Below the PV plant a quieter row shows its battery's part. Without any investment only the savings appear. A row opens its sensor, which
 also says since when it counts. Its only option is a title. The card follows light and dark themes, works on
 phones and desktops, and can be used with keyboard and screen reader.
 
@@ -387,7 +399,7 @@ Areas and their figures:
 |---|---|
 | Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power (with price levels) |
 | Grid | Grid import, feed-in, the electricity bill (what the supplier charges, without the feed-in), grid costs with their parts, average grid price, saving from cheap hours (with a cheap level) |
-| Solar | Solar production, self-consumption, saving (with the PV plant), forecast today and tomorrow (with a forecast in the energy dashboard), payback and return (with an investment) |
+| Solar | Solar production, self-consumption, saving (with the PV plant), the battery's part of it (with a battery), forecast today and tomorrow (with a forecast in the energy dashboard), payback and return (with an investment) |
 | Heat pump | Consumption, costs, average price, average grid price, solar share, heat, seasonal COP, heat price, comparison costs (the former heating), saving with the part by solar power, payback and return (with an investment) |
 | Electric car | Consumption, costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power, payback and return (with an investment) |
 | Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
@@ -521,6 +533,10 @@ actions:
 
 ## Known limitations
 
+- The battery's part is split from the PV plant's saving hour by hour, with
+  the battery charging from solar power first and giving to the house first.
+  Within an hour that charges and gives, or that charges from both, the split
+  between the two can differ from what really flowed; their sum cannot.
 - The time before the setup is computed with one average per value, because
   Home Assistant does not know earlier gas, oil, or fuel prices. A price
   sensor's history from before the setup is not used.

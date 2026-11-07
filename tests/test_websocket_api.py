@@ -247,3 +247,25 @@ async def test_figures_interface_error(
         response = await _figures(hass, hass_ws_client)
     assert not response["success"]
     assert response["error"]["code"] == "energy_interface"
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_battery_part_of_the_pv_plant(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """With a battery, the PV plant's area names the statistic of its part."""
+    battery = {
+        "type": "battery",
+        "stat_energy_from": "sensor.discharge",
+        "stat_energy_to": "sensor.charge",
+    }
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [*PREFS["energy_sources"], battery]}
+    )
+    await setup_entry(hass, make_entry(("pv", {**PV_DATA, "battery_investment": 4000})))
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    assert areas["solar"]["statistics"]["battery_saving"] == [
+        "electricity_lens:pv_battery_saving"
+    ]
+    assert areas["solar"]["investment"] is True

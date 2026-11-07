@@ -384,6 +384,37 @@ async def test_add_category(hass: HomeAssistant) -> None:
     assert hass.states.get("sensor.electric_car_saving") is not None
 
 
+async def test_pv_with_battery_asks_for_its_cost(hass: HomeAssistant) -> None:
+    """With a battery in the energy dashboard, its cost is asked on its own."""
+    battery = {
+        "type": "battery",
+        "stat_energy_from": "sensor.discharge",
+        "stat_energy_to": "sensor.charge",
+    }
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [*PREFS["energy_sources"], battery]}
+    )
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "pv"), context={"source": SOURCE_USER}
+    )
+    assert _fields(result) == ["investment", "battery_investment"]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"investment": 12000, "battery_investment": 6000}
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _data(entry, "pv")["battery_investment"] == 6000
+
+    result = await _reconfigure(hass, entry, "pv", "investment")
+    assert _suggested(result)["battery_investment"] == 6000
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"investment": 12000}
+    )
+    assert result["reason"] == "investment_saved"
+    assert "battery_investment" not in _data(entry, "pv")
+
+
 async def test_add_heat_pump_without_former_heating(hass: HomeAssistant) -> None:
     """A new build's heat pump asks for no prices and has no saving sensors."""
     entry = make_entry(("wallbox", WALLBOX_DATA))

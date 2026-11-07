@@ -68,6 +68,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "distance",
             "alternative_cost": "comparison costs",
             "solar_saving": "saving by solar power",
+            "battery_saving": "battery saving",
             "saving": "saving",
         },
         "pv": {
@@ -117,6 +118,10 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Purchase cost (optional)", "For the payback"),
+            "battery_investment": (
+                "Battery purchase cost (optional)",
+                "For the battery's own payback. The PV plant's counts both, so leave the battery out above",
+            ),
             "standing_charge": (
                 "Standing charge per month (optional)",
                 "As on the electricity bill; shared evenly over the hours of the month",
@@ -391,6 +396,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "Strecke",
             "alternative_cost": "Vergleichskosten",
             "solar_saving": "Ersparnis durch PV-Strom",
+            "battery_saving": "Ersparnis durch Batterie",
             "saving": "Ersparnis",
         },
         "pv": {
@@ -440,6 +446,10 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "fields": {
             "investment": ("Anschaffungskosten (optional)", "Für die Amortisation"),
+            "battery_investment": (
+                "Anschaffungskosten der Batterie (optional)",
+                "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+            ),
             "standing_charge": (
                 "Grundpreis pro Monat (optional)",
                 "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
@@ -727,7 +737,7 @@ def household_step(t: dict[str, Any], title: str, description: str) -> dict[str,
 def pv_steps(t: dict[str, Any]) -> dict[str, Any]:
     """Return the PV step and its variant without feed-in."""
     title = t["categories"]["pv"]
-    block = fields(t, ["investment"])
+    block = fields(t, ["investment", "battery_investment"])
     return {
         "pv": form(title, t["pv"]["description"], block),
         "pv_no_export": form(
@@ -857,7 +867,9 @@ def subentry_steps(t: dict[str, Any], category: str) -> dict[str, Any]:
             **pv_steps(t),
             "reconfigure": menu(t, ["investment", "recompute"]),
             "investment": form(
-                t["investment"]["title"], None, fields(t, ["investment"])
+                t["investment"]["title"],
+                None,
+                fields(t, ["investment", "battery_investment"]),
             ),
             "recompute": recompute,
         }

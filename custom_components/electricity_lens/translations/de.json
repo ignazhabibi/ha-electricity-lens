@@ -44,20 +44,24 @@
         "title": "PV-Anlage",
         "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
-          "investment": "Anschaffungskosten (optional)"
+          "investment": "Anschaffungskosten (optional)",
+          "battery_investment": "Anschaffungskosten der Batterie (optional)"
         },
         "data_description": {
-          "investment": "Für die Amortisation"
+          "investment": "Für die Amortisation",
+          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
         }
       },
       "pv_no_export": {
         "title": "PV-Anlage",
         "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
-          "investment": "Anschaffungskosten (optional)"
+          "investment": "Anschaffungskosten (optional)",
+          "battery_investment": "Anschaffungskosten der Batterie (optional)"
         },
         "data_description": {
-          "investment": "Für die Amortisation"
+          "investment": "Für die Amortisation",
+          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
         }
       },
       "heat_pump": {
@@ -492,20 +496,24 @@
           "title": "PV-Anlage",
           "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
-            "investment": "Anschaffungskosten (optional)"
+            "investment": "Anschaffungskosten (optional)",
+            "battery_investment": "Anschaffungskosten der Batterie (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation"
+            "investment": "Für die Amortisation",
+            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
           }
         },
         "pv_no_export": {
           "title": "PV-Anlage",
           "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
-            "investment": "Anschaffungskosten (optional)"
+            "investment": "Anschaffungskosten (optional)",
+            "battery_investment": "Anschaffungskosten der Batterie (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation"
+            "investment": "Für die Amortisation",
+            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
           }
         },
         "reconfigure": {
@@ -518,10 +526,12 @@
         "investment": {
           "title": "Anschaffungskosten",
           "data": {
-            "investment": "Anschaffungskosten (optional)"
+            "investment": "Anschaffungskosten (optional)",
+            "battery_investment": "Anschaffungskosten der Batterie (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation"
+            "investment": "Für die Amortisation",
+            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
           }
         },
         "recompute": {
@@ -1449,6 +1459,7 @@
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten",
         "solar_saving": "Ersparnis durch PV-Strom",
+        "battery_saving": "Ersparnis durch Batterie",
         "saving": "Ersparnis"
       }
     }
