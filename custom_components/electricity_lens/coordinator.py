@@ -148,6 +148,23 @@ CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
 }
 
 
+# The figures the household keeps for each area: energy, solar power, costs,
+# solar costs, and the cheap and expensive grid power with their costs.
+HOUSEHOLD_AREA_FIGURES = 8
+
+
+def _done(state: CategoryState | HouseholdState) -> float:
+    """Return the share of the past that is computed."""
+    if not state.computing_past:
+        return 1.0
+    if state.next_hour is None or state.past_until is None or state.data_start is None:
+        return 0.0
+    start = _ceil_hour(state.data_start)
+    if (span := state.past_until - start) <= 0:
+        return 1.0
+    return min(max((state.next_hour - start) / span, 0.0), 1.0)
+
+
 def _standing_charge(state: HouseholdState, hour: float) -> float:
     """Return the standing charge of an hour: its month's share."""
     monthly = state.standing_charge.value_at(hour)
@@ -373,9 +390,14 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             # No grid data yet, so there is nothing to compute.
             self._without_data = set(self.configs)
             return self._results()
+        started = time()
+        if (computing := self.progress()) is not None:
+            _LOGGER.debug("Computing the past, %s %% done", computing)
         await self._async_advance_household(setup, end)
         for subentry_id, config in self.configs.items():
             await self._async_advance(subentry_id, config, setup, end)
+        if computing is not None and self.progress() is None:
+            _LOGGER.debug("Computed the past in %.0f s", time() - started)
         await async_wait_recorder(self.hass)
         await self._async_save()
         return self._results()
@@ -479,6 +501,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             progress.next_hour = chunk_end
             self.states[subentry_id] = state = progress
             await self._async_save()
+            self.async_update_listeners()
             replace = False
             start = chunk_end
         if state.next_hour is None:
@@ -923,6 +946,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             progress.next_hour = chunk_end
             self.household_state = state = progress
             await self._async_save()
+            self.async_update_listeners()
             start = chunk_end
         if state.next_hour is None:
             state.next_hour = max(start, counting_since)
@@ -1135,6 +1159,28 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                         history.get(figure, []),
                         replace=replace,
                     )
+
+    def progress(self) -> int | None:
+        """Return how far the past is computed, in percent; None once it is.
+
+        Writing the statistics takes most of the time, so each part counts with
+        the number of statistics it writes: the household with the figures of
+        each of its areas, each category with its own.
+        """
+        parts: list[tuple[float, float]] = []
+        household = self.household_state
+        if household.data_start is not None:
+            areas = len(self.setup.devices) + 2 if self.setup else 2
+            parts.append((HOUSEHOLD_AREA_FIGURES * areas, _done(household)))
+        for subentry_id, config in self.configs.items():
+            if subentry_id in self._without_data:
+                continue
+            figures = 1 + len(CATEGORY_FIGURES.get(config.category, ()))
+            parts.append((figures, _done(self.states[subentry_id])))
+        if all(done >= 1 for _, done in parts):
+            return None
+        total = sum(weight for weight, _ in parts)
+        return int(sum(weight * done for weight, done in parts) / total * 100)
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState

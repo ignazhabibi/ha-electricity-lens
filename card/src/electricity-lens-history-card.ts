@@ -48,8 +48,8 @@ import {
 } from "./history-figures";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { hasText, localizer, type Localize } from "./localize";
-import { noCategoriesText, readCategories } from "./model";
+import { calculatingText, hasText, localizer, type Localize } from "./localize";
+import { noCategoriesText, readCategories, readProgress } from "./model";
 import { cardStyles } from "./styles";
 import type {
   Category,
@@ -662,7 +662,7 @@ export class ElectricityLensHistoryCard extends LensCard {
           : nothing}
       </div>
       ${calculating
-        ? html`<p class="summary">${t("calculating")}</p>`
+        ? html`<p class="summary">${calculatingText(t, readProgress(this.hass, this._info))}</p>`
         : missing
           ? html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`
           : this._body(loaded, hasData)}

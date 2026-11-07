@@ -486,7 +486,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     // No chip: the ring holds the total in its middle, the bars name each
     // amount, and the date selection or the title says the period.
     let body: TemplateResult;
-    if (calculating) body = html`<p class="summary">${t("calculating")}</p>`;
+    if (calculating) body = html`<p class="summary">${this._waitingText("calculating")}</p>`;
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
     else if (this._sums && !this._sums.values) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;

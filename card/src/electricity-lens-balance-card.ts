@@ -9,7 +9,7 @@ import { consumerColors, palette } from "./colors";
 import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { localizer, type Localize } from "./localize";
+import { calculatingText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles } from "./styles";
 import type { Category, FiguresInfo, HomeAssistant } from "./types";
@@ -165,7 +165,7 @@ export class ElectricityLensBalanceCard extends LensCard {
           </tbody>
         </table>
       </div>
-      ${calculating ? html`<p class="note">${t("calculating")}</p>` : nothing}
+      ${calculating ? html`<p class="note">${calculatingText(t, balance.progress)}</p>` : nothing}
     </ha-card>`;
   }
 

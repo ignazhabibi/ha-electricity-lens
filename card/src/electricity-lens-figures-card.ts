@@ -35,8 +35,8 @@ import {
 } from "./history";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { hasText, localizer, type Localize } from "./localize";
-import { areaOfCategory, investmentSensors } from "./model";
+import { calculatingText, hasText, localizer, type Localize } from "./localize";
+import { areaOfCategory, investmentSensors, readProgress } from "./model";
 import { cardStyles } from "./styles";
 import type {
   FigureArea,
@@ -398,7 +398,7 @@ export class ElectricityLensFiguresCard extends LensCard {
     const label = config.name ?? figureLabel(this._localize, figure, area);
     if (isInvestment(figure)) return this._investmentCard(label, figure, area);
     if (this._info?.calculating && !isForecast(figure)) {
-      return this._card(label, "…", t("calculating"));
+      return this._card(label, "…", calculatingText(t, readProgress(this.hass, this._info)));
     }
     if (!this._loaded) return this._card(label, "…");
     if (this._loaded.failed) return this._card(label, "–", t("figures_not_loaded"));

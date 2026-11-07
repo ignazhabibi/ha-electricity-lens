@@ -1,6 +1,12 @@
 // Reads the integration's sensors and derives what the card shows.
 
-import type { BalanceFigures, Category, CategoryFigures, HomeAssistant } from "./types";
+import type {
+  BalanceFigures,
+  Category,
+  CategoryFigures,
+  FiguresInfo,
+  HomeAssistant,
+} from "./types";
 
 export const DOMAIN = "electricity_lens";
 const ORDER: Category[] = ["pv", "heat_pump", "wallbox"];
@@ -96,9 +102,18 @@ export function readBalance(hass: HomeAssistant): BalanceFigures | null {
     saved: number(state.attributes.saved) ?? 0,
     invested: number(state.attributes.invested) ?? 0,
     perYear: number(state.attributes.per_year),
+    progress: number(state.attributes.progress),
     entityId: entry!.entity_id,
   };
 }
+
+/** How far the integration has computed the past, in percent; null once it
+ * has, or when nothing tells. The balance sensor follows each computed
+ * chunk; the cached areas only every few seconds. */
+export const readProgress = (
+  hass: HomeAssistant | undefined,
+  info?: FiguresInfo | null
+): number | null => (hass ? readBalance(hass)?.progress : null) ?? info?.progress ?? null;
 
 /** What to say when no category can be read: their sensors exist but have no
  * state to read, or the integration is not set up. */

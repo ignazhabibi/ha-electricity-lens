@@ -10,6 +10,7 @@ const en = {
   integration_unavailable:
     "The figures aren't available right now. Check Electricity Lens under Settings > Devices & services.",
   calculating: "Being computed …",
+  calculating_progress: "Being computed … {percent} %",
   loading: "Loading …",
   column_area: "Area",
   column_per_year: "Per year",
@@ -227,6 +228,7 @@ const de: Record<Key, string> = {
   integration_unavailable:
     "Die Zahlen sind gerade nicht verfügbar. Prüfe Electricity Lens unter Einstellungen > Geräte & Dienste.",
   calculating: "Wird berechnet …",
+  calculating_progress: "Wird berechnet … {percent} %",
   loading: "Wird geladen …",
   column_area: "Bereich",
   column_per_year: "Pro Jahr",
@@ -444,3 +446,9 @@ export function localizer(language: string): Localize {
   return (key, values = {}) =>
     texts[key].replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? "");
 }
+
+/** What to say while the integration computes the past, with how far it is. */
+export const calculatingText = (t: Localize, progress: number | null): string =>
+  progress === null
+    ? t("calculating")
+    : t("calculating_progress", { percent: String(progress) });

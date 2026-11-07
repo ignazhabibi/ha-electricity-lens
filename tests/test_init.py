@@ -898,6 +898,8 @@ async def test_restart_continues_the_past(
     state = next(iter(entry.runtime_data.states.values()))
     assert state.next_hour == data_start.timestamp() + 12 * HOUR
     assert state.computing_past
+    # The household's 5 areas write 8 figures each; the PV plant one, a quarter done.
+    assert entry.runtime_data.progress() == int((40 + 0.25) / 41 * 100)
 
     # Act: start again.
     with (
@@ -919,6 +921,31 @@ async def test_restart_continues_the_past(
     assert _state(hass, "sensor.pv_plant_saving").attributes["calculating"] is False
     pv_sums = await _sums(hass, "electricity_lens:pv_saving", data_start)
     assert pv_sums[-1] == pytest.approx(saving)
+    assert entry.runtime_data.progress() is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_progress_is_shown_while_computing(hass: HomeAssistant) -> None:
+    """The balance sensor tells how far the past is computed, after each chunk."""
+    seen: list[Any] = []
+
+    def record(event: Any) -> None:
+        if event.data["entity_id"] == "sensor.electricity_lens_balance" and (
+            new := event.data["new_state"]
+        ):
+            seen.append(new.attributes.get("progress"))
+
+    hass.bus.async_listen("state_changed", record)
+    with patch.object(coordinator_module, "CHUNK", 12 * HOUR):
+        await setup_entry(hass, make_entry(("pv", PV_DATA)))
+
+    shown = [value for value in seen if value is not None]
+    assert len(shown) >= 4
+    assert shown == sorted(shown)
+    assert 0 <= shown[0] < shown[-1] < 100
+    assert seen[-1] is None
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert balance.attributes["progress"] is None
 
 
 async def test_migration_from_future_version(hass: HomeAssistant) -> None:

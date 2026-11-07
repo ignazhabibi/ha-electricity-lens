@@ -11,8 +11,8 @@ import { formatter, type Format } from "./format";
 import { fixedRange, type Range } from "./history";
 import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
-import { localizer, type Key, type Localize } from "./localize";
-import { noCategoriesText, readCategories } from "./model";
+import { calculatingText, localizer, type Key, type Localize } from "./localize";
+import { noCategoriesText, readCategories, readProgress } from "./model";
 import { loadSums } from "./sums";
 import type { FixedPeriod } from "./history";
 import type { FiguresInfo, HomeAssistant, StatisticMetadata } from "./types";
@@ -206,6 +206,12 @@ export abstract class PeriodSumsCard extends LensCard {
     if (!this._ids().length) return "figures_unavailable";
     if (!this._sums) return "loading";
     return this._sums.values ? undefined : "history_failed";
+  }
+
+  /** The text of a waiting key, with the progress while the past is computed. */
+  protected _waitingText(key: Key): string {
+    if (key !== "calculating") return this._localize(key);
+    return calculatingText(this._localize, readProgress(this.hass, this._info));
   }
 
   protected abstract render(): TemplateResult;

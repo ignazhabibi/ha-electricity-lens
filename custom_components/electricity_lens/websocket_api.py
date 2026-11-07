@@ -249,6 +249,7 @@ async def async_figures(
     return {
         "calculating": coordinator.household_state.computing_past
         or any(result.calculating for result in coordinator.data.categories.values()),
+        "progress": coordinator.progress(),
         "levels": {"cheap_until": cheap_until, "expensive_from": expensive_from},
         "areas": areas,
         # The sensors of the power right now: the grid's positive while

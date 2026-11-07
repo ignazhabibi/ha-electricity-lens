@@ -45,4 +45,5 @@ async def async_get_config_entry_diagnostics(
         "currency": hass.config.currency,
         "energy_dashboard": energy,
         "last_update_success": coordinator.last_update_success,
+        "progress": coordinator.progress(),
     }

@@ -42,6 +42,8 @@ export interface BalanceFigures {
   invested: number;
   /** All yearly savings; null until every category has one. */
   perYear: number | null;
+  /** How far the past is computed, in percent; null once it is. */
+  progress: number | null;
   entityId: string;
 }
 
@@ -79,6 +81,8 @@ export interface FigureArea {
 
 export interface FiguresInfo {
   calculating: boolean;
+  /** How far the past is computed, in percent; null once it is. */
+  progress?: number | null;
   levels: { cheap_until: number | null; expensive_from: number | null };
   areas: FigureArea[];
   /** The energy dashboard's power sensors of the sources: the grid's are

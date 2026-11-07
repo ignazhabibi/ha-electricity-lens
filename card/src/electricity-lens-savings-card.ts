@@ -129,7 +129,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     return html`<ha-card>
       <div class="header"><h2 class="title">${t("savings_title")}</h2></div>
       ${waiting
-        ? html`<p class="summary">${t(waiting)}</p>`
+        ? html`<p class="summary">${this._waitingText(waiting)}</p>`
         : this._config.area
           ? this._reckoning()
           : this._table()}
