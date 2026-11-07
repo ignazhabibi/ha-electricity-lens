@@ -160,8 +160,12 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     view(
       t("strategy.overview"),
       "now",
+      // The power right now on top, where the energy dashboard knows the grid's.
       // Without savings there is no balance; the day's curve keeps the column filled.
-      [savings ? card("electricity-lens-balance-card") : sourceHistory("household", today)],
+      [
+        ...(info.power?.grid.length ? [card("electricity-lens-flow-card")] : []),
+        savings ? card("electricity-lens-balance-card") : sourceHistory("household", today),
+      ],
       [
         ...forecastGauges,
         named("household", "cost", "strategy.cost_today", today),

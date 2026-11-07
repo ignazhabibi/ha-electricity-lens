@@ -95,6 +95,57 @@ def test_parse_legacy_grid_and_battery() -> None:
     assert setup.devices[0].included_in == "sensor.hp"
 
 
+def test_parse_power_sensors() -> None:
+    """The power sensors of sources and devices are read as Home Assistant keeps them."""
+    # Arrange: the current grid format, a battery, and a device with power sensors.
+    grid, solar = PREFS["energy_sources"]
+    prefs = {
+        **PREFS,
+        "energy_sources": [
+            {**grid, "stat_rate": "sensor.grid_power"},
+            {**solar, "stat_rate": "sensor.solar_power"},
+            {
+                "type": "battery",
+                "stat_energy_from": "sensor.discharge",
+                "stat_energy_to": "sensor.charge",
+                "stat_rate": "sensor.battery_power",
+            },
+        ],
+        "device_consumption": [
+            {"stat_consumption": "sensor.heat_pump", "stat_rate": "sensor.hp_power"},
+            {"stat_consumption": "sensor.washer"},
+        ],
+    }
+
+    # Act
+    setup = parse_preferences(prefs)
+
+    # Assert
+    assert setup.grid_power == ("sensor.grid_power",)
+    assert setup.solar_power == ("sensor.solar_power",)
+    assert setup.battery_power == ("sensor.battery_power",)
+    assert [device.power for device in setup.devices] == ["sensor.hp_power", None]
+
+
+def test_parse_legacy_grid_power() -> None:
+    """Before 2025.12 the grid's power sensors were a list of their own."""
+    setup = parse_preferences(
+        {
+            "energy_sources": [
+                {
+                    "type": "grid",
+                    "flow_from": [],
+                    "flow_to": [],
+                    "power": [{"stat_rate": "sensor.grid_power"}, {}],
+                    "cost_adjustment_day": 0,
+                }
+            ],
+            "device_consumption": [],
+        }
+    )
+    assert setup.grid_power == ("sensor.grid_power",)
+
+
 def test_parse_errors() -> None:
     """An unexpected format raises instead of guessing."""
     assert parse_preferences(None) == EnergySetup()

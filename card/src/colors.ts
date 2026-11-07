@@ -10,6 +10,8 @@
 //   has the fixed device color --color-30, the car its device's color.
 // - The standing charge is no power at all, so a quiet taupe outside these
 //   families; a theme can set --electricity-lens-standing-charge-color.
+// - A battery has Home Assistant's two battery colors, one for giving power
+//   and one for taking it.
 // - Lines are quiet: ratios and prices in the secondary text color.
 // ECharts cannot read CSS variables, so the colors are resolved here.
 
@@ -21,6 +23,9 @@ export interface Palette {
   cheap: string;
   expensive: string;
   export: string;
+  /** A battery giving power and taking it, as in Home Assistant's energy cards. */
+  batteryOut: string;
+  batteryIn: string;
   standing: string;
   heat: string;
   car: string;
@@ -103,6 +108,8 @@ export function palette(element: Element): Palette {
     cheap: mix(grid, "white", 0.55),
     expensive: mix(grid, "black", 0.7),
     export: read("--energy-grid-return-color", "#8353d1"),
+    batteryOut: read("--energy-battery-out-color", "#4db6ac"),
+    batteryIn: read("--energy-battery-in-color", "#f06292"),
     standing: read("--electricity-lens-standing-charge-color", "#a1887f"),
     // The heat pump keeps one fixed device color (--color-30), never gas.
     heat:

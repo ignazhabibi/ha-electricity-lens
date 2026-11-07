@@ -4,6 +4,7 @@ import { ElectricityLensBreakdownCardEditor } from "./breakdown-editor";
 import { ElectricityLensBalanceCard } from "./electricity-lens-balance-card";
 import { ElectricityLensBreakdownCard } from "./electricity-lens-breakdown-card";
 import { ElectricityLensFiguresCard } from "./electricity-lens-figures-card";
+import { ElectricityLensFlowCard } from "./electricity-lens-flow-card";
 import { ElectricityLensHeatMetersCard } from "./electricity-lens-heat-meters-card";
 import { ElectricityLensHistoryCard } from "./electricity-lens-history-card";
 import { ElectricityLensSavingsCard } from "./electricity-lens-savings-card";
@@ -14,6 +15,13 @@ import { ElectricityLensSavingsCardEditor } from "./savings-editor";
 import { ElectricityLensDashboardStrategy } from "./strategy";
 
 registerCards([
+  {
+    tag: "electricity-lens-flow-card",
+    card: ElectricityLensFlowCard,
+    name: "Electricity Lens power flow",
+    description:
+      "Where the power comes from right now and where it goes, as two bars, from the energy dashboard's power sensors.",
+  },
   {
     tag: "electricity-lens-balance-card",
     card: ElectricityLensBalanceCard,

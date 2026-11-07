@@ -33,6 +33,15 @@ export function numberFormat(
   });
 }
 
+/** Power in kW as Home Assistant shows it: watts below one kilowatt. */
+export function formatPower(locale: LocaleSettings | undefined, kw: number): string {
+  if (Math.abs(kw) < 1) {
+    return `${numberFormat(locale, { maximumFractionDigits: 0 }).format(kw * 1000)} W`;
+  }
+  const digits = Math.abs(kw) < 100 ? 1 : 0;
+  return `${numberFormat(locale, { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(kw)} kW`;
+}
+
 /** Whether times use AM and PM by the user's profile; undefined leaves it to the language. */
 export function hour12(locale: LocaleSettings | undefined): boolean | undefined {
   switch (locale?.time_format) {

@@ -71,7 +71,8 @@ async def async_figures(
     """Return the areas with the statistics of each of their figures.
 
     Each figure is a list of statistics whose changes add up, for example the
-    import meters of several grid connections.
+    import meters of several grid connections. Consumers and the sources also
+    name the energy dashboard's power sensors, for the power right now.
     """
     setup = coordinator.setup or await async_get_energy_setup(hass)
     text = await coordinator.async_texts()
@@ -142,6 +143,7 @@ async def async_figures(
             }
         )
     parents = {device.stat: device.included_in for device in setup.devices}
+    power = {device.stat: device.power for device in setup.devices if device.power}
     for category, (subentry_id, config) in categories.items():
         if category == CATEGORY_PV:
             continue
@@ -149,6 +151,7 @@ async def async_figures(
         devices = [device_area(meter) for meter in meters]
         areas.append(
             {
+                "power": [power[meter] for meter in meters if meter in power],
                 **area(
                     "category",
                     category,
@@ -229,6 +232,7 @@ async def async_figures(
                 ),
             ),
             "top_level": device.stat in top_level,
+            "power": [device.power] if device.power else [],
         }
         for device in setup.devices
     )
@@ -247,4 +251,11 @@ async def async_figures(
         or any(result.calculating for result in coordinator.data.categories.values()),
         "levels": {"cheap_until": cheap_until, "expensive_from": expensive_from},
         "areas": areas,
+        # The sensors of the power right now: the grid's positive while
+        # importing, the batteries' positive while discharging.
+        "power": {
+            "grid": list(setup.grid_power),
+            "solar": list(setup.solar_power),
+            "battery": list(setup.battery_power),
+        },
     }

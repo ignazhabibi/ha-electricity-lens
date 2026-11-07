@@ -82,6 +82,8 @@ class DeviceMeter:
     stat: str
     name: str | None
     included_in: str | None
+    power: str | None = None
+    """The sensor of its power right now, if the energy dashboard knows one."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +96,12 @@ class EnergySetup:
     devices: tuple[DeviceMeter, ...] = ()
     forecasts: tuple[str, ...] = ()
     """Config entries of the solar forecasts."""
+    grid_power: tuple[str, ...] = ()
+    """Power sensors of the grid connections, positive while importing."""
+    solar_power: tuple[str, ...] = ()
+    """Power sensors of the PV plants."""
+    battery_power: tuple[str, ...] = ()
+    """Power sensors of the batteries, positive while discharging."""
 
     @property
     def priced_grids(self) -> tuple[GridSource, ...]:
@@ -172,10 +180,19 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
         solar: list[str] = []
         batteries: list[Battery] = []
         forecasts: list[str] = []
+        # Home Assistant keeps each source's power in stat_rate with one sign
+        # convention; for an inverted or a two-sensor setup it is a sensor
+        # Home Assistant creates for this.
+        power: dict[str, list[str]] = {"grid": [], "solar": [], "battery": []}
         for source in prefs["energy_sources"]:
             match source["type"]:
                 case "grid" if "flow_from" in source:
                     grids.extend(_grids_from_legacy(source))
+                    power["grid"].extend(
+                        flow["stat_rate"]
+                        for flow in source.get("power", ())
+                        if flow.get("stat_rate")
+                    )
                 case "grid":
                     grids.append(_grid_from_unified(source))
                 case "solar":
@@ -187,11 +204,14 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
                     )
                 case _:
                     pass
+            if source["type"] in power and (rate := source.get("stat_rate")):
+                power[source["type"]].append(rate)
         devices = tuple(
             DeviceMeter(
                 stat=device["stat_consumption"],
                 name=device.get("name"),
                 included_in=device.get("included_in_stat"),
+                power=device.get("stat_rate"),
             )
             for device in prefs["device_consumption"]
         )
@@ -200,7 +220,14 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
             f"Unexpected energy preferences format: {err!r}"
         ) from err
     return EnergySetup(
-        tuple(grids), tuple(solar), tuple(batteries), devices, tuple(forecasts)
+        tuple(grids),
+        tuple(solar),
+        tuple(batteries),
+        devices,
+        tuple(forecasts),
+        grid_power=tuple(power["grid"]),
+        solar_power=tuple(power["solar"]),
+        battery_power=tuple(power["battery"]),
     )
 
 

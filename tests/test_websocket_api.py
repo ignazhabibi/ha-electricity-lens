@@ -11,7 +11,14 @@ from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.electricity_lens.sources import EnergyInterfaceError
 
-from .conftest import HEAT_PUMP_DATA, PV_DATA, make_entry, setup_entry
+from .conftest import (
+    HEAT_PUMP_DATA,
+    PREFS,
+    PV_DATA,
+    make_entry,
+    set_energy_prefs,
+    setup_entry,
+)
 
 
 async def _figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> Any:
@@ -89,6 +96,56 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     assert washer["statistics"]["cost"] == [
         "electricity_lens:device_sensor_washer_cost"
     ]
+    # Without power sensors in the energy dashboard there is nothing to show now.
+    assert washer["power"] == []
+    assert result["power"] == {"grid": [], "solar": [], "battery": []}
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_power(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """The energy dashboard's power sensors are passed on by source and consumer."""
+    # Arrange: power sensors for the grid, the PV plant, and two devices.
+    grid, solar = PREFS["energy_sources"]
+    await set_energy_prefs(
+        hass,
+        {
+            **PREFS,
+            "energy_sources": [
+                {**grid, "power_config": {"stat_rate": "sensor.grid_power"}},
+                {**solar, "stat_rate": "sensor.solar_power"},
+            ],
+            "device_consumption": [
+                {
+                    "stat_consumption": "sensor.heat_pump",
+                    "stat_rate": "sensor.hp_power",
+                },
+                {"stat_consumption": "sensor.wallbox"},
+                {
+                    "stat_consumption": "sensor.washer",
+                    "stat_rate": "sensor.washer_power",
+                },
+            ],
+        },
+    )
+    await setup_entry(hass, make_entry(("heat_pump", HEAT_PUMP_DATA)))
+
+    # Act
+    response = await _figures(hass, hass_ws_client)
+
+    # Assert
+    result = response["result"]
+    assert result["power"] == {
+        "grid": ["sensor.grid_power"],
+        "solar": ["sensor.solar_power"],
+        "battery": [],
+    }
+    areas = {area["id"]: area for area in result["areas"]}
+    assert areas["heat_pump"]["power"] == ["sensor.hp_power"]
+    assert areas["device_sensor_heat_pump"]["power"] == ["sensor.hp_power"]
+    assert areas["device_sensor_wallbox"]["power"] == []
+    assert areas["device_sensor_washer"]["power"] == ["sensor.washer_power"]
 
 
 async def test_figures_not_loaded(

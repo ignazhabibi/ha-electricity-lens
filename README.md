@@ -145,9 +145,10 @@ Home Assistant 2026.10 or newer is required.
 5. Follow the setup (see below), then assign areas to the new devices if you
    like.
 6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
-   dashboard**, or add the cards **Electricity Lens economics**, **Electricity
-   Lens history**, **Electricity Lens key figures**, and **Electricity Lens
-   breakdown** to a dashboard from the card picker. The first has no options.
+   dashboard**, or add the cards **Electricity Lens power flow**, **Electricity
+   Lens economics**, **Electricity Lens history**, **Electricity Lens key
+   figures**, and **Electricity Lens breakdown** to a dashboard from the card
+   picker. The first two have no options but a title.
    There is no dashboard resource to add: the integration serves the cards
    itself and updates them with the integration.
 
@@ -258,6 +259,21 @@ change are not stored; statistics cards carry the sum over them.
 Like Home Assistant's energy cards, the cards that follow the energy date
 selection take `collection_key` in YAML, for a date selection with a key of its
 own. Without one they follow the dashboard's.
+
+### Electricity Lens power flow
+
+Where the power comes from right now and where it goes, as two bars of the
+same length: above the PV plant, the battery, and the grid; below each
+consumer, Other, the battery, and the feed-in. In equals out, so the bars fit
+any household, with any number of devices. A sentence above says how much of
+the consumption the own power covers, and a list below names each part with its
+power; a part with one sensor opens its dialog. The chip shows the consumption.
+
+The card reads the power sensors of the energy dashboard: those of the grid,
+the PV plant, and the battery, and those of the individual devices. It needs
+one for the grid. Devices that belong to a category show as that category, as
+in the consumption by device; Other is the consumption minus the devices with a
+power sensor. The card follows the sensors' states, without statistics.
 
 ### Electricity Lens economics
 
@@ -422,7 +438,7 @@ other views follow the energy date selection.
 
 | View | Question | Shows |
 |---|---|---|
-| Now | How is today going? | The economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to 70 kWh, red below 25 and green from 45 kWh; costs and consumption today; each investment's payback, and once paid back its return |
+| Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to 70 kWh, red below 25 and green from 45 kWh; costs and consumption today; each investment's payback, and once paid back its return |
 | Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
 | Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; devices ranked and split by source; the savings of the period as a table |
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the seasonal COP; its electricity by source; its costs by source with the average price; seasonal COP, heat price, its electricity mix, heat, electricity, and seasonal COP per meter, and its saving reckoned up |
@@ -439,6 +455,8 @@ themes that change those change the cards too:
 - A device that belongs to a category wears its color everywhere: the heat
   pump's devices red (the gas color), the car's green. Other devices take a
   fixed order of quiet colors; "Other" is grey.
+- A battery has the energy dashboard's battery colors: one while it gives
+  power, one while it takes it.
 - Bars are amounts. Prices and ratios are thin dashed grey lines on the right
   axis; prices step, because an hour's price holds for the whole hour. Lines
   of other statistics are dotted.
@@ -451,7 +469,8 @@ builds on with the same cards.
 Electricity Lens reads the recorder's hourly long-term statistics of the meters
 in the energy dashboard. It checks for newly compiled hours every 15 minutes,
 and at once when the energy dashboard changes. Each hour is valued with the
-prices of that hour. When Home Assistant was off, the recorder reports the
+prices of that hour. Only the power flow card shows the current states of the
+power sensors instead. When Home Assistant was off, the recorder reports the
 missed energy with the next hour, so no energy is lost; prices of the missing
 hours are not known and the next hour's price is used.
 
