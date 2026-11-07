@@ -21,6 +21,7 @@ from custom_components.electricity_lens.sources import (
     EnergyInterfaceError,
     EnergySetup,
     GridSource,
+    async_best_day,
     async_end_of_data,
     async_first_hour,
     async_get_energy_setup,
@@ -231,6 +232,19 @@ async def test_statistics(hass: HomeAssistant, data_start: datetime) -> None:
     assert await async_first_hour(hass, ["sensor.meter"]) == start + 2 * 3600
     assert await async_end_of_data(hass, "sensor.none") is None
     assert await async_end_of_data(hass, "sensor.meter") == start + 5 * 3600
+
+
+async def test_best_day_adds_up_the_statistics_per_day(hass: HomeAssistant) -> None:
+    """The best day is the most the statistics measured together on a local day."""
+    midnight = dt_util.start_of_local_day() - timedelta(days=3)
+    import_hourly(hass, "sensor.roof", midnight, [0] + [1.0] * 23 + [2.0] * 24)
+    import_hourly(hass, "sensor.balcony", midnight, [0] + [0.5] * 47)
+    await async_wait_recording_done(hass)
+
+    start = midnight.timestamp()
+    assert await async_best_day(hass, [], start) is None
+    assert await async_best_day(hass, ["sensor.roof", "sensor.balcony"], start) == 60.0
+    assert await async_best_day(hass, ["sensor.roof"], start + 4 * 86400) is None
 
 
 async def test_history_values_step(hass: HomeAssistant) -> None:

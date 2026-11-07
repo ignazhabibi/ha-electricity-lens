@@ -95,7 +95,7 @@ test("with a PV plant the price includes solar power, and the forecast shows as 
   const sensors: Sensors = {
     categories: ["pv"],
     investments: [],
-    forecasts: [{ day: "tomorrow", entity: "sensor.electricity_lens_solar_forecast_tomorrow" }],
+    forecasts: [{ day: "tomorrow", entity: "sensor.electricity_lens_solar_forecast_tomorrow", bestDay: 3.2, fullYear: true }],
   };
 
   const all = views(infoOf([solar]), sensors);
@@ -103,8 +103,25 @@ test("with a PV plant the price includes solar power, and the forecast shows as 
   assert.ok(typesOf(viewOf(all, "household")).includes("energy-solar-graph"));
   const gauges = cardsOf(viewOf(all, "now")).filter((card) => card.type === "gauge");
   assert.deepEqual(gauges.map((card) => card.entity), ["sensor.electricity_lens_solar_forecast_tomorrow"]);
+  // A balcony plant: the gauge reaches its best day, not a large roof's.
+  assert.equal(gauges[0].max, 4);
+  assert.deepEqual(gauges[0].severity, { red: 0, yellow: 1.4, green: 2.6 });
   const price = cardsOf(viewOf(all, "costs")).find((card) => card.figure === "price");
   assert.equal(price?.name, t("strategy.price_with_solar"));
+});
+
+test("the forecast gauges have no colors before a year of solar data", () => {
+  const solar = area("solar", "solar", {}, { forecast: true });
+  const forecast = { day: "today" as const, entity: "sensor.electricity_lens_solar_remaining_today" };
+  const gauge = (extra: Partial<Sensors["forecasts"][number]>) =>
+    cardsOf(viewOf(views(infoOf([solar]), { categories: [], investments: [], forecasts: [{ ...forecast, ...extra }] }), "now")).find(
+      (card) => card.type === "gauge"
+    );
+
+  const firstMonths = gauge({ bestDay: 41.3, fullYear: false });
+  assert.equal(firstMonths?.max, 42);
+  assert.equal(firstMonths?.severity, undefined);
+  assert.equal(gauge({})?.max, undefined);
 });
 
 test("several heat meters of the heat pump's devices share one card", () => {

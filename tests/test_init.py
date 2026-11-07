@@ -989,10 +989,11 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
             hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
         )
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert (
-        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
-        == 12.5
-    )
+    remaining = _state(hass, "sensor.electricity_lens_solar_remaining_today")
+    assert float(remaining.state) == 12.5
+    # The scale of the forecast: the best solar day, from two days of data.
+    assert remaining.attributes["best_day"] > 0
+    assert remaining.attributes["best_day_full_year"] is False
 
     await set_energy_prefs(hass, PREFS)
     await hass.async_block_till_done(wait_background_tasks=True)

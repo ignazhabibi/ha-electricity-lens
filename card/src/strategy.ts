@@ -59,18 +59,20 @@ const view = (
   sidebar: { sections: [{ type: "grid", cards: sidebar }] },
 });
 
-/** The upper end of the forecast gauges, in kWh a day. */
-const FORECAST_MAX_KWH = 70;
-/** Where the forecast gauges turn from red to yellow to green, in kWh. */
-const FORECAST_SEVERITY = { red: 0, yellow: 25, green: 45 };
+/** Where the forecast gauges turn from red to yellow to green, as shares of
+ * the best solar day of the last twelve months: what a good day is depends on
+ * the plant. */
+const FORECAST_YELLOW = 0.35;
+const FORECAST_GREEN = 0.65;
 
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   categories: Category[];
   /** The categories with an investment, and the sensors about it. */
   investments: { category: Category; payback: string; annualReturn: string }[];
-  /** The sensors of the solar forecast for the rest of today and for tomorrow. */
-  forecasts: { day: "today" | "tomorrow"; entity: string }[];
+  /** The sensors of the solar forecast for the rest of today and for tomorrow,
+   * with the best solar day of the last twelve months as their scale. */
+  forecasts: { day: "today" | "tomorrow"; entity: string; bestDay?: number; fullYear?: boolean }[];
 }
 
 /** Finds the categories among the entities. */
@@ -84,7 +86,10 @@ export function findSensors(hass: HomeAssistant): Sensors {
   const forecasts = (["today", "tomorrow"] as const).flatMap((day) => {
     const key = day === "today" ? "forecast_rest_today" : "forecast_tomorrow";
     const entity = entries.find((entry) => entry.translation_key === key)?.entity_id;
-    return entity ? [{ day, entity }] : [];
+    if (!entity) return [];
+    const attributes = hass.states[entity]?.attributes ?? {};
+    const bestDay = typeof attributes.best_day === "number" ? attributes.best_day : undefined;
+    return [{ day, entity, bestDay, fullYear: attributes.best_day_full_year === true }];
   });
   return { categories, investments: investmentSensors(hass), forecasts };
 }
@@ -143,19 +148,30 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       ...half,
     }),
   ]);
-  // The solar forecast as gauges, from the integration's sensors.
+  // The solar forecast as gauges up to the best day of the last twelve months.
+  // Colors only once the data covers a year: a best day of winter alone
+  // would make every spring day look good.
   const forecastGauges = solar?.forecast
-    ? sensors.forecasts.map(({ entity, day }) =>
-        card("gauge", {
+    ? sensors.forecasts.map(({ entity, day, bestDay, fullYear }) => {
+        const max = bestDay ? Math.ceil(bestDay) : undefined;
+        return card("gauge", {
           entity,
           name: t(`strategy.forecast_${day}`),
           min: 0,
-          max: FORECAST_MAX_KWH,
+          ...(max ? { max } : {}),
           needle: false,
-          severity: FORECAST_SEVERITY,
+          ...(max && fullYear
+            ? {
+                severity: {
+                  red: 0,
+                  yellow: Math.round(max * FORECAST_YELLOW * 10) / 10,
+                  green: Math.round(max * FORECAST_GREEN * 10) / 10,
+                },
+              }
+            : {}),
           ...half,
-        })
-      )
+        });
+      })
     : [];
   const views: View[] = [];
 

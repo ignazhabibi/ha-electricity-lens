@@ -6,7 +6,7 @@ import logging
 import math
 from collections.abc import Callable, Collection, Iterator
 from copy import deepcopy
-from datetime import timedelta
+from datetime import date, timedelta
 from time import time
 from typing import Any
 
@@ -82,6 +82,7 @@ from .sources import (
     EnergyInterfaceError,
     EnergySetup,
     GridSource,
+    async_best_day,
     async_end_of_data,
     async_first_hour,
     async_get_energy_setup,
@@ -272,6 +273,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         """The solar forecast in kWh for the rest of today and for tomorrow."""
         self.forecast_sensors = False
         """Whether the forecast sensors exist; they follow the energy dashboard."""
+        self.best_solar_day: float | None = None
+        """The most solar energy of a day in the last twelve months, in kWh."""
+        self.best_solar_day_full_year = False
+        """Whether the solar data covers all of the last twelve months."""
+        self._best_solar_day_on: date | None = None
 
     async def async_load(self) -> None:
         """Restore progress and record changed current values."""
@@ -336,6 +342,21 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             }
         )
 
+    async def _async_update_best_solar_day(self, solar: tuple[str, ...]) -> None:
+        """Find the best solar day of the last twelve months, once a day.
+
+        It is the scale of the forecast: what counts as a good day depends on
+        the plant, from a balcony plant to a large roof.
+        """
+        today = dt_util.now().date()
+        if self._best_solar_day_on == today:
+            return
+        year_ago = (dt_util.start_of_local_day() - timedelta(days=365)).timestamp()
+        self.best_solar_day = await async_best_day(self.hass, solar, year_ago)
+        first = await async_first_hour(self.hass, solar)
+        self.best_solar_day_full_year = first is not None and first <= year_ago
+        self._best_solar_day_on = today
+
     async def _async_update_data(self) -> PaybackData:
         """Compute all hours the recorder has compiled since the last update."""
         try:
@@ -350,6 +371,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             ) from err
         ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ENERGY_INTERFACE)
         self.forecast = await async_solar_forecast(self.hass, setup.forecasts)
+        if setup.forecasts:
+            await self._async_update_best_solar_day(setup.solar)
 
         grid = setup.grid()
         if grid is None or grid.import_stat is None:

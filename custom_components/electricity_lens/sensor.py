@@ -205,6 +205,15 @@ class ForecastSensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
             0 if self.entity_description.key == "forecast_rest_today" else 1
         ]
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:  # pyright: ignore[reportIncompatibleVariableOverride]
+        """Return the best solar day of the last twelve months, the forecast's scale."""
+        best = self.coordinator.best_solar_day
+        return {
+            "best_day": None if best is None else round(best, 1),
+            "best_day_full_year": self.coordinator.best_solar_day_full_year,
+        }
+
 
 class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """A figure of one category."""
