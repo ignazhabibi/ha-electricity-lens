@@ -64,6 +64,8 @@ export interface ChartLine extends ChartSeries {
 export interface ChartInput {
   /** Axis label and tooltip heading of each slot. */
   labels: Array<{ axis: string; tooltip: string }>;
+  /** A label on every so many slots, from the first; without it as ECharts fits them. */
+  labelEvery?: number;
   series: ChartSeries[];
   /** The same bars for the period compared with, slot by slot, as HA's energy
    * graphs show them: paler, next to the bars of the selection. */
@@ -315,6 +317,7 @@ export function barChart(input: ChartInput) {
       type: "category",
       data: input.labels.map((label) => label.axis),
       axisTick: { show: false },
+      ...(input.labelEvery ? { axisLabel: { interval: input.labelEvery - 1 } } : {}),
     },
     // One axis is given as an object, as HA's own energy graphs do.
     yAxis: lines.length ? [barAxis, lineAxis] : barAxis,

@@ -572,6 +572,8 @@ export class ElectricityLensHistoryCard extends LensCard {
         : "";
     const chart = barChart({
       labels,
+      // Hours as Home Assistant's energy graphs tick them: every four, every eight over two days.
+      labelEvery: plan.period === "hour" ? (labels.length > 25 ? 8 : 4) : undefined,
       series,
       compare,
       unit: plan.unit === "money" ? fmt.currencySymbol() : plan.unit === "distance" ? "km" : "kWh",
@@ -594,7 +596,9 @@ export class ElectricityLensHistoryCard extends LensCard {
   private _labels(slots: number[], period: Period): Array<{ axis: string; tooltip: string }> {
     const format = (options: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(this._language, options);
-    const hour = format({ hour: "2-digit", minute: "2-digit", hour12: hour12(this.hass?.locale) });
+    const hour = format({ hour: "numeric", minute: "2-digit", hour12: hour12(this.hass?.locale) });
+    // A new day shows its date, as on Home Assistant's energy graphs.
+    const date = format({ day: "numeric", month: "short" });
     const severalYears =
       slots.length > 0 &&
       new Date(slots[0]).getFullYear() !== new Date(slots[slots.length - 1]).getFullYear();
@@ -611,7 +615,7 @@ export class ElectricityLensHistoryCard extends LensCard {
       year: format({ year: "numeric" }),
     }[period];
     return slots.map((slot) => ({
-      axis: axis.format(slot),
+      axis: period === "hour" && new Date(slot).getHours() === 0 ? date.format(slot) : axis.format(slot),
       tooltip:
         period === "hour"
           ? `${hour.format(slot)} – ${hour.format(slot + 3_600_000)}`

@@ -9,8 +9,8 @@ import { CSS_COLORS, consumerColors, palette } from "./colors";
 import type { Key } from "./localize";
 import { checkCollectionKey } from "./energy-date";
 import { readCategories } from "./model";
-import { PeriodSumsCard, addUp, tableStyles } from "./period-sums-card";
-import { cardStyles } from "./styles";
+import { PeriodSumsCard, addUp } from "./period-sums-card";
+import { cardStyles, tableStyles } from "./styles";
 import type { CategoryFigures, FigureArea, FiguresInfo } from "./types";
 
 export interface SavingsCardConfig {
@@ -190,7 +190,8 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     return html`<table>
         <thead>
           <tr>
-            <th scope="col" colspan="2" class="name">${t("savings_source")}</th>
+            <th class="swatch-cell"></th>
+            <th scope="col" class="name">${t("savings_source")}</th>
             <th scope="col">${t("savings_energy")}</th>
             <th scope="col">${t("savings_amount")}</th>
           </tr>
@@ -211,7 +212,8 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
         </tbody>
         <tfoot>
           <tr>
-            <th scope="row" colspan="2" class="name">${t("savings_total")}</th>
+            <td class="swatch-cell"></td>
+            <th scope="row" class="name">${t("savings_total")}</th>
             <td></td>
             <td>${fmt.value(total, "money")}</td>
           </tr>
