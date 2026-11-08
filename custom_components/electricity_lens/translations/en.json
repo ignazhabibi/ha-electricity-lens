@@ -3,28 +3,28 @@
     "step": {
       "user": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_devices": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_solar": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs solar production in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs PV production in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_household_only": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout PV production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
       },
       "household": {
         "title": "Household",
@@ -42,7 +42,7 @@
       },
       "pv": {
         "title": "PV plant",
-        "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+        "description": "Counted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
           "battery_investment": "Battery purchase cost (optional)"
@@ -54,7 +54,7 @@
       },
       "pv_no_export": {
         "title": "PV plant",
-        "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+        "description": "**The energy dashboard has no feed-in.** All PV power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
           "battery_investment": "Battery purchase cost (optional)"
@@ -494,7 +494,7 @@
       "step": {
         "pv": {
           "title": "PV plant",
-          "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+          "description": "Counted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
             "battery_investment": "Battery purchase cost (optional)"
@@ -506,7 +506,7 @@
         },
         "pv_no_export": {
           "title": "PV plant",
-          "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+          "description": "**The energy dashboard has no feed-in.** All PV power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
             "battery_investment": "Battery purchase cost (optional)"
@@ -550,7 +550,7 @@
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -1133,7 +1133,7 @@
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -1277,7 +1277,7 @@
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs solar production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -1304,7 +1304,7 @@
         "name": "Saving",
         "state_attributes": {
           "category": {
-            "name": "Category"
+            "name": "Area"
           },
           "calculating": {
             "name": "Calculating"
@@ -1345,10 +1345,10 @@
         "name": "Saving per year"
       },
       "forecast_rest_today": {
-        "name": "Solar remaining today"
+        "name": "PV left today"
       },
       "forecast_tomorrow": {
-        "name": "Solar forecast tomorrow"
+        "name": "PV tomorrow"
       },
       "payback": {
         "name": "Paid back",
@@ -1441,11 +1441,11 @@
         "household": "Household",
         "other": "Other",
         "area_grid": "Grid",
-        "area_solar": "Solar",
+        "area_solar": "PV",
         "energy": "consumption",
-        "solar": "solar power",
+        "solar": "PV power",
         "cost": "costs",
-        "solar_cost": "solar power costs",
+        "solar_cost": "PV power costs",
         "cheap": "cheap grid power",
         "cheap_cost": "cheap grid power costs",
         "expensive": "expensive grid power",
@@ -1454,11 +1454,11 @@
         "grid_import_cost": "Grid import costs",
         "grid_feed_in": "Feed-in compensation",
         "grid_standing_charge": "Standing charge",
-        "grid_cheap_saving": "Saving from cheap hours",
+        "grid_cheap_saving": "Tariff saving",
         "heat": "heat",
         "distance": "distance",
         "alternative_cost": "comparison costs",
-        "solar_saving": "saving by solar power",
+        "solar_saving": "saving by PV power",
         "battery_saving": "battery saving",
         "saving": "saving"
       }

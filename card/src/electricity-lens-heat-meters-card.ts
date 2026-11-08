@@ -7,6 +7,7 @@ import { html, type TemplateResult } from "lit";
 import { checkCollectionKey } from "./energy-date";
 
 import { consumerColors, palette } from "./colors";
+import { explanation } from "./explain";
 import { heatDevices } from "./history-figures";
 import { PeriodSumsCard, addUp } from "./period-sums-card";
 import { cardStyles, tableStyles } from "./styles";
@@ -42,10 +43,11 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     const t = this._localize;
     if (!this.hass) return html``;
     const waiting = this._waiting();
-    const devices = this._devices;
-    const title = devices.length ? devices.map((device) => device.name).join(" & ") : t("figure.heat");
     return html`<ha-card>
-      <div class="header"><h2 class="title">${title}</h2></div>
+      <div class="header">
+        <h2 class="title">${t("heat_meters_title")}</h2>
+        ${explanation(t("info_label"), [t("info.heat_meters")])}
+      </div>
       ${waiting ? html`<p class="summary">${this._waitingText(waiting)}</p>` : this._table()}
     </ha-card>`;
   }

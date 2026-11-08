@@ -1,8 +1,10 @@
 // Styles the cards share: category colors, the header, and the tables.
 
-import { css } from "lit";
+import { css, type CSSResultGroup } from "lit";
 
-export const cardStyles = css`
+import { explanationStyles } from "./explain";
+
+const baseStyles = css`
   :host {
     --electricity-lens-pv-color: var(--energy-solar-color, #ff9800);
     --electricity-lens-heat-pump-color: var(--graph-color-30, var(--color-30, #bf3947));
@@ -49,6 +51,8 @@ export const cardStyles = css`
     display: none;
   }
 `;
+
+export const cardStyles: CSSResultGroup = [baseStyles, explanationStyles];
 
 /* The tables of all cards: a color swatch, a name, numbers at the end, and
  * the total in the footer. On a phone the swatches give their room to the

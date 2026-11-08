@@ -39,6 +39,7 @@ import { LensCard } from "./lens-card";
 import { calculatingText, durationText, hasText, localizer, type Localize } from "./localize";
 import { areaOfCategory, investmentSensors, readProgress } from "./model";
 import { cardStyles } from "./styles";
+import { explanation, type Explanation } from "./explain";
 import type {
   FigureArea,
   FiguresInfo,
@@ -64,13 +65,19 @@ export interface FiguresCardConfig extends FigureConfig {
   collection_key?: string;
 }
 
-/** A figure's name; devices and the like are named with their area. */
+/** A figure's name in its area's own words, as the heat pump's "Stromverbrauch"
+ * or the car's "Geladene Energie"; see CONTEXT.md. */
+export function ownFigureLabel(t: Localize, figure: Figure, area: FigureArea): string {
+  const key = [`figure.${figure}.${area.id}`, `figure.${figure}.${area.kind}`].find(hasText);
+  return t(key ?? (`figure.${figure}` as const));
+}
+
+/** A figure's name; devices and the like are named with their area. A payback
+ * or return is named by its area alone: the value says which it is. */
 export function figureLabel(t: Localize, figure: Figure, area: FigureArea): string {
-  const specific = `figure.${figure}.${area.kind}`;
-  const label = t(hasText(specific) ? specific : (`figure.${figure}` as const));
-  return ["device", "other", "category"].includes(area.kind)
-    ? `${area.name} ${label}`
-    : label;
+  if (!["device", "other", "category"].includes(area.kind)) return ownFigureLabel(t, figure, area);
+  if (area.kind === "category" && isInvestment(figure)) return area.name;
+  return t("figure_of", { figure: ownFigureLabel(t, figure, area), area: area.name });
 }
 
 /** The integration computes new hours every 15 minutes. */
@@ -429,8 +436,20 @@ export class ElectricityLensFiguresCard extends LensCard {
     return this._card(
       label,
       result.value === null ? "–" : this._format(result.value, result.unit),
-      config.secondary === "none" ? undefined : line
+      config.secondary === "none" ? undefined : line,
+      undefined,
+      this._explanation(figure, area)
     );
+  }
+
+  /** How a figure is valued, where its name does not say it. */
+  private _explanation(figure: Figure, area: FigureArea): Explanation {
+    const t = this._localize;
+    if (figure === "price" && area.statistics.solar?.length) return [t("info.price")];
+    if (figure === "heat_price") return [t("info.heat_price")];
+    if (figure === "payback") return [t("info.payback")];
+    if (figure === "annual_return") return [t("info.annual_return")];
+    return [];
   }
 
   private _statisticCard(config: FigureConfig): TemplateResult {
@@ -527,17 +546,24 @@ export class ElectricityLensFiguresCard extends LensCard {
     const entity = figure === "payback" ? sensors?.payback : sensors?.annualReturn;
     const state = entity ? this.hass?.states[entity] : undefined;
     const number = Number(state?.state);
-    if (!state || !Number.isFinite(number)) return this._card(label, "–", undefined, entity);
+    const info = this._explanation(figure, area);
+    if (!state || !Number.isFinite(number)) return this._card(label, "–", undefined, entity, info);
     if (figure === "payback") {
       // Not yet paid back does not round up to 100 %.
       const paid = number < 100 ? Math.floor(number) : number;
-      return this._card(label, this._format(paid, "percent"), this._paybackLine(state.attributes), entity);
+      return this._card(
+        label,
+        [this._number(paid, 0), t("payback_unit")],
+        this._paybackLine(state.attributes),
+        entity,
+        info
+      );
     }
     const rate = numberFormat(this.hass?.locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     }).format(number);
-    return this._card(label, t("return_value", { rate }), this._returnLine(state.attributes), entity);
+    return this._card(label, t("return_value", { rate }), this._returnLine(state.attributes), entity, info);
   }
 
   /** What a payback sensor tells: the time still to go, else the investment. */
@@ -567,7 +593,13 @@ export class ElectricityLensFiguresCard extends LensCard {
    * value with its unit, and the line that explains it. Nothing wraps; what
    * does not fit ends in an ellipsis and shows whole as a tooltip. An entity's
    * card opens its dialog, as Home Assistant's cards do. */
-  private _card(label: string, value: string | [string, string], line?: string, entity?: string): TemplateResult {
+  private _card(
+    label: string,
+    value: string | [string, string],
+    line?: string,
+    entity?: string,
+    info: Explanation = []
+  ): TemplateResult {
     const [number, unit] = typeof value === "string" ? splitUnit(value) : value;
     const whole = typeof value === "string" ? value : value.filter(Boolean).join(" ");
     const open = () => {
@@ -592,7 +624,10 @@ export class ElectricityLensFiguresCard extends LensCard {
       @click=${entity ? open : nothing}
       @keydown=${entity ? key : nothing}
     >
-      <div class="header"><h2 class="title" title=${label}>${label}</h2></div>
+      <div class="header">
+        <h2 class="title" title=${label}>${label}</h2>
+        ${explanation(this._localize("info_label"), info)}
+      </div>
       <div class="stat">
         <div class="value">
           <span class="number" title=${whole}>${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
@@ -626,6 +661,12 @@ export class ElectricityLensFiguresCard extends LensCard {
       .clickable:focus-visible {
         outline: 2px solid var(--primary-color);
         outline-offset: -2px;
+      }
+      /* The info icon keeps the title's height. */
+      .header button.info {
+        width: 24px;
+        height: 24px;
+        margin: 0 calc(-1 * var(--ha-space-1, 4px)) 0 0;
       }
       .title {
         font-size: var(--ha-font-size-l, 16px);

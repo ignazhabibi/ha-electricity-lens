@@ -45,6 +45,15 @@ The sums over a period, the key figures' arithmetic, the history chart's stacks,
 the power flow, and the dashboard's views have tests in `card/test/`, run with
 `npm --prefix card test` and by the quality gate.
 
+## Texts
+
+Every text a user sees follows [CONTEXT.md](CONTEXT.md): its terms, the terms
+by area, and the space of each place. `card/test/wording.test.ts` and
+`tests/test_translations.py` check the words it rules out and the widths;
+`card/test/titles.test.ts` writes every title of the dashboard, for households
+of every kind, to `card/test/titles.snapshot.md`. After an intended change of a
+title, run `UPDATE_SNAPSHOT=1 npm --prefix card test` and review the diff.
+
 ## Python
 
 - Python 3.14+ is the project baseline. Follow the Ruff and Pyright

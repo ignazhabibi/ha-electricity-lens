@@ -1071,14 +1071,8 @@ async def test_forecast_sensors(hass: HomeAssistant) -> None:
     assert not registry.async_get_entity_id(
         "sensor", DOMAIN, f"{entry.entry_id}_forecast_today"
     )
-    assert (
-        float(_state(hass, "sensor.electricity_lens_solar_remaining_today").state)
-        == 12.5
-    )
-    assert (
-        float(_state(hass, "sensor.electricity_lens_solar_forecast_tomorrow").state)
-        == 20.25
-    )
+    assert float(_state(hass, "sensor.electricity_lens_pv_left_today").state) == 12.5
+    assert float(_state(hass, "sensor.electricity_lens_pv_tomorrow").state) == 20.25
 
 
 @pytest.mark.usefixtures("energy")
@@ -1087,7 +1081,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
 ) -> None:
     """A forecast added later brings its sensors; removed, they go."""
     await setup_entry(hass, config_entry)
-    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    assert hass.states.get("sensor.electricity_lens_pv_left_today") is None
     solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
 
     with patch(
@@ -1098,7 +1092,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
             hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
         )
         await hass.async_block_till_done(wait_background_tasks=True)
-    remaining = _state(hass, "sensor.electricity_lens_solar_remaining_today")
+    remaining = _state(hass, "sensor.electricity_lens_pv_left_today")
     assert float(remaining.state) == 12.5
     # The scale of the forecast: the best solar day, from two days of data.
     assert remaining.attributes["best_day"] > 0
@@ -1106,7 +1100,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
 
     await set_energy_prefs(hass, PREFS)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get("sensor.electricity_lens_solar_remaining_today") is None
+    assert hass.states.get("sensor.electricity_lens_pv_left_today") is None
     assert not er.async_get(hass).async_get_entity_id(
         "sensor", DOMAIN, f"{config_entry.entry_id}_forecast_rest_today"
     )

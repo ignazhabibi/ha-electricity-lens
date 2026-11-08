@@ -3,28 +3,28 @@
     "step": {
       "user": {
         "title": "Electricity Lens",
-        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ PV-Erzeugung: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_devices": {
         "title": "Electricity Lens",
-        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ PV-Erzeugung: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür Wärmepumpe und E-Auto fehlen einzelne Geräte im [Energie-Dashboard](/config/energy).",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_no_solar": {
         "title": "Electricity Lens",
-        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür die PV-Anlage fehlt Solar im [Energie-Dashboard](/config/energy).",
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ PV-Erzeugung: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nFür die PV-Anlage fehlt die PV-Erzeugung im [Energie-Dashboard](/config/energy).",
         "data": {
           "categories": "Welche Ersparnisse sollen ausgewertet werden? (optional)"
         }
       },
       "user_household_only": {
         "title": "Electricity Lens",
-        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ Solar: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nOhne Solar und einzelne Geräte im [Energie-Dashboard](/config/energy) wird nur der Haushalt berechnet."
+        "description": "Berechnet Verbrauch, Strommix und Kosten deines Haushalts und jedes Geräts. Wenn du möchtest, auch was PV-Anlage, Wärmepumpe und E-Auto gespart haben und wann sie sich bezahlt machen.\n\nAus deinem Energie-Dashboard:\n{grid} Netzbezug mit Strompreis\n{export} Einspeisung\n{compensation} Einspeisevergütung\n✓ PV-Erzeugung: {solar} Quellen\n{battery} Batterie\n✓ Einzelne Geräte: {devices}\n\nOhne PV-Erzeugung und einzelne Geräte im [Energie-Dashboard](/config/energy) wird nur der Haushalt berechnet."
       },
       "household": {
         "title": "Haushalt",
@@ -42,7 +42,7 @@
       },
       "pv": {
         "title": "PV-Anlage",
-        "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
+        "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
           "investment": "Anschaffungskosten (optional)",
           "battery_investment": "Anschaffungskosten der Batterie (optional)"
@@ -54,7 +54,7 @@
       },
       "pv_no_export": {
         "title": "PV-Anlage",
-        "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
+        "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze PV-Strom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
           "investment": "Anschaffungskosten (optional)",
           "battery_investment": "Anschaffungskosten der Batterie (optional)"
@@ -494,7 +494,7 @@
       "step": {
         "pv": {
           "title": "PV-Anlage",
-          "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
+          "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
             "investment": "Anschaffungskosten (optional)",
             "battery_investment": "Anschaffungskosten der Batterie (optional)"
@@ -506,7 +506,7 @@
         },
         "pv_no_export": {
           "title": "PV-Anlage",
-          "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze Solarstrom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant Solardaten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
+          "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze PV-Strom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
             "investment": "Anschaffungskosten (optional)",
             "battery_investment": "Anschaffungskosten der Batterie (optional)"
@@ -550,7 +550,7 @@
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
-        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
+        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
@@ -1133,7 +1133,7 @@
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
-        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
+        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
@@ -1277,7 +1277,7 @@
       "abort": {
         "energy_interface": "Das Energie-Dashboard lässt sich nicht lesen. Diese Version von Home Assistant wird noch nicht unterstützt; bitte sieh nach, ob es ein Update von Electricity Lens gibt.",
         "already_configured": "Das ist schon eingerichtet. Ändern kannst du es über »Neu konfigurieren«.",
-        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht Solar, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
+        "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
@@ -1304,7 +1304,7 @@
         "name": "Ersparnis",
         "state_attributes": {
           "category": {
-            "name": "Kategorie"
+            "name": "Bereich"
           },
           "calculating": {
             "name": "Wird berechnet"
@@ -1345,10 +1345,10 @@
         "name": "Ersparnis pro Jahr"
       },
       "forecast_rest_today": {
-        "name": "PV-Rest heute"
+        "name": "PV heute noch"
       },
       "forecast_tomorrow": {
-        "name": "PV-Prognose morgen"
+        "name": "PV morgen"
       },
       "payback": {
         "name": "Amortisiert",
@@ -1441,11 +1441,11 @@
         "household": "Haushalt",
         "other": "Sonstiges",
         "area_grid": "Netz",
-        "area_solar": "Solar",
+        "area_solar": "PV",
         "energy": "Verbrauch",
-        "solar": "Solarstrom",
+        "solar": "PV-Strom",
         "cost": "Kosten",
-        "solar_cost": "Solarstrom-Kosten",
+        "solar_cost": "Kosten PV-Strom",
         "cheap": "günstiger Netzstrom",
         "cheap_cost": "Kosten günstiger Netzstrom",
         "expensive": "teurer Netzstrom",
@@ -1454,12 +1454,12 @@
         "grid_import_cost": "Kosten Netzbezug",
         "grid_feed_in": "Einspeisevergütung",
         "grid_standing_charge": "Grundpreis",
-        "grid_cheap_saving": "Ersparnis durch günstige Zeiten",
+        "grid_cheap_saving": "Tarifersparnis",
         "heat": "Wärme",
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten",
         "solar_saving": "Ersparnis durch PV-Strom",
-        "battery_saving": "Ersparnis durch Batterie",
+        "battery_saving": "Batterie-Ersparnis",
         "saving": "Ersparnis"
       }
     }

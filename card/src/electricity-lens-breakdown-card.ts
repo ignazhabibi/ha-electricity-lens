@@ -15,7 +15,7 @@ import { checkCollectionKey } from "./energy-date";
 import { sharesProblem, statisticUnit } from "./figures";
 import { entityName } from "./format";
 import { barSeries, type BarSeries } from "./history-figures";
-import { hasText } from "./localize";
+import { hasText, type Localize } from "./localize";
 import { PeriodSumsCard } from "./period-sums-card";
 import { cardStyles } from "./styles";
 import type { FigureArea } from "./types";
@@ -35,6 +35,30 @@ export interface BreakdownCardConfig {
   color_by_source?: boolean;
   /** Instead of an area: the shares of these statistics. */
   statistics?: Array<{ statistic: string; name?: string }>;
+}
+
+/** How the whole is split: by device where the area has devices and the card
+ * asks for it, else by source, or by device where there is only one source. */
+export function breakdownSplit(config: BreakdownCardConfig, area: FigureArea | undefined): "source" | "consumer" {
+  if (
+    config.by === "consumer" &&
+    (area?.kind === "household" || (area?.kind === "category" && (area.statistics.energy?.length ?? 0) > 1))
+  ) {
+    return "consumer";
+  }
+  return area?.statistics.solar?.length ? "source" : "consumer";
+}
+
+/** A breakdown's title without one of its own. See CONTEXT.md. */
+export function breakdownTitle(t: Localize, config: BreakdownCardConfig, area: FigureArea | undefined): string {
+  if (config.title) return config.title;
+  if (config.statistics?.length) return t("breakdown_statistics");
+  // Until the integration answered, the configured split names the card.
+  const by = area ? breakdownSplit(config, area) : (config.by ?? "source");
+  if (by === "source") return t("breakdown_mix");
+  if (config.figure === "cost") return t("breakdown_cost_by_device");
+  // The heat pump's kWh are electricity, not a "Verbrauch" of gas or oil.
+  return t(area?.id === "heat_pump" ? "breakdown_heat_pump_by_device" : "breakdown_energy_by_device");
 }
 
 // Room for the 180 px ring and its labels outside, with the legend below.
@@ -123,14 +147,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
   }
 
   private get _by(): "source" | "consumer" {
-    const area = this._area();
-    if (
-      this._config.by === "consumer" &&
-      (area?.kind === "household" || (area?.kind === "category" && (area.statistics.energy?.length ?? 0) > 1))
-    ) {
-      return "consumer";
-    }
-    return area?.statistics.solar?.length ? "source" : "consumer";
+    return breakdownSplit(this._config, this._area());
   }
 
   private get _figure(): "energy" | "cost" {
@@ -324,14 +341,9 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
   }
 
   private _title(): string {
-    const t = this._localize;
-    if (this._config.title) return this._config.title;
-    if (this._byStatistics) return "";
-    // Until the integration answered, the configured split names the card.
-    const by = this._area() ? this._by : (this._config.by ?? "source");
-    if (by === "source") return t("breakdown_mix");
-    return t(this._figure === "cost" ? "breakdown_cost_by_device" : "breakdown_energy_by_device");
+    return breakdownTitle(this._localize, this._config, this._area());
   }
+
 
   /** The ring on HA's chart element, as in the user's energy cards, with
    * HA's chart legend below: a tap hides a part and the ring closes up. */
