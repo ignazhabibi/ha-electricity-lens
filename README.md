@@ -1,36 +1,411 @@
+<img src="https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/custom_components/electricity_lens/brand/icon.png" alt="" width="96" align="right">
+
 # Electricity Lens
 
-A Home Assistant integration with its own dashboard cards and electricity
-dashboard strategy. It computes what
-your household and each of its devices consumed and cost, how much of it was
-solar power or cheap grid power, and what your solar panels, heat pump, and
-electric car have saved compared with what they replaced, and whether and when
-they pay off.
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![Release](https://img.shields.io/github/v/release/ignazhabibi/ha-electricity-lens)](https://github.com/ignazhabibi/ha-electricity-lens/releases)
+
+**What your electricity really costs, where it comes from, and whether your
+solar panels, heat pump, and electric car pay off.**
 
 Home Assistant's energy dashboard shows what you consumed, produced, and paid.
 Electricity Lens answers the questions that come next:
 
 - What did each device cost me, including the solar power it used?
-- How much of my grid power did I buy in cheap hours?
-- What has each investment saved so far?
-- Has it paid for itself yet? If not, roughly when?
+- How much of my grid power did I buy in cheap hours, and what did that save?
+- What has each investment saved so far, and has it paid for itself yet?
 - Is the whole electrification in the plus already?
 
-It needs no YAML, no helpers, and no template sensors. Everything it can, it
-takes from the energy dashboard; it asks only for what Home Assistant cannot
-know, such as what the heat pump cost extra or what gas cost on average.
+It takes everything it can from the energy dashboard and computes your whole
+history, hour by hour, right after setup. There is no YAML, no helper, and no
+template sensor to write.
 
-## Use cases
+<!-- Screenshot: images/costs.png, the Costs view of the dashboard, desktop, light theme -->
 
-- See at a glance whether the solar panels, heat pump, and electric car together
-  have already saved more than they cost.
-- Get a notification when the heat pump has paid for itself.
-- Compare the yearly saving of each investment, and see which one pays off
-  fastest.
-- Keep an honest record: savings can be negative for a while, for example when
-  electricity is expensive and gas is cheap, and the integration shows that.
+## Contents
 
-## What it calculates
+- [What you get](#what-you-get)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Setup](#setup)
+- [The dashboard](#the-dashboard)
+- [The cards](#the-cards)
+- [How it calculates](#how-it-calculates)
+- [Sensors and statistics](#sensors-and-statistics)
+- [Changing things later](#changing-things-later)
+- [FAQ](#faq)
+- [Troubleshooting](#troubleshooting)
+- [Known limitations](#known-limitations)
+- [Removal](#removal)
+
+## What you get
+
+Electricity Lens is one package with three parts. HACS installs and updates
+them together.
+
+| Part | What it does |
+|---|---|
+| **The integration** | Values every hour of your energy data: consumption, solar power, and costs of the household, of each device, and of "Other"; the savings of solar, heat pump, and electric car against what they replaced. It keeps the results as long-term statistics, from your first data on. |
+| **A dashboard** | A finished electricity dashboard with the views Now, Consumption, Costs, Heating, and Charging. It shows only what your household has, with no settings. |
+| **Seven cards** | Power flow, economics, savings, heat meters, history, key figures, and breakdown, for your own dashboards, set up in the card editor. |
+
+Besides, each saving is a sensor you can use in automations, for example to
+get a notification when the heat pump has paid for itself.
+
+What it covers:
+
+| Area | Always or optional | What you see |
+|---|---|---|
+| Household | Always | Consumption, costs, and electricity mix of the household, each device, and Other; the electricity bill; price levels and the tariff saving |
+| Solar | With solar production in the energy dashboard | Production, self-consumption, saving, payback, a home battery's part, the solar forecast |
+| Heat pump | With its meters under *Individual devices* | Electricity and its costs, heat, COP, heat price, saving against the former heating, payback |
+| Electric car | With the wallbox meters under *Individual devices* | Charged energy and its costs, costs per 100 km, saving against a combustion car, payback |
+
+Everything runs locally in Home Assistant. Electricity Lens calls no online
+service and sends no data anywhere.
+
+## Requirements
+
+- Home Assistant 2026.10 or newer.
+- An [energy dashboard](https://my.home-assistant.io/redirect/config_energy/)
+  with a grid import and an electricity price: a fixed price, a price entity,
+  or a cost statistic. Dynamic tariffs such as Tibber, Octopus, or Nord Pool
+  prices work through their price entity.
+- For **solar**: at least one solar production source. Several sources and
+  home batteries count as one solar system. A feed-in meter is recommended;
+  without one all solar power counts as used in the house, and the setup warns
+  about it.
+- For the **heat pump** and the **electric car**: their electricity meters
+  under *Individual devices* in the energy dashboard. A total meter, or the
+  parts that add up to it, such as heating and hot water, or two charging
+  points. Heat meters are optional.
+
+## Installation
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ignazhabibi&repository=ha-electricity-lens&category=integration)
+
+1. Set up the energy dashboard with grid import and electricity price, your
+   solar production, and the meters of heat pump and wallbox under
+   *Individual devices*.
+2. Install Electricity Lens from the Marketplace (Settings › Marketplace) or
+   HACS as a custom repository: `https://github.com/ignazhabibi/ha-electricity-lens`,
+   type *Integration*.
+3. Restart Home Assistant.
+4. Add the integration:
+   [![Open your Home Assistant instance and start setting up Electricity Lens.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=electricity_lens)
+   or **Settings › Devices & services › Add integration › Electricity Lens**.
+5. Follow the [setup](#setup).
+6. Add the dashboard: **Settings › Dashboards › Add dashboard**, under
+   *Community dashboards*: **Electricity Lens**. The cards are in the card
+   picker as well. There is no dashboard resource to add: the integration
+   serves the cards itself and updates them with the integration.
+
+The past is computed in the background right after setup. With several years
+of data this takes a few minutes, on small hardware such as a Raspberry Pi
+longer; until then the cards say how far it is. A restart in between continues
+where it stopped.
+
+## Setup
+
+The setup asks only for what Home Assistant cannot know, such as what the heat
+pump cost extra or what gas cost on average. A step appears only when your
+household needs it.
+
+1. **Overview**: what the energy dashboard provides, and which savings to
+   evaluate. The household is always computed; solar, heat pump, and electric
+   car are optional. Nothing is preselected, and only possible categories are
+   offered.
+2. **Household**, optional: the **standing charge per month**, as on the
+   electricity bill. It is shared evenly over the hours of its month and added
+   to the grid costs. The first value applies from the beginning.
+3. **Solar**: since when it counts, and the purchase cost (optional). With a
+   battery in the energy dashboard, its purchase cost too (optional), for its
+   own payback; the solar payback counts both, so enter the plant's cost
+   without the battery.
+4. **Heat pump**:
+   | Field | Description |
+   |---|---|
+   | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
+   | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
+   | Former heating | Gas, heating oil, LPG, pellets, district heating, or an electric heating such as storage heaters; or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the economics, but its heat, COP, heat price, and the Heating view. |
+   | Extra cost (optional) | Extra purchase cost over the former heating, for the payback. Not with no former heating. |
+5. **Heat pump, average since the first data**:
+   | Field | Description |
+   |---|---|
+   | Price of the former heating | Average per kWh (gas, district heating, heating electricity), per litre (heating oil, LPG), or per kilogram (pellets). Also the current value from now on. Not with no former heating. |
+   | COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
+   | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
+   | Price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
+6. **Electric car**: charging meters, what it is compared with (a combustion
+   car or nothing), and the extra purchase cost over a combustion car
+   (optional). Compared with nothing, as for a second car, the car has no
+   saving, no saving sensors, and no place in the economics, but its charging
+   costs, mix, and the Charging view.
+7. **Electric car, average since the first data**: consumption of the electric
+   car (measured at the wallbox, with charging losses; with several cars,
+   their average), consumption of a comparable combustion car, fuel price, an
+   own tariff (optional), and a fuel price sensor (optional). Compared with
+   nothing, only the own tariff (optional).
+
+Then assign areas to the new devices if you like.
+
+## The dashboard
+
+Electricity Lens brings a finished electricity dashboard. Add it under
+**Settings › Dashboards › Add dashboard**, under *Community dashboards*:
+**Electricity Lens**. Or in YAML:
+
+```yaml
+strategy:
+  type: custom:electricity-lens
+```
+
+It has no settings. It asks the integration what the household has and shows
+only the views and cards that fit: costs by device need individual devices in
+the energy dashboard, and shares by source need solar power or a grid price
+with levels in the last 30 days. Each view answers one question, and each card
+has one home; only the first view repeats headline figures, always for today.
+The other views follow the energy date selection.
+
+| View | Question | Shows |
+|---|---|---|
+| Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to the best solar day of the last twelve months, red below about a third of it and green from about two thirds once the data covers a year; costs and consumption today; each investment's payback, and once paid back its return |
+| Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
+| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; where the grid price had levels in the last 30 days, the share of grid power from cheap hours and the tariff saving, and the share from expensive hours where there were some; devices ranked and split by source; the savings of the period as a table |
+| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the COP; its electricity by source; its costs by source with the average price; COP, heat price, its electricity mix, heat, electricity, and COP per meter, and, with a former heating, its saving reckoned up |
+| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and, compared with a combustion car, the saving reckoned up |
+
+<!-- Screenshot: images/now.png, the Now view, desktop, light theme -->
+<!-- Screenshot: images/heating.png, the Heating view, desktop, dark theme -->
+<!-- Screenshot: images/phone.png, the Costs view on a phone -->
+
+Whoever wants more takes control of the dashboard (⋮ › *Take control*) and
+builds on with the same cards. A dashboard taken over keeps its views, so later
+releases no longer change its layout.
+
+### Colors
+
+All cards share one color system built on Home Assistant's energy and graph
+colors, so themes that change those change the cards too:
+
+- Solar power is the solar color. Grid power is one family: cheap is light,
+  normal is the grid color, expensive is dark. The feed-in is the return color
+  and shows below the line.
+- Devices take Home Assistant's graph colors in the order of the energy
+  dashboard, as in its own graph of individual devices. The heat pump has one
+  fixed red of its own, never the gas color; the car has the color of its
+  device. "Other" is grey.
+- A battery has the energy dashboard's battery colors: one while it gives
+  power, one while it takes it.
+- Bars are amounts. Prices and ratios are thin dashed grey lines on the right
+  axis; prices step, because an hour's price holds for the whole hour. Lines
+  of other statistics are dotted.
+
+## The cards
+
+All cards are in the card picker under their names, in Home Assistant's
+language, English or German, and follow light and dark themes on phones and
+desktops. Like Home Assistant's energy cards, those that follow the energy date
+selection take `collection_key` in YAML, for a date selection with a key of its
+own; without one they follow the dashboard's.
+
+Their legends name only what occurs in the period, or in the period compared
+with: a month without expensive hours has no "Grid expensive", and without
+cheap or expensive hours the grid power is just "Grid". Where the numbers need
+a rule to be understood, an info icon at the end of the header explains them,
+as on Home Assistant's self-sufficiency gauge. A pointer shows it while over
+the icon; a tap keeps it open.
+
+| Card | Shows | Options |
+|---|---|---|
+| [Power flow](#power-flow) | Where the power comes from and goes right now | Title |
+| [Economics](#economics) | Savings, investments, and balance of each area since counting began | Title |
+| [Savings](#savings) | What was saved in the selected period | Area |
+| [Heat meters](#heat-meters) | Heat, electricity, and COP per heat pump meter | None |
+| [History](#history) | A figure over time as bars | Period, area, figure, split, lines |
+| [Key figures](#key-figures) | One figure for a period | Period, source, area, figure |
+| [Breakdown](#breakdown) | Shares of a whole as a ring or bars | Period, area, split, display |
+
+<!-- Screenshot: images/cards.png, a collage of the cards, desktop, light theme -->
+
+### Power flow
+
+Where the power comes from right now and where it goes, as two bars of the same
+length: above the solar panels, the battery, and the grid; below each consumer,
+Other, the battery, and the feed-in. In equals out, so the bars fit any
+household, with any number of devices. A sentence above says how much of the
+consumption the own power covers, and a list below names each part with its
+power; a part with one sensor opens its dialog. The chip shows the power the
+house takes.
+
+The card reads the power sensors of the energy dashboard: those of the grid,
+the solar panels, and the battery, and those of the individual devices. It
+needs one for the grid. Devices that belong to a category show as that
+category, as in the consumption by device; Other is the consumption minus the
+devices with a power sensor. The card follows the sensors' states, without
+statistics.
+
+### Economics
+
+The card finds the areas by itself and is built like the totals table of Home
+Assistant's energy dashboard: one row per area with what it saves per year on
+average, what it has saved, its investment, and its balance, then a row with
+the totals. Above the table a sentence says how much of all investments is
+paid back and, once there are yearly savings, in about how long everything is
+in the plus. Below solar a quieter row shows its battery's part. Without any
+investment only the savings appear. A row opens its sensor, which also says
+since when it counts. The card can be used with keyboard and screen reader.
+
+### Savings
+
+What was saved in the selected period, as a table: by self-consumption, by the
+feed-in, by the heat pump, and by the electric car, each with its energy and
+amount. The info icon says what each row counts, for example what the former
+heating would have cost. The amounts are those of the economics card, so they
+add up without counting solar power twice; the saving on the Heating and
+Charging views includes the device's solar power and can be higher. The card
+follows the energy date selection, without one this month. Where a period
+holds a saving but no energy, the energy shows as a dash: the household's
+figures can begin later than the savings.
+
+With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
+instead: what the former heating or a combustion car would have cost, less the
+heat pump's electricity costs or the car's charging costs, and how the saving
+splits: the part the economics card counts for the heat pump or car, and the
+part it counts for solar, which gets the benefit of solar power. The card
+editor offers only the areas that are set up.
+
+### Heat meters
+
+COP by device: heat, electricity, and COP of each of the heat pump's meters in
+the selected period, for example heating and hot water, with their total below.
+It needs a heat meter per electricity meter and has no options.
+
+### History
+
+A figure per hour, day, month, or year as bars, in the look of the energy
+dashboard, set up in the card editor. Without options it shows what each
+category saved, stacked by category; a month in which a category cost more
+than it saved shows below the line.
+
+| Option | Choices |
+|---|---|
+| Period | *Follow the date selection*, a fixed period such as last month or this year, or all years from the first one with a value |
+| Area and figure | The savings of all areas, or an area's consumption, costs, savings, or feed-in |
+| Split | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also by bill item (standing charge and grid power by price level, without the feed-in); by device (top-level devices and Other) for the household's consumption and costs; or none |
+| Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency; for the household also the grid price |
+| Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
+
+With an *Energy date selection* card on the same dashboard it follows the
+selected period as the energy dashboard does: hours for a day, days for a week
+or month, months for a year. When the date selection compares with an earlier
+period, its bars stand paler next to the selected ones. Without a date
+selection it shows the savings per year since counting began, other figures
+for this month. The chip at the top shows the total of the bars.
+
+```yaml
+type: custom:electricity-lens-history-card
+area: household
+figure: energy
+stack: source
+line: price
+lines:
+  - statistic: sensor.outside_temperature
+```
+
+### Key figures
+
+One figure for a period as a small card, like the stat cards of the energy
+dashboards; several figures are several cards. The period is *Follow the date
+selection* (this month without an *Energy date selection* card), or a fixed one
+such as today, last month, or this year, so the card also works on dashboards
+without a date selection.
+
+A card has one of three sources:
+
+| Source | Shows |
+|---|---|
+| Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
+| Statistic | Any statistic of Home Assistant, as it is: its total over the period for a meter, its mean, minimum, or maximum for a measurement; the mean can show the range of the period below. The editor offers only what the statistic has |
+| Entity | Any entity's current state, as Home Assistant shows it |
+
+Areas and their figures:
+
+| Area | Figures |
+|---|---|
+| Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power with the share of hours of that level (where the grid price had it) |
+| Grid | Grid import, feed-in, the electricity bill (what the supplier charges, without the feed-in), grid costs with their parts, average grid price, tariff saving (where the grid price had levels) |
+| Solar | Solar production, self-consumption, saving (with the solar panels), the battery's part of it (with a battery), solar today and tomorrow (with a forecast in the energy dashboard), payback and return (with an investment) |
+| Heat pump | Electricity, electricity costs, average price, average grid price, solar share, heat, COP, heat price, comparison costs (the former heating), saving with the part by solar power, payback and return (with an investment) |
+| Electric car | Charged energy, charging costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power, payback and return (with an investment) |
+| Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
+
+The card computes nothing beyond adding up the hours of the period, taking one
+such sum from another, and dividing two of them, for example costs by
+consumption; every cost and share per hour comes from the integration.
+
+```yaml
+type: custom:electricity-lens-figures-card
+period: energy_date
+area: household
+figure: cost
+```
+
+```yaml
+type: custom:electricity-lens-figures-card
+statistic: sensor.outside_temperature
+value: mean
+secondary: range
+```
+
+```yaml
+type: custom:electricity-lens-figures-card
+entity: sensor.electricity_price
+name: Price now
+```
+
+### Breakdown
+
+Shares of a whole for a period, as a ring or as bars, set up in the card
+editor. The ring is drawn like the pie of Home Assistant's devices graph: each
+share labeled outside, the total in the middle, and a legend below that hides
+a share with a tap.
+
+- **By source**: solar power and grid power by price level, for the household,
+  a device, or Other.
+- **By device**: the household's consumption or costs by top-level device and
+  Other, each with its consumption and average price, or a category's devices,
+  such as the heat pump's heating and hot water. Bars can be colored by the
+  sources of each device, in the bar's own unit: a bar of costs splits by what
+  each source cost. A device that would read as zero is left out.
+- **Statistics**: the shares of any statistics as they are, in their unit, for
+  example the heat for heating and hot water from the heat pump's own sensors.
+  They need a total and one unit; otherwise the card says why it shows no
+  shares.
+
+A bar whose device or statistic is an entity opens its dialog with a tap. When
+the date selection compares with an earlier period, that period shows as a
+paler inner ring, or as a thin bar under each bar. The period is *Follow the
+date selection* (this month without one) or a fixed period.
+
+```yaml
+type: custom:electricity-lens-breakdown-card
+area: household
+by: consumer
+figure: cost
+display: bars
+color_by_source: true
+```
+
+## How it calculates
+
+Electricity Lens reads the recorder's hourly long-term statistics of the meters
+in the energy dashboard and values each hour with the prices of that hour. It
+checks for newly compiled hours every 15 minutes, and at once when the energy
+dashboard changes. When Home Assistant was off, the recorder reports the missed
+energy with the next hour, so no energy is lost; prices of the missing hours
+are not known and the next hour's price is used. Only the power flow card shows
+the current states of the power sensors instead.
 
 ### The household
 
@@ -49,37 +424,38 @@ hour Electricity Lens derives:
   expensive grid power. Solar power used in the house is shared among the
   consumers of that hour in proportion to their consumption. A home battery
   counts as solar power, as in the solar saving.
-- **Price levels** follow the grid price on their own; there is nothing to set.
-  The normal price is the price of most hours of the last 7 days (their
-  median), such as the high rate beside a cheap night window. Grid power is
-  cheap at a price at least 10 % below it and expensive at least 10 % above,
-  judged by what a kWh cost in its hour. So a flat tariff has no levels, a
-  tariff with a cheap window has cheap hours, a tariff with three stages or a
-  dynamic one has both, and windows of supplier and grid fees that overlap are
-  simply their price. After a change of tariff the normal price takes a few
-  days to follow. Grid power at an own tariff of heat pump or electric car has
-  one price, so it has no level.
-- **Costs** of each consumption: grid power at what a kWh cost in that hour,
-  or at the own tariff of heat pump or electric car for their devices; solar
-  power at the feed-in compensation it did not earn, as evcc does. What a kWh
-  cost comes from the energy dashboard's costs, which price each kWh at its
-  moment, so a car charging in the cheap minutes of an hour pays less than the
-  hour's mean price. Where those costs do not fit the prices of the hour, for
-  example after a gap in the meter, the mean price counts.
+- **Costs** of each consumption: grid power at what a kWh cost in that hour, or
+  at the own tariff of heat pump or electric car for their devices; solar power
+  at the feed-in compensation it did not earn, as evcc does. What a kWh cost
+  comes from the energy dashboard's costs, which price each kWh at its moment,
+  so a car charging in the cheap minutes of an hour pays less than the hour's
+  mean price. Where those costs do not fit the prices of the hour, for example
+  after a gap in the meter, the mean price counts.
 - **Grid costs**: imports at what they cost, minus the feed-in compensation,
-  plus the standing charge if one is entered.
-- **Tariff saving**: what cheap grid power cost less, and expensive grid power
-  more, than at the normal price. Beside it the share of grid power from cheap
-  hours, compared with the share of hours that were cheap: drawn evenly, the
-  two would be equal.
+  plus the standing charge if one is entered. The **electricity bill** is what
+  the supplier charges: the imports and the standing charge, without the
+  feed-in compensation.
 
-Costs and savings answer different questions, so they value solar power
-differently: a device's costs count its solar power at the lost feed-in
-compensation; the savings below give the benefit of solar power to the solar
-panels. In the economics a device's electricity counts at the grid price, solar
-power or not, so nothing counts twice. On the key figures and charts of a heat
-pump or car, the saving includes its solar power, with that part below the key
-figure.
+### Price levels and the tariff saving
+
+Price levels follow the grid price on their own; there is nothing to set.
+
+- The **normal price** is the price of most hours of the last 7 days (their
+  median), such as the high rate beside a cheap night window.
+- Grid power is **cheap** at a price at least 10 % below it and **expensive**
+  at least 10 % above, judged by what a kWh cost in its hour.
+- So a flat tariff has no levels, a tariff with a cheap window has cheap hours,
+  a tariff with three stages or a dynamic one has both, and windows of supplier
+  and grid fees that overlap are simply their price. After a change of tariff
+  the normal price takes a few days to follow.
+- Grid power at an own tariff of heat pump or electric car has one price, so it
+  has no level.
+
+The **tariff saving** is what cheap grid power cost less, and expensive grid
+power more, than at the normal price. Beside it stands the share of grid power
+from cheap hours, compared with the share of hours that were cheap: drawn
+evenly, the two would be equal. The tariff saving is not part of the balance,
+because the savings already count every kWh at its real price.
 
 ### Savings
 
@@ -93,11 +469,16 @@ replaced.
 | Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. |
 
 - **No double counting.** The three savings add up to the household's total
-  saving. The benefit of solar power belongs to the solar panels alone; heat pump
-  and electric car pay for all their electricity at the price of that hour,
-  even when the sun delivered it.
-- **The battery's part.** Of the solar saving, the battery's is what it
-  adds to the same solar panels without it: what it gives, valued at the hour's
+  saving, the balance before investments. The benefit of solar power belongs
+  to the solar panels alone; heat pump and electric car pay for all their
+  electricity at the price of that hour, even when the sun delivered it.
+- **Costs and savings answer different questions.** A device's costs count its
+  solar power at the lost feed-in compensation; in the economics its
+  electricity counts at the grid price, solar power or not, so nothing counts
+  twice. On the key figures and charts of a heat pump or car, the saving
+  includes its solar power, with that part below the key figure.
+- **The battery's part.** Of the solar saving, the battery's is what it adds to
+  the same solar panels without it: what it gives, valued at the hour's
   electricity price or, when fed in, the feed-in compensation, minus the solar
   power it stores at the feed-in compensation it did not earn and the grid
   power it charges at the hour's price. The rest is what the solar panels saved
@@ -105,16 +486,17 @@ replaced.
   statistics do not say which power went where, so the battery is taken to
   charge from solar power first and to give to the house first.
 - **Prices at the time of use.** The electricity price of each hour is what the
-  energy dashboard charged for it, so dynamic tariffs are handled hour by
-  hour. With several tariffs, such as day and night, the average of the hour
-  counts. Heat pump and electric car can have an own tariff instead.
+  energy dashboard charged for it, so dynamic tariffs are handled hour by hour.
+  With several tariffs, such as day and night, the average of the hour counts.
+  Heat pump and electric car can have an own tariff instead.
 - **Measurements are facts.** Electricity Lens never filters or corrects
   readings. If a meter recorded a wrong value, fix it in Home Assistant's
   statistics tools, which also fixes the energy dashboard, then choose
-  *Recompute* (see below).
-- **Honest numbers.** There is no yearly average before twelve months of data,
-  because seasons would distort it. Heat that was estimated instead of
-  measured is marked as such.
+  *Recompute*.
+- **Honest numbers.** Savings can be negative for a while, for example when
+  electricity is expensive and gas is cheap, and the cards show that. There is
+  no yearly average before twelve months of data, because seasons would
+  distort it. Heat that was estimated instead of measured is marked as such.
 
 The former heating would have paid per kWh of heat:
 
@@ -137,128 +519,9 @@ Each category counts from the first hour Home Assistant has data for it.
 | From the first data to the setup | One average per value (gas, oil, or fuel price, consumptions, COP, own tariff), entered at setup, because Home Assistant does not know earlier prices. |
 | From the setup on | The averages as starting values. Changed values and a price sensor apply from the next full hour; what was computed stays, just as the energy dashboard treats a new electricity price. |
 
-## Supported setups
+## Sensors and statistics
 
-Electricity Lens works with any energy dashboard that has:
-
-- a grid import with an electricity price (a fixed price, a price entity, or a
-  cost statistic), and
-- for the **Solar**: at least one solar production source. Several solar
-  sources and home batteries are counted together as one solar system. Without a
-  feed-in meter all solar power counts as used in the house; the setup warns
-  about it.
-- for the **heat pump** and the **electric car**: their electricity meters
-  under *Individual devices*. Choose a total meter, or the parts that add up to
-  it, for example heating and hot water, or two charging points. Meters the
-  energy dashboard marks as included in another selected meter are not
-  counted twice. A meter belongs to one category only.
-
-Not supported: other alternatives than the former heatings above and a
-combustion car, or none, gas prices per cubic metre, the standing charge of a
-former gas or district heating, solar thermal, investments from a helper,
-and fetching prices from online services. Price sensors you already have can
-be used, though.
-
-Home Assistant 2026.10 or newer is required.
-
-## Installation
-
-1. Set up the [energy dashboard](https://my.home-assistant.io/redirect/config_energy/)
-   with grid import and electricity price, your solar production, and the
-   meters of heat pump and wallbox under *Individual devices*.
-2. Install Electricity Lens from the Marketplace (Settings › Marketplace) or HACS
-   as a custom repository: `https://github.com/ignazhabibi/ha-electricity-lens`,
-   type *Integration*.
-3. Restart Home Assistant.
-4. Go to **Settings › Devices & services › Add integration** and choose
-   **Electricity Lens**.
-5. Follow the setup (see below), then assign areas to the new devices if you
-   like.
-6. Add the **Electricity Lens** dashboard under **Settings › Dashboards › Add
-   dashboard**, or add the cards **Electricity Lens power flow**, **Electricity
-   Lens economics**, **Electricity Lens savings**, **Electricity Lens heat
-   meters**, **Electricity Lens history**, **Electricity Lens key figures**, and
-   **Electricity Lens breakdown** to a dashboard from the card picker. Power
-   flow and economics have no options but a title, heat meters none at all.
-   The card picker names them in Home Assistant's language, English or German.
-   There is no dashboard resource to add: the integration serves the cards
-   itself and updates them with the integration.
-
-The past is computed in the background right after setup. With several years
-of data this can take a few minutes, on small hardware such as a Raspberry Pi
-longer; until then the cards say how far it is. A restart in between continues
-where it stopped.
-
-## Configuration
-
-### Setup
-
-1. **Overview**: what the energy dashboard provides, and which savings to
-   evaluate. The household is always computed; the categories are optional.
-   Nothing is preselected; only possible categories are offered.
-2. **Household**, optional:
-   | Field | Description |
-   |---|---|
-   | Standing charge per month | As on the electricity bill. Shared evenly over the hours of its month and added to the grid costs. The first value applies from the beginning. |
-3. **Solar**: since when it counts, and the purchase cost (optional). With a
-   battery in the energy dashboard, its purchase cost too (optional), for its
-   own payback; the solar payback counts both, so enter the plant's cost
-   without the battery.
-4. **Heat pump**:
-   | Field | Description |
-   |---|---|
-   | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
-   | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
-   | Former heating | Gas, heating oil, LPG, pellets, district heating, or an electric heating such as storage heaters; or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the economics, but its heat, COP, heat price, and the Heating view. |
-   | Extra cost (optional) | Extra purchase cost over the former heating, for the payback. Not with no former heating. |
-5. **Heat pump, average since the first data**:
-   | Field | Description |
-   |---|---|
-   | Price of the former heating | Average per kWh (gas, district heating, heating electricity), per litre (heating oil, LPG), or per kilogram (pellets). Also the current value from now on. Not with no former heating. |
-   | COP | Only asked without heat meters, or when the heat data begins later than the electricity data; the step names until when it estimates. Later gaps use the COP measured until then. |
-   | Own electricity tariff (optional) | Only with a separate heat pump tariff. |
-   | Price sensor (optional) | Replaces the average from the setup on. While it has no value, its last value counts. Not with no former heating. |
-6. **Electric car**: charging meters, what it is compared with, a combustion
-   car or nothing, and the extra purchase cost over a combustion car
-   (optional). Compared with nothing, as for a second car, the car has no
-   saving, no saving sensors, and no place in the economics, but its charging
-   costs, mix, and the Charging view.
-7. **Electric car, average since the first data**: consumption of the electric
-   car (measured at the wallbox, with charging losses; with several cars,
-   their average), consumption of a comparable combustion car, fuel price, an
-   own tariff (optional), and a fuel price sensor (optional). Compared with
-   nothing, only the own tariff (optional).
-
-### Changing things later
-
-**Configure** on the integration page changes the household:
-
-| Option | What it does |
-|---|---|
-| Standing charge | A new standing charge applies from the next full hour. |
-| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
-
-Changes to the energy dashboard's grid, solar, battery, or devices compute the
-household and all categories again.
-
-Categories are config subentries. On the integration page each category has
-**Reconfigure** and **Delete**, and there are buttons to add the categories not
-set up yet; they lead through the same steps as the setup.
-
-**Reconfigure** opens a menu:
-
-| Option | What it does |
-|---|---|
-| Values from now on | New prices, consumptions, COP, tariff, or price sensor. They apply from the next full hour. |
-| Averages before the setup | Corrects the averages of the time before the setup. That time is computed again. |
-| Meters and extra cost | Other meters or another former heating compute everything again; another former heating asks for its prices. The extra cost applies at once. |
-| Recompute | Computes the category again with the current data, for example after you fixed a wrong reading in the statistics. All values stay. |
-| Purchase cost (solar) | The plant's and the battery's. Applies at once. |
-
-Changes in the energy dashboard are followed automatically. A new or removed
-meter computes the household again, and a category whose meters changed.
-
-## Entities
+### Sensors
 
 Each category is a device with these sensors; one more device holds the
 overall balance. A heat pump without a former heating, or a car compared with
@@ -274,12 +537,26 @@ show.
 | Solar left today, Solar tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. Their attributes show the best solar day of the last twelve months, the scale of the dashboard's gauges, and whether the data covers all twelve months. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, the share of all investments the savings have covered, the years until they cover them at the yearly savings, and, while the past is computed, how far it is in percent. |
 
-## Statistics
+Notify when the heat pump has paid for itself:
+
+```yaml
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.heat_pump_paid_back
+    above: 100
+actions:
+  - action: notify.notify
+    data:
+      message: "The heat pump has paid for itself."
+```
+
+### Statistics
 
 Electricity Lens keeps a long-term statistic of its own for every figure Home
-Assistant has no statistic for, including the computed past; it copies none. They appear in Home Assistant's statistics pickers, for
-example in the *Statistics graph* card, under their names such as
-"Household consumption" or "Washer costs".
+Assistant has no statistic for, including the computed past; it copies none.
+They appear in Home Assistant's statistics pickers, for example in the
+*Statistics graph* card, under their names such as "Household consumption" or
+"Washer costs".
 
 | Statistic | Content |
 |---|---|
@@ -299,282 +576,113 @@ example in the *Statistics graph* card, under their names such as
 Energy is in kWh, money in your currency. Hours in which a figure did not
 change are not stored; statistics cards carry the sum over them.
 
-## The cards
+## Changing things later
 
-Like Home Assistant's energy cards, the cards that follow the energy date
-selection take `collection_key` in YAML, for a date selection with a key of its
-own. Without one they follow the dashboard's. Their legends name only what
-occurs in the period, or in the period compared with: a month without
-expensive hours has no "Grid expensive", and without cheap or expensive hours
-the grid power is just "Grid".
+**Configure** on the integration page changes the household:
 
-Where the numbers need a rule to be understood, an info icon at the end of the
-header explains them, as on Home Assistant's self-sufficiency gauge: the
-economics, savings, and heat meters, costs by source and the electricity bill,
-and the key figures of the average price with solar, the heat price, the payback,
-and the return. A pointer shows it while over the icon; a tap keeps it open.
-The words follow [CONTEXT.md](CONTEXT.md).
-
-### Electricity Lens power flow
-
-Where the power comes from right now and where it goes, as two bars of the
-same length: above the solar panels, the battery, and the grid; below each
-consumer, Other, the battery, and the feed-in. In equals out, so the bars fit
-any household, with any number of devices. A sentence above says how much of
-the consumption the own power covers, and a list below names each part with its
-power; a part with one sensor opens its dialog. The chip shows the power the
-house takes.
-
-The card reads the power sensors of the energy dashboard: those of the grid,
-the solar panels, and the battery, and those of the individual devices. It needs
-one for the grid. Devices that belong to a category show as that category, as
-in the consumption by device; Other is the consumption minus the devices with a
-power sensor. The card follows the sensors' states, without statistics.
-
-### Electricity Lens economics
-
-The card finds the areas by itself and is built like the totals table of
-Home Assistant's energy dashboard: one row per area with what it saves per
-year on average, what it has saved, its investment, and its balance, then a row
-with the totals. Above the table a sentence says how much of all investments is
-paid back and, once there are yearly savings, in about how long everything is
-in the plus. Below solar a quieter row shows its battery's part. Without any investment only the savings appear. A row opens its sensor, which
-also says since when it counts. Its only option is a title. The card follows light and dark themes, works on
-phones and desktops, and can be used with keyboard and screen reader.
-
-### Electricity Lens savings
-
-What was saved in the selected period, as a table: by self-consumption, by the
-feed-in, by the heat pump, and by the electric car, each with its energy and
-amount. The info icon says what each row counts, for example what the former
-heating would have cost. The amounts are those of the economics card, so
-they add up without counting solar power twice; the saving on the Heating and
-Charging views includes the device's solar power and can be higher. The card
-follows the energy date selection, without one this month.
-Where a period holds a saving but no energy, the energy shows as a dash: the
-household's figures can begin later than the savings.
-
-With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
-instead: what the former heating or a combustion car would have cost, less the
-heat pump's electricity costs or the car's charging costs, and how the saving
-splits: the part the economics card counts for the heat pump or car, and the
-part it counts for solar, which gets the benefit of solar power. The card editor offers only the
-areas that are set up.
-
-### Electricity Lens heat meters
-
-COP by device: heat, electricity, and COP of each of the heat
-pump's meters in the selected period, for example heating and hot water, with
-their total below. It
-needs a heat meter per electricity meter and has no options.
-
-### Electricity Lens history
-
-A figure per hour, day, month, or year as bars, in the look of the energy
-dashboard, set up in the card editor. Without options it shows what each
-category saved, stacked by category; a month in which a category cost more
-than it saved shows below the line.
-
-| Option | Choices |
+| Option | What it does |
 |---|---|
-| Period | *Follow the date selection*, a fixed period such as last month or this year, or all years from the first one with a value |
-| Area and figure | The savings of all areas, or an area's consumption, costs, savings, or feed-in |
-| Split | By source (solar, cheap, normal, and expensive grid power, for the household with the feed-in below the line and outside the total) for consumption and the costs of the household, heat pump, and car; for the household's costs also by bill item (standing charge and grid power by price level, without the feed-in); by device (top-level devices and Other) for the household's consumption and costs; or none |
-| Line | A share or price of the same area on a second axis, for example the average price or the self-sufficiency; for the household also the grid price |
-| Further lines | Any statistics, for example the outside temperature: their mean, or their total for meters |
+| Standing charge | A new standing charge applies from the next full hour. |
+| Recompute | Computes everything again with the current data, the household and all categories, for example after you fixed a wrong reading in the statistics. All values stay. |
 
-With an *Energy date selection* card on the same dashboard it follows the
-selected period as the energy dashboard does: hours for a day, days for a week
-or month, months for a year. When the date selection compares with an earlier
-period, its bars stand paler next to the selected ones. Without a date
-selection it shows the savings per year since counting began, other figures
-for this month. The chip at the top shows the total of the bars. In YAML:
+Categories are config subentries. On the integration page each category has
+**Reconfigure** and **Delete**, and there are buttons to add the categories not
+set up yet; they lead through the same steps as the setup. **Reconfigure**
+opens a menu:
 
-```yaml
-type: custom:electricity-lens-history-card
-area: household
-figure: energy
-stack: source
-line: price
-lines:
-  - statistic: sensor.outside_temperature
-```
-
-### Electricity Lens key figures
-
-One figure for a period as a small card, like the stat cards of the energy
-dashboards; several figures are several cards. It is set up in the card editor
-without YAML. The period is *Follow the date selection* (this month without an
-*Energy date selection* card), or a fixed one such as today, last month, or
-this year, so the card also works on dashboards without a date selection.
-
-A card has one of three sources:
-
-| Source | Shows |
+| Option | What it does |
 |---|---|
-| Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
-| Statistic | Any statistic of Home Assistant, as it is: its total over the period for a meter, its mean, minimum, or maximum for a measurement; the mean can show the range of the period below. The editor offers only what the statistic has |
-| Entity | Any entity's current state, as Home Assistant shows it |
+| Values from now on | New prices, consumptions, COP, tariff, or price sensor. They apply from the next full hour. |
+| Averages before the setup | Corrects the averages of the time before the setup. That time is computed again. |
+| Meters and extra cost | Other meters or another former heating compute everything again; another former heating asks for its prices. The extra cost applies at once. |
+| Recompute | Computes the category again with the current data, for example after you fixed a wrong reading in the statistics. All values stay. |
+| Purchase cost (solar) | The plant's and the battery's. Applies at once. |
 
-Areas and their figures:
+Changes in the energy dashboard are followed automatically: changes to its
+grid, solar, battery, or devices compute the household again, and a category
+whose meters changed.
 
-| Area | Figures |
-|---|---|
-| Household | Consumption, costs, average price, self-sufficiency (solar share), cheap and expensive grid power with the share of hours of that level (where the grid price had it) |
-| Grid | Grid import, feed-in, the electricity bill (what the supplier charges, without the feed-in), grid costs with their parts, average grid price, tariff saving (where the grid price had levels) |
-| Solar | Solar production, self-consumption, saving (with the solar panels), the battery's part of it (with a battery), solar today and tomorrow (with a forecast in the energy dashboard), payback and return (with an investment) |
-| Heat pump | Electricity, electricity costs, average price, average grid price, solar share, heat, COP, heat price, comparison costs (the former heating), saving with the part by solar power, payback and return (with an investment) |
-| Electric car | Charged energy, charging costs, average price, average grid price, solar share, distance, costs per 100 km, comparison costs (the combustion car), saving with the part by solar power, payback and return (with an investment) |
-| Each device, Other | Consumption, costs, average price, average grid price, solar share, cheap and expensive grid power |
+The rule behind it: a fact with a date, such as a price or a standing charge,
+applies from the next full hour, so what was computed stays. A rule of the
+calculation, or a correction of the past, applies to the whole history.
 
-The card computes nothing beyond adding up the hours of the period, taking one
-such sum from another, and dividing two of them, for example costs by consumption; every cost and
-share per hour comes from the integration. In YAML:
+## FAQ
 
-```yaml
-type: custom:electricity-lens-figures-card
-period: energy_date
-area: household
-figure: cost
-```
+**Why do my costs differ from the energy dashboard?**
+The energy dashboard shows what the grid imports cost. Electricity Lens shows
+that too, as *grid import cost* and within the *electricity bill*, which also
+holds the standing charge. Its *costs* answer another question: what your
+consumption cost, so they also count the solar power you used, at the feed-in
+compensation you did not earn by using it. Without that, a device running on
+solar power would look free.
 
-```yaml
-type: custom:electricity-lens-figures-card
-statistic: sensor.outside_temperature
-value: mean
-secondary: range
-```
+**Why does the electricity bill differ from my supplier's bill?**
+It counts what the energy dashboard's meter and price say, hour by hour. A
+price that is wrong in Home Assistant, a missing standing charge, or a bill
+period that does not match the month all make a difference. Discounts, taxes
+outside the kWh price, and credits are not known to Home Assistant.
 
-```yaml
-type: custom:electricity-lens-figures-card
-entity: sensor.electricity_price
-name: Price now
-```
+**Does it work with dynamic tariffs such as Tibber, Octopus, or Nord Pool?**
+Yes. Electricity Lens uses whatever price the energy dashboard has, a price
+entity or a cost statistic, hour by hour. Price levels and the tariff saving
+follow the prices on their own, so you see how much grid power you bought in
+cheap hours.
 
-### Electricity Lens breakdown
+**I have a flat tariff. Why is there nothing about cheap hours?**
+A flat price has no levels, so there are no cheap or expensive hours, and the
+dashboard leaves those figures out. The grid power is then just "Grid".
 
-Shares of a whole for a period, as a ring or as bars, set up in the card
-editor. The ring is drawn like the pie of Home Assistant's devices graph:
-each share labeled outside, the total in the middle, and a legend below
-that hides a share with a tap.
+**Why is my heat pump's saving lower than I expected?**
+It compares with the former heating's energy price only: the standing charge of
+a former gas connection, maintenance, and the chimney sweep are left out. If
+you cancelled the gas connection, your real saving is higher. Check too that
+the price of the former heating and, without heat meters, the COP are right.
 
-- **By source**: solar power and grid power by price level, for the
-  household, a device, or Other.
-- **By device**: the household's consumption or costs by top-level device
-  and Other, each with its consumption and average price, or a category's
-  devices, such as the heat pump's heating and hot water. Bars can be
-  colored by the sources of each device, in the bar's own unit: a bar of costs
-  splits by what each source cost. A device that would read as zero is left out.
-- **Statistics**: the shares of any statistics as they are, in their unit, for
-  example the heat for heating and hot water from the heat pump's own sensors.
-  They need a total and one unit; otherwise the card says why it shows no
-  shares.
+**Why is a saving negative?**
+When electricity is expensive and gas or fuel cheap, a heat pump or electric
+car can cost more than what it replaced, for a month or longer. Electricity
+Lens shows that instead of hiding it.
 
-A bar whose device or statistic is an entity opens its dialog with a tap. When
-the date selection compares with an earlier period, that period shows as a
-paler inner ring, or as a thin bar under each bar. The period is *Follow the
-date selection* (this month without one) or a fixed period.
+**Why is there no yearly saving or payback date yet?**
+A yearly average needs twelve months of data; before that, seasons would
+distort it.
 
-```yaml
-type: custom:electricity-lens-breakdown-card
-area: household
-by: consumer
-figure: cost
-display: bars
-color_by_source: true
-```
+**Does it count solar power twice?**
+No. The three savings add up to the balance: the benefit of solar power belongs
+to the solar panels, and heat pump and car pay for all their electricity at
+the grid price. Only their own views add their solar power to their saving, and
+name that part.
 
-## The dashboard
+**I have a balcony plant without a feed-in meter.**
+That works. All solar power then counts as used in the house; the setup warns
+about it.
 
-Electricity Lens brings a finished electricity dashboard. Add it under
-**Settings › Dashboards › Add dashboard**, under *Community dashboards*:
-**Electricity Lens**. Or in YAML:
+**I have a home battery.**
+It counts as part of the solar system. Its part of the solar saving is shown on
+its own, with its own payback if you enter its purchase cost.
 
-```yaml
-strategy:
-  type: custom:electricity-lens
-```
+**How long does the first computation take?**
+A few minutes for several years of data, longer on a Raspberry Pi. The cards
+show the progress, and a restart continues where it stopped.
 
-It has no settings. It asks the integration what the household has and shows
-only the views and cards that fit: costs by device need individual devices in
-the energy dashboard, and shares by source need solar power or a grid price
-with levels in the last 30 days.
-Each view answers one question, and each card has one home; only the first
-view repeats headline figures, always for today. The other views follow the
-energy date selection.
+**Does it change my energy dashboard or my data?**
+No. It only reads the energy dashboard and the recorder's statistics, and
+writes statistics of its own under `electricity_lens:`. Deleting the
+integration removes them.
 
-| View | Question | Shows |
-|---|---|---|
-| Now | How is today going? | Where the power comes from and where it goes right now, with a power sensor for the grid in the energy dashboard; the economics card, which always shows the current state; the solar forecast for the rest of today and for tomorrow as gauges up to the best solar day of the last twelve months, red below about a third of it and green from about two thirds once the data covers a year; costs and consumption today; each investment's payback, and once paid back its return |
-| Consumption | Where does my electricity come from, and where does it go? | Consumption by source; solar production and forecast; consumption over time by device; power flow, electricity mix, self-sufficiency, and self-consumption |
-| Costs | What does my electricity cost, and what did I save? | The electricity bill with the grid price; the costs of all consumption by source, solar power included, with the average price; the same costs by device; average grid price and average price; where the grid price had levels in the last 30 days, the share of grid power from cheap hours and the tariff saving, and the share from expensive hours where there were some; devices ranked and split by source; the savings of the period as a table |
-| Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the COP; its electricity by source; its costs by source with the average price; COP, heat price, its electricity mix, heat, electricity, and COP per meter, and, with a former heating, its saving reckoned up |
-| Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and, compared with a combustion car, the saving reckoned up |
+**Does it send data anywhere?**
+No. It runs locally and calls no online service.
 
-### Colors
+**I fixed a wrong meter reading. How do I update the figures?**
+Choose *Configure › Recompute* on the integration page. It computes everything
+again with the corrected statistics.
 
-All cards share one color system built on Home Assistant's energy and graph
-colors, so themes that change those change the cards too:
+**I took control of the dashboard. Why don't I get new views?**
+A dashboard taken over keeps the views it stored. To get the current layout,
+add the Electricity Lens dashboard again, or copy the new cards into yours.
 
-- solar power is the solar color. Grid power is one family: cheap is light,
-  normal is the grid color, expensive is dark. The feed-in is the return
-  color and shows below the line.
-- Devices take Home Assistant's graph colors in the order of the energy
-  dashboard, as in its own graph of individual devices. The heat pump has
-  one fixed red of its own, never the gas color; the car has the color of
-  its device. "Other" is grey.
-- A battery has the energy dashboard's battery colors: one while it gives
-  power, one while it takes it.
-- Bars are amounts. Prices and ratios are thin dashed grey lines on the right
-  axis; prices step, because an hour's price holds for the whole hour. Lines
-  of other statistics are dotted.
-
-Whoever wants more takes control of the dashboard (⋮ › *Take control*) and
-builds on with the same cards.
-
-## How the data updates
-
-Electricity Lens reads the recorder's hourly long-term statistics of the meters
-in the energy dashboard. It checks for newly compiled hours every 15 minutes,
-and at once when the energy dashboard changes. Each hour is valued with the
-prices of that hour. Only the power flow card shows the current states of the
-power sensors instead. When Home Assistant was off, the recorder reports the
-missed energy with the next hour, so no energy is lost; prices of the missing
-hours are not known and the next hour's price is used.
-
-## Example automation
-
-Notify when the heat pump has paid for itself:
-
-```yaml
-triggers:
-  - trigger: numeric_state
-    entity_id: sensor.heat_pump_paid_back
-    above: 100
-actions:
-  - action: notify.notify
-    data:
-      message: "The heat pump has paid for itself."
-```
-
-## Known limitations
-
-- The battery's part is split from the solar saving hour by hour, with
-  the battery charging from solar power first and giving to the house first.
-  Within an hour that charges and gives, or that charges from both, the split
-  between the two can differ from what really flowed; their sum cannot.
-- The time before the setup is computed with one average per value, because
-  Home Assistant does not know earlier gas, oil, or fuel prices. A price
-  sensor's history from before the setup is not used.
-- Only data Home Assistant has counts. Savings from before Home Assistant
-  recorded the energy dashboard cannot be imported.
-- Several cars sharing a wallbox use one average consumption.
-- The yearly average is a plain average since counting began; the first and
-  last partial seasons can make it a little high or low.
-- The energy dashboard and the recorder statistics have no public Python
-  interface. Electricity Lens keeps all access to them in one module and raises a
-  repair issue instead of showing wrong numbers if a Home Assistant update
-  changes them.
+**Which languages are there?**
+English and German, following Home Assistant's language.
 
 ## Troubleshooting
 
@@ -593,8 +701,32 @@ actions:
   or choose another one with *Reconfigure*.
 - **No payback percentage**: enter the purchase or extra cost.
 - **The card says it is calculating for long**: if its percentage no longer
-  rises, download the diagnostics from the integration page and open an issue
-  with them.
+  rises, download the diagnostics from the integration page and open an
+  [issue](https://github.com/ignazhabibi/ha-electricity-lens/issues) with them.
+
+## Known limitations
+
+- Not supported: other alternatives than the former heatings above and a
+  combustion car, or none; gas prices per cubic metre; the standing charge of a
+  former gas or district heating; solar thermal; investments from a helper; and
+  fetching prices from online services. Price sensors you already have can be
+  used, though.
+- The battery's part is split from the solar saving hour by hour, with the
+  battery charging from solar power first and giving to the house first. Within
+  an hour that charges and gives, or that charges from both, the split between
+  the two can differ from what really flowed; their sum cannot.
+- The time before the setup is computed with one average per value, because
+  Home Assistant does not know earlier gas, oil, or fuel prices. A price
+  sensor's history from before the setup is not used.
+- Only data Home Assistant has counts. Savings from before Home Assistant
+  recorded the energy dashboard cannot be imported.
+- Several cars sharing a wallbox use one average consumption.
+- The yearly average is a plain average since counting began; the first and
+  last partial seasons can make it a little high or low.
+- The energy dashboard and the recorder statistics have no public Python
+  interface. Electricity Lens keeps all access to them in one module and raises
+  a repair issue instead of showing wrong numbers if a Home Assistant update
+  changes them.
 
 ## Removal
 
@@ -611,7 +743,7 @@ removes that category's saving statistic.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Automated coding agents also follow
-[AGENTS.md](AGENTS.md).
+[AGENTS.md](AGENTS.md). The words on the cards follow [CONTEXT.md](CONTEXT.md).
 
 ## License
 
