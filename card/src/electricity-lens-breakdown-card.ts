@@ -63,6 +63,10 @@ export function breakdownTitle(t: Localize, config: BreakdownCardConfig, area: F
 
 // Room for the 180 px ring and its labels outside, with the legend below.
 const RING_HEIGHT = "240px";
+/** The sources a bar of a device splits into, in the order of the key. */
+const MIX_SOURCES = ["solar", "cheap", "grid", "expensive"] as const;
+type MixSource = (typeof MIX_SOURCES)[number];
+
 // The legend icons of HA's chart legend: a checked and an empty circle.
 const CHECK =
   "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z";
@@ -79,7 +83,7 @@ interface Part {
   /** The entity whose dialog a tap opens, if the part is one. */
   entity?: string;
   /** For consumers: the value per source, to split the bar. */
-  mix?: Array<{ color: string; value: number }>;
+  mix?: Array<{ source: MixSource; color: string; value: number }>;
   /** For consumers by costs: their energy, for the average price. */
   energy?: number;
 }
@@ -306,16 +310,17 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
             expensive: money ? of("expensive_cost") : expensive,
           };
           part.mix = [
-            { color: colors.solar, value: sources.solar },
-            { color: colors.cheap, value: sources.cheap },
+            { source: "solar", color: colors.solar, value: sources.solar },
+            { source: "cheap", color: colors.cheap, value: sources.cheap },
             {
+              source: "grid",
               color: colors.grid,
               value: Math.max(
                 (money ? of("cost") : energy) - sources.solar - sources.cheap - sources.expensive,
                 0
               ),
             },
-            { color: colors.expensive, value: sources.expensive },
+            { source: "expensive", color: colors.expensive, value: sources.expensive },
           ];
         }
       }
@@ -344,6 +349,18 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     return breakdownTitle(this._localize, this._config, this._area());
   }
 
+
+  /** The parts that read as more than zero in the period or the one compared
+   * with; without cheap or expensive grid power the rest is the grid power. */
+  private _occurring(parts: Part[]): Part[] {
+    const zero = this._value(0);
+    const shown = parts.filter(
+      (part) => this._value(part.value) !== zero || (part.compare !== undefined && this._value(part.compare) !== zero)
+    );
+    if (this._by !== "source" || shown.some((part) => part.id === "cheap" || part.id === "expensive")) return shown;
+    const t = this._localize;
+    return shown.map((part) => (part.id === "grid" && part.name === t("mix.normal") ? { ...part, name: t("mix.grid") } : part));
+  }
 
   /** The ring on HA's chart element, as in the user's energy cards, with
    * HA's chart legend below: a tap hides a part and the ring closes up. */
@@ -426,6 +443,14 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     const widthOf = (value: number) => (max > 0 ? Math.max((value / max) * 100, 0) : 0);
     const split = this._config.color_by_source === true && this._by === "consumer";
     const t = this._localize;
+    // The key names only the sources the bars hold.
+    const keys = MIX_SOURCES.filter(
+      (source) =>
+        this._value(
+          shown.flatMap((part) => part.mix ?? []).reduce((sum, item) => sum + (item.source === source ? item.value : 0), 0)
+        ) !== zero
+    );
+    const levels = keys.includes("cheap") || keys.includes("expensive");
     return html`<div class="bars">
       ${shown.map((part) => {
         const width = widthOf(part.value);
@@ -482,19 +507,9 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
       })}
       ${split
         ? html`<div class="key">
-            ${(["solar", "cheap", "grid", "expensive"] as const)
-              .filter(
-                (key) =>
-                  (key !== "cheap" || this._info?.levels.cheap != null) &&
-                  (key !== "expensive" || this._info?.levels.expensive != null)
-              )
-              .map(
+            ${keys.map(
               (key) => html`<span><span class="dot" style="--c: ${CSS_COLORS[key]}"></span>${t(
-                key === "grid"
-                  ? this._info?.levels.cheap != null || this._info?.levels.expensive != null
-                    ? "source.normal"
-                    : "source.grid"
-                  : `source.${key}`
+                key === "grid" ? (levels ? "source.normal" : "source.grid") : `source.${key}`
               )}</span>`
             )}
           </div>`
@@ -520,7 +535,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;
     else if (this._sharesProblem()) body = html`<p class="summary">${this._sharesProblem()}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
-    else body = display === "bars" ? this._bars(parts) : this._ring(parts);
+    else body = display === "bars" ? this._bars(parts) : this._ring(this._occurring(parts));
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${this._title()}</h2>

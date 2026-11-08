@@ -303,7 +303,10 @@ change are not stored; statistics cards carry the sum over them.
 
 Like Home Assistant's energy cards, the cards that follow the energy date
 selection take `collection_key` in YAML, for a date selection with a key of its
-own. Without one they follow the dashboard's.
+own. Without one they follow the dashboard's. Their legends name only what
+occurs in the period, or in the period compared with: a month without
+expensive hours has no "Grid expensive", and without cheap or expensive hours
+the grid power is just "Grid".
 
 Where the numbers need a rule to be understood, an info icon at the end of the
 header explains them, as on Home Assistant's self-sufficiency gauge: the
