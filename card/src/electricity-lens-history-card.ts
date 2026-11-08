@@ -15,7 +15,7 @@ import {
   type TemplateResult,
 } from "lit";
 
-import { barChart, watchChart, type ChartLine, type ChartSeries } from "./chart";
+import { barChart, occurs, watchChart, type ChartLine, type ChartSeries } from "./chart";
 import { consumerColors, palette } from "./colors";
 import { checkCollectionKey, followEnergyDate } from "./energy-date";
 import {
@@ -574,6 +574,12 @@ export class ElectricityLensHistoryCard extends LensCard {
           labels: this._labels(loaded.compareSlots, plan.period),
         }
       : undefined;
+    // Without cheap or expensive grid power in the period, the rest is the
+    // grid power, not its normal part.
+    const all = [...series, ...(compare?.series ?? [])];
+    if (!all.some((item) => (item.id === "cheap" || item.id === "expensive") && occurs(item.values))) {
+      for (const item of all) if (item.id === "grid" && item.name === t("source.normal")) item.name = t("source.grid");
+    }
     const lineUnits: Partial<Record<Unit, string>> = {
       price: this.hass?.config.currency === "EUR" ? "ct/kWh" : `${fmt.currencySymbol()}/kWh`,
       percent: "%",

@@ -258,7 +258,25 @@ export function timeAxis(axis: TimeAxis): Record<string, unknown> {
 /** The data and options for `ha-chart-base`. Values can be negative, for
  * example a heat pump's saving in a month of cheap gas: those bars stack
  * downwards. Series are told apart by their ids, never by their names. */
-export function barChart(input: ChartInput) {
+/** Below this, an amount reads as zero, in kWh or money. */
+const NOTHING = 0.0005;
+
+/** Whether a series has a value in its period that does not read as zero. */
+export const occurs = (values: Array<number | null>): boolean =>
+  values.some((value) => value !== null && Math.abs(value) >= NOTHING);
+
+export function barChart(chart: ChartInput) {
+  // The legend names only what occurs: a series without a value in the
+  // selection or the comparison, or a line without one, is left out.
+  const shown = new Set(
+    [...chart.series, ...(chart.compare?.series ?? [])].filter((item) => occurs(item.values)).map((item) => item.id)
+  );
+  const input: ChartInput = {
+    ...chart,
+    series: chart.series.filter((item) => shown.has(item.id)),
+    compare: chart.compare && { ...chart.compare, series: chart.compare.series.filter((item) => shown.has(item.id)) },
+    lines: (chart.lines ?? []).filter((line) => occurs(line.values)),
+  };
   const lines = input.lines ?? [];
   const compare = input.compare;
   // Compared bars come first, so they stand left of the selection's.

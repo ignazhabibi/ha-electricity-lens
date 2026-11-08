@@ -52,6 +52,36 @@ test("compared bars stand left, paler, and go with their legend entry", () => {
   assert.deepEqual(chart.options.legend.data, [{ id: "solar", secondaryIds: ["compare-solar"], name: "Solar" }]);
 });
 
+test("the legend names only what occurs in the selection or the comparison", () => {
+  const chart = barChart({
+    slots: [0, 86_400_000],
+    axis: { min: 0, max: 86_400_000, language: "en" },
+    labels: ["1", "2"],
+    series: [
+      { id: "cheap", name: "Grid cheap", color: "#90caf9", values: [1, 2] },
+      { id: "expensive", name: "Grid expensive", color: "#1565c0", values: [0, null] },
+      { id: "solar", name: "Solar", color: "#ff9800", values: [0, 0] },
+    ],
+    compare: {
+      series: [
+        { id: "cheap", name: "Grid cheap", color: "#90caf9", values: [1, 1] },
+        { id: "expensive", name: "Grid expensive", color: "#1565c0", values: [0, 0] },
+        { id: "solar", name: "Solar", color: "#ff9800", values: [0.4, 0] },
+      ],
+      labels: ["a", "b"],
+    },
+    lines: [{ id: "price", name: "Avg. grid price", color: "#9e9e9e", values: [null, null], format: String }],
+    unit: "kWh",
+    total: "Total",
+    format: String,
+    tick: String,
+  });
+  assert.deepEqual(
+    chart.options.legend.data.map((entry) => entry.id),
+    ["cheap", "solar"]
+  );
+});
+
 test("bars stand at their slot's start on a time axis, as Home Assistant's energy graphs", () => {
   const day = 86_400_000;
   const chart = barChart({
