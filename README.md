@@ -27,6 +27,13 @@ template sensor to write.
 > as right as that data. They are not financial, tax, or investment advice:
 > check decisions that matter against your bills.
 
+> [!NOTE]
+> Right after setup, Electricity Lens computes your whole history, hour by
+> hour. Depending on how many years of data Home Assistant has, this takes a
+> few minutes, and on weaker hardware such as a Raspberry Pi considerably
+> longer. Until then the cards say how far it is, and a restart in between
+> continues where it stopped.
+
 ![The Costs view of the Electricity Lens dashboard: the electricity bill and the costs by source per month, key figures, the cost distribution by device, and the savings of the year](https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/images/costs.png)
 
 ## Contents
@@ -107,10 +114,8 @@ service and sends no data anywhere.
    picker as well. There is no dashboard resource to add: the integration
    serves the cards itself and updates them with the integration.
 
-The past is computed in the background right after setup. With several years
-of data this takes a few minutes, on small hardware such as a Raspberry Pi
-longer; until then the cards say how far it is. A restart in between continues
-where it stopped.
+The past is computed in the background right after setup; on weaker hardware
+this can take a while (see the note at the top).
 
 ## Setup
 
