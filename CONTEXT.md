@@ -29,7 +29,7 @@ from their bills and devices.
 | Ersparnis | Saving | What an area saves against its comparison, in money | Energy |
 | Vergleich | Comparison | What a heat pump or car is compared with: the former heating, a combustion car | |
 | Investition | Investment | Purchase cost or extra cost of an area | |
-| Bilanz | Balance | Savings minus investments | |
+| Bilanz | Balance | Savings minus investments, the column of the economics card and its sensor | A share of a saving: name the area that counts it, such as "davon PV-Anlage" |
 | Amortisation, amortisiert | Payback, paid back | The share of the investment the savings have covered | |
 | Rendite | Return | What the savings earn a year beyond the investment | |
 | Gerät | Device | An individual device of the energy dashboard | "Verbraucher", "consumer" |
@@ -91,6 +91,9 @@ these places goes into its list there.
   households of every kind; review its diff when a title changes.
 - Where a card needs more words, they go into its info, not into its title or
   rows.
+- Where a saving is split between areas, the rows name the area that counts
+  each part, as the economics card does: "davon Wärmepumpe", "davon
+  PV-Anlage".
 
 ## Info
 

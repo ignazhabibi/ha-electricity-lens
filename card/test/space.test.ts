@@ -105,8 +105,9 @@ const PLACES: Record<string, Place> = {
       "savings_instead_fuel",
       "figure_of",
       "savings_saved",
-      "savings_solar_part",
-      "savings_in_balance",
+      "savings_part_heat_pump",
+      "savings_part_wallbox",
+      "savings_part_pv",
     ],
   },
   "key figure title": {
