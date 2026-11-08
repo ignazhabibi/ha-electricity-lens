@@ -3,28 +3,28 @@
     "step": {
       "user": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your solar panels, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_devices": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your solar panels, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nHeat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_no_solar": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nThe PV plant needs PV production in the [energy dashboard](/config/energy).",
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your solar panels, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nSolar needs solar production in the [energy dashboard](/config/energy).",
         "data": {
           "categories": "Which savings should be evaluated? (optional)"
         }
       },
       "user_household_only": {
         "title": "Electricity Lens",
-        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout PV production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
+        "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your solar panels, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}\n\nWithout solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed."
       },
       "household": {
         "title": "Household",
@@ -41,27 +41,27 @@
         }
       },
       "pv": {
-        "title": "PV plant",
-        "description": "Counted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+        "title": "Solar",
+        "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
           "battery_investment": "Battery purchase cost (optional)"
         },
         "data_description": {
           "investment": "For the payback",
-          "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
+          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
         }
       },
       "pv_no_export": {
-        "title": "PV plant",
-        "description": "**The energy dashboard has no feed-in.** All PV power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+        "title": "Solar",
+        "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
           "battery_investment": "Battery purchase cost (optional)"
         },
         "data_description": {
           "investment": "For the payback",
-          "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
+          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
         }
       },
       "heat_pump": {
@@ -76,7 +76,7 @@
         "data_description": {
           "meters": "Total meter, or heating and hot water separately",
           "heat_meters": "Heat meters for the same parts as the electricity consumption",
-          "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
+          "heating": "None, as in a new build: no saving, but heat, COP, and heat price",
           "investment": "Extra purchase cost over the former heating. For the payback."
         }
       },
@@ -99,7 +99,7 @@
         "description": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "gas_price": "Gas price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "gas_price_entity": "Gas price sensor (optional)"
         },
@@ -115,7 +115,7 @@
         "description": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "gas_price": "Gas price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "gas_price_entity": "Gas price sensor (optional)"
         },
@@ -145,7 +145,7 @@
         "description": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "oil_price": "Heating oil price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "oil_price_entity": "Heating oil price sensor (optional)"
         },
@@ -161,7 +161,7 @@
         "description": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "oil_price": "Heating oil price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "oil_price_entity": "Heating oil price sensor (optional)"
         },
@@ -191,7 +191,7 @@
         "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "lpg_price": "LPG price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "lpg_price_entity": "LPG price sensor (optional)"
         },
@@ -207,7 +207,7 @@
         "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "lpg_price": "LPG price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "lpg_price_entity": "LPG price sensor (optional)"
         },
@@ -237,7 +237,7 @@
         "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "pellets_price": "Pellet price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "pellets_price_entity": "Pellet price sensor (optional)"
         },
@@ -253,7 +253,7 @@
         "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "pellets_price": "Pellet price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "pellets_price_entity": "Pellet price sensor (optional)"
         },
@@ -283,7 +283,7 @@
         "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "district_heating_price": "District heating price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "district_heating_price_entity": "District heating price sensor (optional)"
         },
@@ -299,7 +299,7 @@
         "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "district_heating_price": "District heating price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "district_heating_price_entity": "District heating price sensor (optional)"
         },
@@ -329,7 +329,7 @@
         "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "electric_price": "Heating electricity price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "electric_price_entity": "Heating electricity price sensor (optional)"
         },
@@ -345,7 +345,7 @@
         "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
         "data": {
           "electric_price": "Heating electricity price",
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)",
           "electric_price_entity": "Heating electricity price sensor (optional)"
         },
@@ -358,7 +358,7 @@
       },
       "heat_pump_values_none": {
         "title": "Average since {since}",
-        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
         "data": {
           "tariff": "Own electricity tariff (optional)"
         },
@@ -368,9 +368,9 @@
       },
       "heat_pump_values_none_scop": {
         "title": "Average since {since}",
-        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
         "data": {
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)"
         },
         "data_description": {
@@ -380,9 +380,9 @@
       },
       "heat_pump_values_none_scop_until": {
         "title": "Average since {since}",
-        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+        "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
         "data": {
-          "scop": "Seasonal COP",
+          "scop": "COP",
           "tariff": "Own electricity tariff (optional)"
         },
         "data_description": {
@@ -437,7 +437,7 @@
       "meters_required": "Choose at least one meter.",
       "heating_required": "Choose the former heating.",
       "value_required": "Enter a value above 0.",
-      "scop_range": "Enter a seasonal COP between 1 and 10.",
+      "scop_range": "Enter a COP between 1 and 10.",
       "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
     },
     "abort": {
@@ -487,33 +487,33 @@
   },
   "config_subentries": {
     "pv": {
-      "entry_type": "PV plant",
+      "entry_type": "Solar",
       "initiate_flow": {
-        "user": "Add PV plant"
+        "user": "Add solar"
       },
       "step": {
         "pv": {
-          "title": "PV plant",
-          "description": "Counted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+          "title": "Solar",
+          "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
             "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
             "investment": "For the payback",
-            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
+            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
           }
         },
         "pv_no_export": {
-          "title": "PV plant",
-          "description": "**The energy dashboard has no feed-in.** All PV power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+          "title": "Solar",
+          "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
             "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
             "investment": "For the payback",
-            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
+            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
           }
         },
         "reconfigure": {
@@ -531,12 +531,12 @@
           },
           "data_description": {
             "investment": "For the payback",
-            "battery_investment": "For the battery's own payback. The PV plant's counts both, so leave the battery out above"
+            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
           }
         },
         "recompute": {
           "title": "Recompute",
-          "description": "Computes the PV plant again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are."
+          "description": "Computes the solar saving again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are."
         }
       },
       "error": {
@@ -544,13 +544,13 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "scop_range": "Enter a COP between 1 and 10.",
         "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -574,7 +574,7 @@
           "data_description": {
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
-            "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
+            "heating": "None, as in a new build: no saving, but heat, COP, and heat price",
             "investment": "Extra purchase cost over the former heating. For the payback."
           }
         },
@@ -599,7 +599,7 @@
           "data_description": {
             "meters": "Total meter, or heating and hot water separately",
             "heat_meters": "Heat meters for the same parts as the electricity consumption",
-            "heating": "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
+            "heating": "None, as in a new build: no saving, but heat, COP, and heat price",
             "investment": "Extra purchase cost over the former heating. For the payback."
           }
         },
@@ -626,7 +626,7 @@
           "description": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "gas_price": "Gas price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "gas_price_entity": "Gas price sensor (optional)"
           },
@@ -642,7 +642,7 @@
           "description": "For the time since {since}, Home Assistant does not know your gas prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "gas_price": "Gas price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "gas_price_entity": "Gas price sensor (optional)"
           },
@@ -672,7 +672,7 @@
           "description": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "oil_price": "Heating oil price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "oil_price_entity": "Heating oil price sensor (optional)"
           },
@@ -688,7 +688,7 @@
           "description": "For the time since {since}, Home Assistant does not know your heating oil prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "oil_price": "Heating oil price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "oil_price_entity": "Heating oil price sensor (optional)"
           },
@@ -718,7 +718,7 @@
           "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "lpg_price": "LPG price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "lpg_price_entity": "LPG price sensor (optional)"
           },
@@ -734,7 +734,7 @@
           "description": "For the time since {since}, Home Assistant does not know your LPG prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "lpg_price": "LPG price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "lpg_price_entity": "LPG price sensor (optional)"
           },
@@ -764,7 +764,7 @@
           "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "pellets_price": "Pellet price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "pellets_price_entity": "Pellet price sensor (optional)"
           },
@@ -780,7 +780,7 @@
           "description": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "pellets_price": "Pellet price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "pellets_price_entity": "Pellet price sensor (optional)"
           },
@@ -810,7 +810,7 @@
           "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "district_heating_price": "District heating price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "district_heating_price_entity": "District heating price sensor (optional)"
           },
@@ -826,7 +826,7 @@
           "description": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "district_heating_price": "District heating price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "district_heating_price_entity": "District heating price sensor (optional)"
           },
@@ -856,7 +856,7 @@
           "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "electric_price": "Heating electricity price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "electric_price_entity": "Heating electricity price sensor (optional)"
           },
@@ -872,7 +872,7 @@
           "description": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
           "data": {
             "electric_price": "Heating electricity price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "electric_price_entity": "Heating electricity price sensor (optional)"
           },
@@ -885,7 +885,7 @@
         },
         "heat_pump_values_none": {
           "title": "Average since {since}",
-          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
           "data": {
             "tariff": "Own electricity tariff (optional)"
           },
@@ -895,9 +895,9 @@
         },
         "heat_pump_values_none_scop": {
           "title": "Average since {since}",
-          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
           "data": {
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -907,9 +907,9 @@
         },
         "heat_pump_values_none_scop_until": {
           "title": "Average since {since}",
-          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+          "description": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
           "data": {
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -922,7 +922,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "gas_price": "Gas price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "gas_price_entity": "Gas price sensor (optional)"
           },
@@ -938,7 +938,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "oil_price": "Heating oil price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "oil_price_entity": "Heating oil price sensor (optional)"
           },
@@ -954,7 +954,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "lpg_price": "LPG price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "lpg_price_entity": "LPG price sensor (optional)"
           },
@@ -970,7 +970,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "pellets_price": "Pellet price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "pellets_price_entity": "Pellet price sensor (optional)"
           },
@@ -986,7 +986,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "district_heating_price": "District heating price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "district_heating_price_entity": "District heating price sensor (optional)"
           },
@@ -1002,7 +1002,7 @@
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
             "electric_price": "Heating electricity price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)",
             "electric_price_entity": "Heating electricity price sensor (optional)"
           },
@@ -1017,7 +1017,7 @@
           "title": "Values from now on",
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1030,7 +1030,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "gas_price": "Gas price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1044,7 +1044,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "oil_price": "Heating oil price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1058,7 +1058,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "lpg_price": "LPG price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1072,7 +1072,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "pellets_price": "Pellet price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1086,7 +1086,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "district_heating_price": "District heating price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1100,7 +1100,7 @@
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
             "electric_price": "Heating electricity price",
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1113,7 +1113,7 @@
           "title": "Before the setup",
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
-            "scop": "Seasonal COP",
+            "scop": "COP",
             "tariff": "Own electricity tariff (optional)"
           },
           "data_description": {
@@ -1127,13 +1127,13 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "scop_range": "Enter a COP between 1 and 10.",
         "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -1271,13 +1271,13 @@
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
-        "scop_range": "Enter a seasonal COP between 1 and 10.",
+        "scop_range": "Enter a COP between 1 and 10.",
         "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty."
       },
       "abort": {
         "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
         "already_configured": "This is already set up. You can change it with Reconfigure.",
-        "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
+        "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
         "investment_saved": "Saved. The purchase cost applies at once."
@@ -1289,7 +1289,7 @@
       "name": "Electricity Lens"
     },
     "pv": {
-      "name": "PV plant"
+      "name": "Solar"
     },
     "heat_pump": {
       "name": "Heat pump"
@@ -1345,10 +1345,10 @@
         "name": "Saving per year"
       },
       "forecast_rest_today": {
-        "name": "PV left today"
+        "name": "Solar left today"
       },
       "forecast_tomorrow": {
-        "name": "PV tomorrow"
+        "name": "Solar tomorrow"
       },
       "payback": {
         "name": "Paid back",
@@ -1414,7 +1414,7 @@
   "selector": {
     "categories": {
       "options": {
-        "pv": "PV plant",
+        "pv": "Solar",
         "heat_pump": "Heat pump",
         "wallbox": "Electric car"
       }
@@ -1441,11 +1441,11 @@
         "household": "Household",
         "other": "Other",
         "area_grid": "Grid",
-        "area_solar": "PV",
+        "area_solar": "Solar",
         "energy": "consumption",
-        "solar": "PV power",
+        "solar": "solar power",
         "cost": "costs",
-        "solar_cost": "PV power costs",
+        "solar_cost": "solar power costs",
         "cheap": "cheap grid power",
         "cheap_cost": "cheap grid power costs",
         "expensive": "expensive grid power",
@@ -1458,7 +1458,7 @@
         "heat": "heat",
         "distance": "distance",
         "alternative_cost": "comparison costs",
-        "solar_saving": "saving by PV power",
+        "solar_saving": "saving by solar power",
         "battery_saving": "battery saving",
         "saving": "saving"
       }

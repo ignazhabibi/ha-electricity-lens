@@ -19,21 +19,21 @@ OUT = Path(__file__).parent.parent / "custom_components/electricity_lens/transla
 TEXTS: dict[str, dict[str, Any]] = {
     "en": {
         "categories": {
-            "pv": "PV plant",
+            "pv": "Solar",
             "heat_pump": "Heat pump",
             "wallbox": "Electric car",
         },
         "add": {
-            "pv": "Add PV plant",
+            "pv": "Add solar",
             "heat_pump": "Add heat pump",
             "wallbox": "Add electric car",
         },
         "overview": {
             "title": "Electricity Lens",
-            "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your PV plant, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ PV production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
+            "description": "Computes the consumption, electricity mix, and costs of your household and of each device. If you like, also what your solar panels, heat pump, and electric car have saved, and when they pay for themselves.\n\nFrom your energy dashboard:\n{grid} Grid import with electricity price\n{export} Feed-in\n{compensation} Feed-in compensation\n✓ Solar production: {solar} sources\n{battery} Battery\n✓ Individual devices: {devices}",
             "no_devices": "Heat pump and electric car need individual devices in the [energy dashboard](/config/energy).",
-            "no_solar": "The PV plant needs PV production in the [energy dashboard](/config/energy).",
-            "household_only": "Without PV production and individual devices in the [energy dashboard](/config/energy), only the household is computed.",
+            "no_solar": "Solar needs solar production in the [energy dashboard](/config/energy).",
+            "household_only": "Without solar production and individual devices in the [energy dashboard](/config/energy), only the household is computed.",
             "categories": "Which savings should be evaluated? (optional)",
         },
         "household": {
@@ -50,11 +50,11 @@ TEXTS: dict[str, dict[str, Any]] = {
             "household": "Household",
             "other": "Other",
             "area_grid": "Grid",
-            "area_solar": "PV",
+            "area_solar": "Solar",
             "energy": "consumption",
-            "solar": "PV power",
+            "solar": "solar power",
             "cost": "costs",
-            "solar_cost": "PV power costs",
+            "solar_cost": "solar power costs",
             "cheap": "cheap grid power",
             "cheap_cost": "cheap grid power costs",
             "expensive": "expensive grid power",
@@ -67,13 +67,13 @@ TEXTS: dict[str, dict[str, Any]] = {
             "heat": "heat",
             "distance": "distance",
             "alternative_cost": "comparison costs",
-            "solar_saving": "saving by PV power",
+            "solar_saving": "saving by solar power",
             "battery_saving": "battery saving",
             "saving": "saving",
         },
         "pv": {
-            "description": "Counted from {since}, when Home Assistant's PV data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
-            "no_export": "**The energy dashboard has no feed-in.** All PV power then counts as used in the house.",
+            "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
+            "no_export": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.",
         },
         "heat_pump": "Compares the heat pump with your former heating, if there was one.",
         "wallbox": "Compares the electric car with a combustion car, if you like. What is charged at the wallbox is measured.",
@@ -85,7 +85,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "pellets": "For the time since {since}, Home Assistant does not know your pellet prices. Enter averages. They also apply from now on, until you change them.",
             "district_heating": "For the time since {since}, Home Assistant does not know your district heating prices. Enter averages. They also apply from now on, until you change them.",
             "electric": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
-            "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, seasonal COP, and heat price. The values apply since {since} and from now on, until you change them.",
+            "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
             "wallbox": "For the time since {since}, Home Assistant knows neither fuel prices nor consumptions. Enter averages. They also apply from now on, until you change them.",
             "wallbox_none": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
         },
@@ -104,7 +104,7 @@ TEXTS: dict[str, dict[str, Any]] = {
         "investment": {"title": "Purchase cost"},
         "recompute": {
             "title": "Recompute",
-            "pv": "Computes the PV plant again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are.",
+            "pv": "Computes the solar saving again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are.",
             "heat_pump": "Computes the heat pump again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are.",
             "wallbox": "Computes the electric car again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are.",
         },
@@ -120,7 +120,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "investment": ("Purchase cost (optional)", "For the payback"),
             "battery_investment": (
                 "Battery purchase cost (optional)",
-                "For the battery's own payback. The PV plant's counts both, so leave the battery out above",
+                "For the battery's own payback. Solar's counts both, so leave the battery out above",
             ),
             "standing_charge": (
                 "Standing charge per month (optional)",
@@ -144,7 +144,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "heating": (
                 "Former heating",
-                "None, as in a new build: no saving, but heat, seasonal COP, and heat price",
+                "None, as in a new build: no saving, but heat, COP, and heat price",
             ),
             "gas_price": ("Gas price", "Unit price on the gas bill"),
             "oil_price": ("Heating oil price", "Average price per litre"),
@@ -160,7 +160,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "fuel_price": ("Fuel price", None),
             "scop": (
-                "Seasonal COP",
+                "COP",
                 "Estimates the heat from the electricity consumption",
             ),
             "tariff": (
@@ -223,11 +223,11 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
             ),
             "scop_until": (
-                "Seasonal COP",
+                "COP",
                 "Estimates the heat until {heat_until}; there are no readings before",
             ),
             "scop_before": (
-                "Seasonal COP",
+                "COP",
                 "Estimates the heat where none was measured",
             ),
             "now_gas_price_entity": (
@@ -274,7 +274,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "meters_required": "Choose at least one meter.",
             "heating_required": "Choose the former heating.",
             "value_required": "Enter a value above 0.",
-            "scop_range": "Enter a seasonal COP between 1 and 10.",
+            "scop_range": "Enter a COP between 1 and 10.",
             "investment_without_comparison": "Without a comparison there is no saving to pay back an extra cost. Leave it empty.",
         },
         "aborts": {
@@ -282,7 +282,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "energy_interface": "The energy dashboard cannot be read. This version of Home Assistant is not supported yet; please look for an update of Electricity Lens.",
             "single_instance_allowed": "Electricity Lens is already set up. Add more on its integration page.",
             "already_configured": "This is already set up. You can change it with Reconfigure.",
-            "not_available": "The energy dashboard does not provide the data for this. The PV plant needs PV production, heat pump and electric car need individual devices.",
+            "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
             "values_from": "The new values apply from {time}.",
             "recomputing": "It is being computed again. This usually takes less than a minute.",
             "investment_saved": "Saved. The purchase cost applies at once.",
@@ -297,8 +297,8 @@ TEXTS: dict[str, dict[str, Any]] = {
             "saving_per_year": "Saving per year",
             "annual_return": "Return per year",
             "balance": "Balance",
-            "forecast_rest_today": "PV left today",
-            "forecast_tomorrow": "PV tomorrow",
+            "forecast_rest_today": "Solar left today",
+            "forecast_tomorrow": "Solar tomorrow",
         },
         "attributes": {
             "category": "Area",
@@ -413,7 +413,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "pellets": "Für die Zeit seit dem {since} kennt Home Assistant deine Pelletpreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "district_heating": "Für die Zeit seit dem {since} kennt Home Assistant deine Fernwärmepreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "electric": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizstrompreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
-            "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, Jahresarbeitszahl und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
+            "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, COP und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
             "wallbox": "Für die Zeit seit dem {since} kennt Home Assistant weder Spritpreise noch Verbräuche. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "wallbox_none": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
         },
@@ -472,7 +472,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "heating": (
                 "Frühere Heizung",
-                "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, JAZ und Wärmepreis",
+                "Keine, etwa im Neubau: keine Ersparnis, aber Wärme, COP und Wärmepreis",
             ),
             "gas_price": ("Gaspreis", "Arbeitspreis laut Gasrechnung"),
             "oil_price": ("Heizölpreis", "Durchschnittlicher Literpreis"),
@@ -488,7 +488,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "fuel_price": ("Spritpreis", None),
             "scop": (
-                "Jahresarbeitszahl (JAZ)",
+                "COP",
                 "Schätzt die Wärme aus dem Stromverbrauch",
             ),
             "tariff": (
@@ -551,11 +551,11 @@ TEXTS: dict[str, dict[str, Any]] = {
                 "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
             ),
             "scop_until": (
-                "Jahresarbeitszahl (JAZ)",
+                "COP",
                 "Schätzt die Wärme bis {heat_until}, dafür fehlen Messwerte",
             ),
             "scop_before": (
-                "Jahresarbeitszahl (JAZ)",
+                "COP",
                 "Schätzt die Wärme, wo keine gemessen wurde",
             ),
             "now_gas_price_entity": (
@@ -602,7 +602,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "meters_required": "Wähle mindestens einen Zähler.",
             "heating_required": "Wähle die frühere Heizung.",
             "value_required": "Gib einen Wert über 0 an.",
-            "scop_range": "Gib eine JAZ zwischen 1 und 10 an.",
+            "scop_range": "Gib einen COP zwischen 1 und 10 an.",
             "investment_without_comparison": "Ohne Vergleich gibt es keine Ersparnis, die Mehrkosten zurückzahlt. Lass das Feld leer.",
         },
         "aborts": {

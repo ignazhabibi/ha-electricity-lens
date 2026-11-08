@@ -93,7 +93,7 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     await setup_entry(hass, config_entry)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    pv = _state(hass, "sensor.pv_plant_saving")
+    pv = _state(hass, "sensor.solar_saving")
     assert float(pv.state) == pytest.approx(COUNTED * PV_PER_HOUR)
     assert pv.attributes["unit_of_measurement"] == "EUR"
     assert pv.attributes["category"] == "pv"
@@ -109,18 +109,18 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert float(_state(hass, "sensor.electric_car_saving").state) == pytest.approx(
         COUNTED * WALLBOX_PER_HOUR
     )
-    assert float(_state(hass, "sensor.pv_plant_paid_back").state) == pytest.approx(
+    assert float(_state(hass, "sensor.solar_paid_back").state) == pytest.approx(
         COUNTED * PV_PER_HOUR / 10000 * 100
     )
     # No investment, no payback; and no yearly figure after two days.
     assert _state(hass, "sensor.electric_car_paid_back").state == "unknown"
-    paid_back = _state(hass, "sensor.pv_plant_paid_back")
+    paid_back = _state(hass, "sensor.solar_paid_back")
     assert paid_back.attributes["investment"] == 10000
     assert paid_back.attributes["years_left"] is None
-    annual_return = _state(hass, "sensor.pv_plant_return_per_year")
+    annual_return = _state(hass, "sensor.solar_return_per_year")
     assert annual_return.state == "unknown"
     assert annual_return.attributes["surplus"] is None
-    assert _state(hass, "sensor.pv_plant_saving_per_year").state == "unknown"
+    assert _state(hass, "sensor.solar_saving_per_year").state == "unknown"
 
     total = COUNTED * (PV_PER_HOUR + HEAT_PUMP_PER_HOUR + WALLBOX_PER_HOUR)
     assert float(
@@ -157,11 +157,11 @@ async def test_history_is_written(
     assert sums[-1] == pytest.approx(COUNTED * PV_PER_HOUR)
     assert sums[0] == pytest.approx(PV_PER_HOUR)
 
-    pv = _state(hass, "sensor.pv_plant_saving")
+    pv = _state(hass, "sensor.solar_saving")
     assert pv.attributes["statistic_id"] == "electricity_lens:pv_saving"
     assert "state_class" not in pv.attributes
     # The sensor keeps no statistics of its own.
-    assert await statistic_sums(hass, "sensor.pv_plant_saving", data_start) == []
+    assert await statistic_sums(hass, "sensor.solar_saving", data_start) == []
 
 
 @pytest.mark.usefixtures("energy")
@@ -310,7 +310,7 @@ async def test_new_hours_continue_the_history(
 
     sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert sums[-1] == pytest.approx((COUNTED + 2) * PV_PER_HOUR)
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+    assert float(_state(hass, "sensor.solar_saving").state) == pytest.approx(
         (COUNTED + 2) * PV_PER_HOUR
     )
 
@@ -350,7 +350,7 @@ async def test_progress_survives_restart(
         await hass.config_entries.async_reload(config_entry.entry_id)
         await hass.async_block_till_done(wait_background_tasks=True)
     changes.assert_not_called()
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+    assert float(_state(hass, "sensor.solar_saving").state) == pytest.approx(
         COUNTED * PV_PER_HOUR
     )
 
@@ -420,7 +420,7 @@ async def test_new_rule_computes_what_it_changes(
     assert coordinator.household_state.totals["household_energy"] == pytest.approx(
         energy if household_again else energy + 100
     )
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(
+    assert float(_state(hass, "sensor.solar_saving").state) == pytest.approx(
         COUNTED * PV_PER_HOUR
     )
     assert all(
@@ -629,7 +629,7 @@ async def test_no_grid_price_raises_issue(
     await set_energy_prefs(hass, {"energy_sources": [grid, PREFS["energy_sources"][1]]})
     await hass.async_block_till_done(wait_background_tasks=True)
     assert ir.async_get(hass).async_get_issue(DOMAIN, "no_grid_price") is not None
-    assert _state(hass, "sensor.pv_plant_saving").state != "unavailable"
+    assert _state(hass, "sensor.solar_saving").state != "unavailable"
 
 
 @pytest.mark.usefixtures("energy")
@@ -644,7 +644,7 @@ async def test_energy_interface_broken(
     ):
         await config_entry.runtime_data.async_refresh()
     assert ir.async_get(hass).async_get_issue(DOMAIN, "energy_interface") is not None
-    assert _state(hass, "sensor.pv_plant_saving").state == "unavailable"
+    assert _state(hass, "sensor.solar_saving").state == "unavailable"
 
 
 @pytest.mark.usefixtures("energy")
@@ -691,7 +691,7 @@ async def test_calculating_without_data(hass: HomeAssistant) -> None:
     await async_wait_recording_done(hass)
     entry = make_entry(("pv", {}))
     await setup_entry(hass, entry)
-    pv = _state(hass, "sensor.pv_plant_saving")
+    pv = _state(hass, "sensor.solar_saving")
     assert pv.state == "unknown"
     assert pv.attributes["calculating"] is False
 
@@ -754,7 +754,7 @@ async def test_prices_from_entities_battery_and_heat_meter(
     await setup_entry(hass, entry)
 
     pv_per_hour = (2.0 - 0.5 + 0.3 - 0.4) * 0.25 + 0.05
-    pv = _state(hass, "sensor.pv_plant_saving")
+    pv = _state(hass, "sensor.solar_saving")
     assert float(pv.state) == pytest.approx(COUNTED * pv_per_hour)
     # The battery stores solar power that would have earned 0.10 per kWh fed
     # in, and gives power that would have cost 0.25.
@@ -950,7 +950,7 @@ async def test_failed_update_counts_no_hour_twice(
     # Assert: each hour counts once, in the state and in the statistics.
     assert coordinator.last_update_success
     saving = COUNTED * PV_PER_HOUR
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
+    assert float(_state(hass, "sensor.solar_saving").state) == pytest.approx(saving)
     pv_sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert pv_sums[-1] == pytest.approx(saving)
     consumption = COUNTED * (1.0 - 0.5 + 2.0)
@@ -999,8 +999,8 @@ async def test_restart_continues_the_past(
     # Assert: only the PV plant's three missing chunks are computed, once each.
     assert changes.call_count == 3
     saving = COUNTED * PV_PER_HOUR
-    assert float(_state(hass, "sensor.pv_plant_saving").state) == pytest.approx(saving)
-    assert _state(hass, "sensor.pv_plant_saving").attributes["calculating"] is False
+    assert float(_state(hass, "sensor.solar_saving").state) == pytest.approx(saving)
+    assert _state(hass, "sensor.solar_saving").attributes["calculating"] is False
     pv_sums = await statistic_sums(hass, "electricity_lens:pv_saving", data_start)
     assert pv_sums[-1] == pytest.approx(saving)
     assert entry.runtime_data.progress() is None
@@ -1071,8 +1071,8 @@ async def test_forecast_sensors(hass: HomeAssistant) -> None:
     assert not registry.async_get_entity_id(
         "sensor", DOMAIN, f"{entry.entry_id}_forecast_today"
     )
-    assert float(_state(hass, "sensor.electricity_lens_pv_left_today").state) == 12.5
-    assert float(_state(hass, "sensor.electricity_lens_pv_tomorrow").state) == 20.25
+    assert float(_state(hass, "sensor.electricity_lens_solar_left_today").state) == 12.5
+    assert float(_state(hass, "sensor.electricity_lens_solar_tomorrow").state) == 20.25
 
 
 @pytest.mark.usefixtures("energy")
@@ -1081,7 +1081,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
 ) -> None:
     """A forecast added later brings its sensors; removed, they go."""
     await setup_entry(hass, config_entry)
-    assert hass.states.get("sensor.electricity_lens_pv_left_today") is None
+    assert hass.states.get("sensor.electricity_lens_solar_left_today") is None
     solar = {**PREFS["energy_sources"][1], "config_entry_solar_forecast": ["plane"]}
 
     with patch(
@@ -1092,7 +1092,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
             hass, {**PREFS, "energy_sources": [PREFS["energy_sources"][0], solar]}
         )
         await hass.async_block_till_done(wait_background_tasks=True)
-    remaining = _state(hass, "sensor.electricity_lens_pv_left_today")
+    remaining = _state(hass, "sensor.electricity_lens_solar_left_today")
     assert float(remaining.state) == 12.5
     # The scale of the forecast: the best solar day, from two days of data.
     assert remaining.attributes["best_day"] > 0
@@ -1100,7 +1100,7 @@ async def test_forecast_sensors_follow_the_energy_dashboard(
 
     await set_energy_prefs(hass, PREFS)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get("sensor.electricity_lens_pv_left_today") is None
+    assert hass.states.get("sensor.electricity_lens_solar_left_today") is None
     assert not er.async_get(hass).async_get_entity_id(
         "sensor", DOMAIN, f"{config_entry.entry_id}_forecast_rest_today"
     )

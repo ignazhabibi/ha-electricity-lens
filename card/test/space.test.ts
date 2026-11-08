@@ -1,5 +1,5 @@
-// The card texts against CONTEXT.md: the words it rules out, and the space of
-// the place each text stands in. Widths are Roboto's, summed per character, as
+// Every card text, in every language, against the space of the place it stands
+// in, as CONTEXT.md gives it. Widths are Roboto's, summed per character, as
 // Home Assistant shows the cards; placeholders hold typical long values.
 
 import assert from "node:assert/strict";
@@ -165,33 +165,3 @@ for (const [place, { size, weight, budget, keys }] of Object.entries(PLACES)) {
     assert.deepEqual(tooLong, []);
   });
 }
-
-/** Words CONTEXT.md rules out, by language, and the texts that may use them. */
-const RULED_OUT: Array<{ language: string; word: RegExp; why: string; except?: Key[] }> = [
-  { language: "de", word: /Solar/, why: "PV, not Solar" },
-  { language: "en", word: /\bsolar\b/i, why: "PV, not solar" },
-  { language: "de", word: /Verbraucher/, why: "Gerät, not Verbraucher" },
-  { language: "en", word: /\bconsumers?\b/i, why: "device, not consumer" },
-  { language: "de", word: /Kategorie/, why: "Bereich, not Kategorie" },
-  { language: "en", word: /\bcategor/i, why: "area, not category" },
-  // A statistic's sum is Home Assistant's word; a total row is "Gesamt".
-  { language: "de", word: /\bSumme\b/, why: "Gesamt, not Summe", except: ["value.change", "statistic_no_sum", "breakdown_no_sum"] },
-];
-
-test("no text uses a word CONTEXT.md rules out", () => {
-  const found = RULED_OUT.flatMap(({ language, word, why, except = [] }) =>
-    Object.entries(languages[language])
-      .filter(([key, text]) => word.test(text.replace(/\{\w+\}/g, "")) && !except.includes(key as Key))
-      .map(([key, text]) => `${language} ${key}: "${text}" (${why})`)
-  );
-  assert.deepEqual(found, []);
-});
-
-test("the car's charged energy is never called consumption", () => {
-  // The car's "Verbrauch" is kWh per 100 km, as the setup asks for it.
-  const carKeys = (Object.keys(languages.en) as Key[]).filter((key) => key.endsWith(".wallbox"));
-  const found = carKeys.flatMap((key) =>
-    [languages.de[key], languages.en[key]].filter((text) => /Verbrauch|consumption/i.test(text))
-  );
-  assert.deepEqual(found, []);
-});

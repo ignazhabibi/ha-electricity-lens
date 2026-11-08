@@ -42,7 +42,7 @@ const base = () => [
 ];
 const pv = area("solar", "solar", "PV", ["energy", "self_used", "saving"], { forecast: true, investment: true });
 const washer = (t: Localize) => area("device_washer", "device", t("figure.energy") === "Verbrauch" ? "Waschmaschine" : "Washer", ["energy", "cost"], { top_level: true });
-/** With a PV plant, a category's power is split into PV and grid power. */
+/** With solar, a category's power is split into solar and grid power. */
 const heatPump = (t: Localize, saving: boolean, solar: boolean) =>
   area("heat_pump", "category", t("category.heat_pump"), [
     "cost",
