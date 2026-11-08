@@ -12,6 +12,7 @@ import { LensCard } from "./lens-card";
 import { calculatingText, durationText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readBalance, readCategories } from "./model";
 import { cardStyles, tableStyles } from "./styles";
+import { lensTable, type Cell, type TableRow } from "./table";
 import type { BalanceFigures, Category, FiguresInfo, HomeAssistant } from "./types";
 
 interface BalanceCardConfig {
@@ -31,6 +32,13 @@ interface RowFigures {
   /** A part of the row above, such as the PV plant's battery. */
   part?: boolean;
 }
+
+/** The categories' colors until the integration's areas give theirs. */
+const CATEGORY_COLORS: Record<Category, string> = {
+  pv: "var(--electricity-lens-pv-color)",
+  heat_pump: "var(--electricity-lens-heat-pump-color)",
+  wallbox: "var(--electricity-lens-wallbox-color)",
+};
 
 /** The columns this household needs. */
 interface Columns {
@@ -119,68 +127,59 @@ export class ElectricityLensBalanceCard extends LensCard {
       perYear: categories.some((category) => category.perYear !== null),
       invested: balance.invested > 0,
     };
+    const rows: TableRow[] = categories.flatMap((category) => {
+      const own = this._row(
+        {
+          name: t(`category.${category.category}`),
+          entityId: category.entityId,
+          perYear: category.perYear,
+          saving: category.calculating ? null : category.saving,
+          investment: category.investment ?? undefined,
+          balance: category.balance,
+          category: category.category,
+        },
+        columns,
+        known
+      );
+      if (!category.battery || category.calculating) return [own];
+      const battery = category.battery;
+      return [
+        own,
+        this._row(
+          {
+            name: t("battery_part"),
+            entityId: category.entityId,
+            perYear: battery.perYear,
+            saving: battery.saving,
+            investment: battery.investment ?? undefined,
+            balance: battery.saving - (battery.investment ?? 0),
+            part: true,
+          },
+          columns
+        ),
+      ];
+    });
+    const total = this._row(
+      {
+        name: t("total"),
+        entityId: balance.entityId,
+        perYear: balance.perYear,
+        saving: calculating ? null : balance.saved,
+        investment: balance.invested,
+        balance: balance.balance,
+      },
+      columns
+    );
+    const head = [
+      t("column_area"),
+      ...(columns.perYear ? [{ text: t("column_per_year"), class: "per-year" }] : []),
+      t("column_saving"),
+      ...(columns.invested ? [t("column_investment"), t("column_balance")] : []),
+    ];
     return html`<ha-card>
       ${title}
       ${!calculating ? this._summary(balance) : nothing}
-      <div class="table">
-        <table>
-          <thead>
-            <tr>
-              <th class="swatch-cell"></th>
-              <th class="name" scope="col">${t("column_area")}</th>
-              ${columns.perYear ? html`<th class="per-year" scope="col">${t("column_per_year")}</th>` : nothing}
-              <th scope="col">${t("column_saving")}</th>
-              ${columns.invested
-                ? html`<th scope="col">${t("column_investment")}</th>
-                    <th scope="col">${t("column_balance")}</th>`
-                : nothing}
-            </tr>
-          </thead>
-          <tbody>
-            ${categories.map(
-              (category) => html`${this._row(
-                {
-                  name: t(`category.${category.category}`),
-                  entityId: category.entityId,
-                  perYear: category.perYear,
-                  saving: category.calculating ? null : category.saving,
-                  investment: category.investment ?? undefined,
-                  balance: category.balance,
-                  category: category.category,
-                },
-                columns,
-                known
-              )}${category.battery && !category.calculating
-                ? this._row(
-                    {
-                      name: t("battery_part"),
-                      entityId: category.entityId,
-                      perYear: category.battery.perYear,
-                      saving: category.battery.saving,
-                      investment: category.battery.investment ?? undefined,
-                      balance: category.battery.saving - (category.battery.investment ?? 0),
-                      part: true,
-                    },
-                    columns
-                  )
-                : nothing}`
-            )}
-          </tbody>
-          <tfoot>
-            ${this._row(
-              {
-                name: t("total"),
-                entityId: balance.entityId,
-                perYear: balance.perYear,
-                saving: calculating ? null : balance.saved,
-                investment: balance.invested,
-                balance: balance.balance,
-              },
-              columns
-            )}
-          </tfoot>
-        </table>
-      </div>
+      <div class="table">${lensTable({ head, rows, foot: [total], swatches: true }, this)}</div>
       ${calculating ? html`<p class="note">${calculatingText(t, balance.progress)}</p>` : nothing}
     </ha-card>`;
   }
@@ -201,88 +200,32 @@ export class ElectricityLensBalanceCard extends LensCard {
     return html`<p class="summary">${text}</p>`;
   }
 
-  private _row(
-    figures: RowFigures,
-    columns: Columns,
-    known?: Map<string, string>
-  ): TemplateResult {
+  private _row(figures: RowFigures, columns: Columns, known?: Map<string, string>): TableRow {
     const { name, entityId, perYear, saving, investment, balance, category, part } = figures;
-    const color = category ? known?.get(category) : undefined;
-    return html`<tr
-      class=${category ?? (part ? "part" : "total")}
-      style=${color ? `--color: ${color}` : ""}
-      @click=${() => this._moreInfo(entityId)}
-    >
-      <td class="swatch-cell">
-        ${category ? html`<span class="swatch" aria-hidden="true"></span>` : nothing}
-      </td>
-      <th class="name" scope="row">
-        <button type="button">${name}</button>
-      </th>
-      ${columns.perYear
-        ? html`<td class="per-year">
-            ${perYear === null
-              ? "–"
-              : this._localize("average", { amount: this._money(perYear) })}
-          </td>`
-        : nothing}
-      <td>${this._money(saving)}</td>
-      ${columns.invested
-        ? html`<td>${this._money(investment)}</td>
-            <td>${this._money(balance, true)}</td>`
-        : nothing}
-    </tr>`;
-  }
-
-  private _moreInfo(entityId: string): void {
-    this.dispatchEvent(
-      new CustomEvent("hass-more-info", {
-        detail: { entityId },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const cells: Cell[] = [];
+    if (columns.perYear) {
+      cells.push({
+        text: perYear === null ? "–" : this._localize("average", { amount: this._money(perYear) }),
+        class: "per-year",
+      });
+    }
+    cells.push(this._money(saving));
+    if (columns.invested) cells.push(this._money(investment), this._money(balance, true));
+    return {
+      name,
+      cells,
+      color: category ? (known?.get(category) ?? CATEGORY_COLORS[category]) : undefined,
+      entity: entityId,
+      kind: part ? "part" : undefined,
+    };
   }
 
   static styles = [
     cardStyles,
     tableStyles,
     css`
-      .pv {
-        --color: var(--electricity-lens-pv-color);
-      }
-      .heat_pump {
-        --color: var(--electricity-lens-heat-pump-color);
-      }
-      .wallbox {
-        --color: var(--electricity-lens-wallbox-color);
-      }
       .table {
         overflow-x: auto;
-      }
-      /* A part of the row above: indented and quieter, as its share. */
-      .part .name,
-      .part td {
-        color: var(--secondary-text-color);
-      }
-      .part .name {
-        padding-inline-start: 16px;
-      }
-      /* Each row opens its sensor's dialog. */
-      tr[class] {
-        cursor: pointer;
-      }
-      tr[class]:hover {
-        background-color: rgba(var(--rgb-primary-text-color), 0.04);
-      }
-      /* Reaches the row by keyboard and for screen readers; the row takes the click. */
-      button {
-        all: unset;
-        cursor: pointer;
-      }
-      button:focus-visible {
-        outline: 2px solid var(--primary-color);
-        outline-offset: 2px;
       }
       .note {
         margin: 0;
