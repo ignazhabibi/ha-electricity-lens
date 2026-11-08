@@ -114,7 +114,9 @@ export interface FiguresInfo {
   calculating: boolean;
   /** How far the past is computed, in percent; null once it is. */
   progress?: number | null;
-  levels: { cheap_until: number | null; expensive_from: number | null };
+  /** The levels the grid price has had, each with the start of its last
+   * hour in seconds; null for a level it never had. */
+  levels: { cheap: number | null; expensive: number | null };
   areas: FigureArea[];
   /** The energy dashboard's power sensors of the sources: the grid's are
    * positive while importing, the batteries' while discharging. */

@@ -21,7 +21,7 @@ const area = (id: string, kind: FigureArea["kind"], energy: string[], power: str
 // none, the washer is a device of its own.
 const info: FiguresInfo = {
   calculating: false,
-  levels: { cheap_until: null, expensive_from: null },
+  levels: { cheap: null, expensive: null },
   power: { grid: ["sensor.grid"], solar: ["sensor.solar"], battery: [] },
   areas: [
     area("household", "household", []),

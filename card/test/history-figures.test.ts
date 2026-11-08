@@ -18,7 +18,7 @@ const area = (id: string, kind: FigureArea["kind"], statistics: FigureArea["stat
 
 const infoOf = (areas: FigureArea[]): FiguresInfo => ({
   calculating: false,
-  levels: { cheap_until: null, expensive_from: null },
+  levels: { cheap: null, expensive: null },
   areas,
 });
 

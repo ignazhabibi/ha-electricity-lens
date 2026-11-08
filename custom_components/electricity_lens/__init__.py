@@ -6,7 +6,9 @@ import logging
 from pathlib import Path
 
 from homeassistant.components import frontend
-from homeassistant.components.http import StaticPathConfig  # pyright: ignore[reportPrivateImportUsage]
+from homeassistant.components.http import (
+    StaticPathConfig,  # pyright: ignore[reportPrivateImportUsage]
+)
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
@@ -23,6 +25,7 @@ from .const import (
     CARD_FILENAME,
     DOMAIN,
     FRONTEND_URL,
+    RETIRED_OPTIONS,
     SIGNAL_ENERGY_PREFS_UPDATED,
 )
 from .coordinator import (
@@ -122,12 +125,25 @@ async def _async_update_listener(
 async def async_migrate_entry(
     hass: HomeAssistant, entry: ElectricityLensConfigEntry
 ) -> bool:
-    """Refuse entries this version cannot read.
+    """Bring an entry up to date, or refuse one this version cannot read.
 
     Entries of version 1.1, from before 0.12.0, are no longer migrated: they
-    fail with a migration error and are set up again.
+    fail with a migration error and are set up again. 1.3 drops the price
+    level thresholds, which the grid price replaced.
     """
-    return entry.version == 1 and entry.minor_version >= 2
+    if entry.version != 1 or entry.minor_version < 2:
+        return False
+    if entry.minor_version == 2:
+        hass.config_entries.async_update_entry(
+            entry,
+            options={
+                key: value
+                for key, value in entry.options.items()
+                if key not in RETIRED_OPTIONS
+            },
+            minor_version=3,
+        )
+    return True
 
 
 async def async_unload_entry(

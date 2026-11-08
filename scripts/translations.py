@@ -38,12 +38,12 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "household": {
             "title": "Household",
-            "description": "All optional. The standing charge is added to the grid costs. With price levels you see how much grid power you drew in cheap and in expensive hours.",
+            "description": "Optional. The standing charge is added to the grid costs. Cheap and expensive hours follow from your grid price on their own.",
         },
         "options": {
             "title": "What do you want to change?",
-            "household": "Standing charge and price levels",
-            "household_description": "A new standing charge applies from the next full hour. New price levels sort the whole past again.",
+            "household": "Standing charge",
+            "household_description": "A new standing charge applies from the next full hour.",
             "recompute": "Computes everything again with the current data: the household and all savings. For example after you corrected a wrong reading in the statistics. Your values stay as they are.",
         },
         "statistics": {
@@ -64,6 +64,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "grid_feed_in": "Feed-in compensation",
             "grid_standing_charge": "Standing charge",
             "grid_cheap_saving": "Tariff saving",
+            "grid_hours": "Counted hours",
+            "grid_cheap_hours": "Cheap hours",
+            "grid_expensive_hours": "Expensive hours",
             "heat": "heat",
             "distance": "distance",
             "alternative_cost": "comparison costs",
@@ -125,14 +128,6 @@ TEXTS: dict[str, dict[str, Any]] = {
             "standing_charge": (
                 "Standing charge per month (optional)",
                 "As on the electricity bill; shared evenly over the hours of the month",
-            ),
-            "cheap_until": (
-                "Cheap up to (optional)",
-                "Grid power at this price or below counts as cheap, if a higher price occurred within the last 24 hours",
-            ),
-            "expensive_from": (
-                "Expensive from (optional)",
-                "Grid power at this price or above counts as expensive, if a lower price occurred within the last 24 hours",
             ),
             "meters": (
                 "Electricity consumption",
@@ -270,7 +265,6 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "comparison": {"combustion": "Combustion car", "none": "Nothing"},
         "errors": {
-            "levels_order": "Expensive must be above cheap.",
             "meters_required": "Choose at least one meter.",
             "heating_required": "Choose the former heating.",
             "value_required": "Enter a value above 0.",
@@ -366,12 +360,12 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "household": {
             "title": "Haushalt",
-            "description": "Alles optional. Der Grundpreis kommt zu den Netzkosten dazu. Mit Preisstufen siehst du, wie viel Netzstrom du in günstigen und in teuren Stunden bezogen hast.",
+            "description": "Optional. Der Grundpreis kommt zu den Netzkosten dazu. Günstige und teure Stunden ergeben sich von selbst aus deinem Netzpreis.",
         },
         "options": {
             "title": "Was möchtest du ändern?",
-            "household": "Grundpreis und Preisstufen",
-            "household_description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde. Neue Preisstufen ordnen die ganze Vergangenheit neu ein.",
+            "household": "Grundpreis",
+            "household_description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde.",
             "recompute": "Rechnet alles mit den aktuellen Messdaten neu: den Haushalt und alle Ersparnisse. Zum Beispiel nachdem du einen falschen Messwert in den Statistiken korrigiert hast. Deine Werte bleiben, wie sie sind.",
         },
         "statistics": {
@@ -392,6 +386,9 @@ TEXTS: dict[str, dict[str, Any]] = {
             "grid_feed_in": "Einspeisevergütung",
             "grid_standing_charge": "Grundpreis",
             "grid_cheap_saving": "Tarifersparnis",
+            "grid_hours": "Gezählte Stunden",
+            "grid_cheap_hours": "Günstige Stunden",
+            "grid_expensive_hours": "Teure Stunden",
             "heat": "Wärme",
             "distance": "Strecke",
             "alternative_cost": "Vergleichskosten",
@@ -453,14 +450,6 @@ TEXTS: dict[str, dict[str, Any]] = {
             "standing_charge": (
                 "Grundpreis pro Monat (optional)",
                 "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
-            ),
-            "cheap_until": (
-                "Günstig bis (optional)",
-                "Netzstrom zu diesem Preis oder darunter zählt als günstig, wenn es in den letzten 24 Stunden einen höheren Preis gab",
-            ),
-            "expensive_from": (
-                "Teuer ab (optional)",
-                "Netzstrom zu diesem Preis oder darüber zählt als teuer, wenn es in den letzten 24 Stunden einen niedrigeren Preis gab",
             ),
             "meters": (
                 "Stromverbrauch",
@@ -598,7 +587,6 @@ TEXTS: dict[str, dict[str, Any]] = {
         },
         "comparison": {"combustion": "Verbrenner", "none": "Nichts"},
         "errors": {
-            "levels_order": "Teuer muss über günstig liegen.",
             "meters_required": "Wähle mindestens einen Zähler.",
             "heating_required": "Wähle die frühere Heizung.",
             "value_required": "Gib einen Wert über 0 an.",
@@ -730,7 +718,7 @@ def household_step(t: dict[str, Any], title: str, description: str) -> dict[str,
     return form(
         title,
         description,
-        fields(t, ["standing_charge", "cheap_until", "expensive_from"]),
+        fields(t, ["standing_charge"]),
     )
 
 
@@ -943,7 +931,6 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                     t["recompute"]["title"], t["options"]["recompute"], {}
                 ),
             },
-            "error": {"levels_order": errors["levels_order"]},
             "abort": {
                 "household_saved": aborts["household_saved"],
                 "recomputing": aborts["recomputing_all"],

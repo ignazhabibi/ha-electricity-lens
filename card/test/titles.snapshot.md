@@ -12,7 +12,7 @@ Written by card/test/titles.test.ts. Main column ‖ sidebar.
 
 - **Now**: Consumption ‖ Costs today · Used today
 - **Consumption**: Consumption by source · Consumption by device ‖ Energy flow · Electricity mix
-- **Costs**: Electricity bill · Costs by device ‖ Avg. grid price · Avg. price · Cost distribution
+- **Costs**: Electricity bill · Costs by device ‖ Avg. grid price · Avg. price · Grid cheap · Tariff saving · Cost distribution
 
 ## en: PV with an investment, a device, and a grid power sensor
 
@@ -24,7 +24,7 @@ Written by card/test/titles.test.ts. Main column ‖ sidebar.
 
 - **Now**: Power flow · Economics ‖ Costs today · Used today
 - **Consumption**: Consumption by source · Solar production · Consumption by device ‖ Energy flow · Electricity mix · (energy-self-sufficiency-gauge) · (energy-solar-consumed-gauge)
-- **Costs**: Electricity bill · Costs by source · Costs by device ‖ Avg. grid price · Price incl. solar · Cost distribution · Savings
+- **Costs**: Electricity bill · Costs by source · Costs by device ‖ Avg. grid price · Price incl. solar · Grid cheap · Tariff saving · Cost distribution · Savings
 - **Heating**: Heat · Electricity · Electricity costs ‖ COP · Heat price · Electricity mix · COP by device · Savings
 - **Charging**: Charged energy · Charging costs ‖ Avg. grid price · Price incl. solar · Electricity mix · Savings
 
@@ -53,7 +53,7 @@ Written by card/test/titles.test.ts. Main column ‖ sidebar.
 
 - **Jetzt**: Verbrauch ‖ Kosten heute · Verbrauch heute
 - **Verbrauch**: Verbrauch nach Quelle · Verbrauch nach Gerät ‖ Energiefluss · Strommix
-- **Kosten**: Stromrechnung · Kosten nach Gerät ‖ Ø Netzpreis · Ø Strompreis · Kostenverteilung
+- **Kosten**: Stromrechnung · Kosten nach Gerät ‖ Ø Netzpreis · Ø Strompreis · Netz günstig · Tarifersparnis · Kostenverteilung
 
 ## de: PV with an investment, a device, and a grid power sensor
 
@@ -65,7 +65,7 @@ Written by card/test/titles.test.ts. Main column ‖ sidebar.
 
 - **Jetzt**: Leistungsfluss · Wirtschaftlichkeit ‖ Kosten heute · Verbrauch heute
 - **Verbrauch**: Verbrauch nach Quelle · PV-Erzeugung · Verbrauch nach Gerät ‖ Energiefluss · Strommix · (energy-self-sufficiency-gauge) · (energy-solar-consumed-gauge)
-- **Kosten**: Stromrechnung · Kosten nach Quelle · Kosten nach Gerät ‖ Ø Netzpreis · Ø Preis inkl. PV · Kostenverteilung · Ersparnis
+- **Kosten**: Stromrechnung · Kosten nach Quelle · Kosten nach Gerät ‖ Ø Netzpreis · Ø Preis inkl. PV · Netz günstig · Tarifersparnis · Kostenverteilung · Ersparnis
 - **Heizen**: Wärme · Stromverbrauch · Stromkosten ‖ COP · Wärmepreis · Strommix · COP nach Gerät · Ersparnis
 - **Laden**: Geladene Energie · Ladekosten ‖ Ø Netzpreis · Ø Preis inkl. PV · Strommix · Ersparnis
 

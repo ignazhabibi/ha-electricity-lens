@@ -449,6 +449,9 @@ export class ElectricityLensFiguresCard extends LensCard {
     if (figure === "heat_price") return [t("info.heat_price")];
     if (figure === "payback") return [t("info.payback")];
     if (figure === "annual_return") return [t("info.annual_return")];
+    if (figure === "cheap_share" || figure === "expensive_share" || figure === "cheap_saving") {
+      return [t(`info.${figure}`)];
+    }
     return [];
   }
 

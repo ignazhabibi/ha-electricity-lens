@@ -144,7 +144,7 @@ function titles(): string {
     for (const household of HOUSEHOLDS) {
       const info: FiguresInfo = {
         calculating: false,
-        levels: { cheap_until: household.levels ? 0.2 : null, expensive_from: null },
+        levels: { cheap: household.levels ? Date.now() / 1000 : null, expensive: null },
         areas: [...base(), ...household.areas(t)],
         ...(household.power ? { power: { grid: ["sensor.grid_power"], solar: [], battery: [] } } : {}),
       };

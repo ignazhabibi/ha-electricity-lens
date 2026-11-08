@@ -65,6 +65,9 @@ const view = (
 const FORECAST_YELLOW = 0.35;
 const FORECAST_GREEN = 0.65;
 
+/** How long a price level counts as current for the dashboard. */
+const LEVELS_RECENT_MS = 30 * 24 * 3600 * 1000;
+
 /** The integration's sensors the dashboard needs to know of. */
 export interface Sensors {
   categories: Category[];
@@ -111,9 +114,14 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
   const heatPump = has("heat_pump");
   const car = has("wallbox");
   const devices = info.areas.some((area) => area.kind === "device");
+  // Whether the grid price had a level within the last 30 days. A flat
+  // price has none, so a month after a change to one the tiles go.
+  const recent = (start: number | null) => start !== null && start * 1000 > Date.now() - LEVELS_RECENT_MS;
+  const cheap = recent(info.levels.cheap);
+  const expensive = recent(info.levels.expensive);
   // Shares by source need more than one source: solar power, or price levels
   // that part the grid power. Without them a ring would be one whole.
-  const sources = Boolean(solar) || info.levels.cheap_until !== null || info.levels.expensive_from !== null;
+  const sources = Boolean(solar) || cheap || expensive;
   // A heat pump or car saves only when compared with what it replaced.
   const saves = (area?: FigureArea) => Boolean(area?.statistics.saving?.length);
   const savings = saves(solar) || saves(heatPump) || saves(car) || sensors.categories.length > 0;
@@ -260,6 +268,14 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       [
         own("grid", "grid_price", quiet),
         price("household", quiet),
+        // How the hours of the grid price were used, and what that brought.
+        ...(cheap || expensive
+          ? [
+              ...(cheap ? [own("household", "cheap_share")] : []),
+              own("grid", "cheap_saving"),
+              ...(expensive ? [own("household", "expensive_share")] : []),
+            ]
+          : []),
         ...(devices
           ? [
               titled("electricity-lens-breakdown-card", "strategy.cost_distribution", {

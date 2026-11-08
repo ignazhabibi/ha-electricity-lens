@@ -22,7 +22,7 @@ const area = (id: string, kind: FigureArea["kind"], statistics: FigureArea["stat
 
 const infoOf = (areas: FigureArea[], power?: FiguresInfo["power"]): FiguresInfo => ({
   calculating: false,
-  levels: { cheap_until: null, expensive_from: null },
+  levels: { cheap: null, expensive: null },
   areas: [area("household", "household", { energy: ["stat:energy"] }), area("grid", "grid"), ...areas],
   ...(power ? { power } : {}),
 });
@@ -61,7 +61,7 @@ test("without devices and a second source, no card shows a single share", () => 
 
 test("devices bring the costs by device, price levels the shares by source", () => {
   const device = area("device_washer", "device", { energy: ["sensor.washer"] });
-  const info = { ...infoOf([device]), levels: { cheap_until: 0.2, expensive_from: null } };
+  const info = { ...infoOf([device]), levels: { cheap: Date.now() / 1000, expensive: null } };
 
   const all = views(info);
 
@@ -69,6 +69,25 @@ test("devices bring the costs by device, price levels the shares by source", () 
   assert.ok(costs.some((card) => card.stack === "consumer"));
   assert.ok(costs.some((card) => card.by === "consumer"));
   assert.ok(cardsOf(viewOf(all, "household")).some((card) => card.by === "source"));
+});
+
+test("a grid price with levels brings its key figures to the costs", () => {
+  const now = Date.now() / 1000;
+  const figuresOf = (levels: { cheap: number | null; expensive: number | null }) =>
+    cardsOf(viewOf(views({ ...infoOf([]), levels }), "costs"))
+      .filter((card) => card.type === "custom:electricity-lens-figures-card")
+      .map((card) => card.figure);
+
+  assert.deepEqual(figuresOf({ cheap: now, expensive: null }), ["grid_price", "price", "cheap_share", "cheap_saving"]);
+  assert.deepEqual(figuresOf({ cheap: now, expensive: now }), [
+    "grid_price",
+    "price",
+    "cheap_share",
+    "cheap_saving",
+    "expensive_share",
+  ]);
+  // A month after the last level, as after a change to a flat price, they go.
+  assert.deepEqual(figuresOf({ cheap: now - 40 * 24 * 3600, expensive: null }), ["grid_price", "price"]);
 });
 
 test("the power flow stands on top where the grid has a power sensor", () => {

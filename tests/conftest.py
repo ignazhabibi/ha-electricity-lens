@@ -235,7 +235,7 @@ async def energy(hass: HomeAssistant, data_start: datetime) -> None:
 def make_entry(
     *categories: tuple[str, dict[str, Any]],
     version: int = 1,
-    minor_version: int = 2,
+    minor_version: int = 3,
     options: dict[str, Any] | None = None,
 ) -> MockConfigEntry:
     """Return a config entry with these categories and household options."""
