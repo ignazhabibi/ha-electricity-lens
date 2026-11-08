@@ -145,7 +145,7 @@ ${n.format(h.value(0))}`,fill:n.centerColor,fontSize:i?12:14,lineHeight:24,fontW
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
-  @container (max-width: 480px) {
+  @container (max-width: 360px) {
     .swatch-cell {
       display: none;
     }

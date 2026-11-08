@@ -51,8 +51,9 @@ export const cardStyles = css`
 `;
 
 /* The tables of all cards: a color swatch, a name, numbers at the end, and
- * the total in the footer. On a phone, or in half a column, the swatches give
- * their room to the names, as in Home Assistant's totals card. */
+ * the total in the footer. On a phone the swatches give their room to the
+ * names, as in Home Assistant's totals card; in half a column on a desktop,
+ * about 400 px wide, they stay and tie the rows to the charts' colors. */
 export const tableStyles = css`
   ha-card {
     container-type: inline-size;
@@ -150,7 +151,7 @@ export const tableStyles = css`
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
-  @container (max-width: 480px) {
+  @container (max-width: 360px) {
     .swatch-cell {
       display: none;
     }
