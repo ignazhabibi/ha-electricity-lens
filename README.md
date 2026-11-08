@@ -390,8 +390,8 @@ A card has one of three sources:
 | Source | Shows |
 |---|---|
 | Energy data | A figure of an area, computed by Electricity Lens, usually with a line below that explains it; `secondary: none` in YAML hides the line |
-| Statistic | Any statistic of Home Assistant, as it is: its total over the period, mean, minimum, or maximum; the mean can show the range of the period below |
-| Entity | Any entity's current state |
+| Statistic | Any statistic of Home Assistant, as it is: its total over the period for a meter, its mean, minimum, or maximum for a measurement; the mean can show the range of the period below. The editor offers only what the statistic has |
+| Entity | Any entity's current state, as Home Assistant shows it |
 
 Areas and their figures:
 
@@ -444,6 +444,8 @@ that hides a share with a tap.
   splits by what each source cost. A device that would read as zero is left out.
 - **Statistics**: the shares of any statistics as they are, in their unit, for
   example the heat for heating and hot water from the heat pump's own sensors.
+  They need a total and one unit; otherwise the card says why it shows no
+  shares.
 
 A bar whose device or statistic is an entity opens its dialog with a tap. When
 the date selection compares with an earlier period, that period shows as a

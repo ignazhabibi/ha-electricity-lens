@@ -24,7 +24,7 @@ import {
   type PeriodOption,
 } from "./electricity-lens-figures-card";
 import { valueOf, type Unit } from "./figures";
-import { formatter, hour12, type Format } from "./format";
+import { entityName, formatter, hour12, type Format } from "./format";
 import {
   FIRST_YEAR,
   fixedRange,
@@ -514,7 +514,7 @@ export class ElectricityLensHistoryCard extends LensCard {
         name:
           line.name ??
           metadata?.name ??
-          (this.hass?.states[line.statistic]?.attributes.friendly_name as string | undefined) ??
+          entityName(this.hass, line.statistic) ??
           line.statistic,
         // The first line of the card is grey; further ones take quiet colors.
         color: index === 0 && !plan.lineFigure ? colors.line : colors.consumers[index % colors.consumers.length],

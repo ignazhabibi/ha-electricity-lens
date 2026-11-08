@@ -3,7 +3,7 @@
 // integration computes every cost and share per hour; the card only adds up
 // the hours of the period, takes one sum from another, and divides.
 
-import type { FigureArea } from "./types";
+import type { FigureArea, StatisticMetadata } from "./types";
 
 export type Figure =
   | "energy"
@@ -400,6 +400,31 @@ export function valueOf(
 
 export type StatisticValue = "change" | "mean" | "min" | "max";
 export const STATISTIC_VALUES: StatisticValue[] = ["change", "mean", "min", "max"];
+
+/** The values a statistic has: a total for meters, a mean, minimum, and
+ * maximum for measurements. Without its metadata, all of them. */
+export function statisticValues(metadata: StatisticMetadata | undefined): StatisticValue[] {
+  if (!metadata) return STATISTIC_VALUES;
+  const hasMean = metadata.mean_type !== undefined ? metadata.mean_type > 0 : !!metadata.has_mean;
+  return STATISTIC_VALUES.filter((value) => (value === "change" ? !!metadata.has_sum : hasMean));
+}
+
+/** The unit a statistic's sums come in: energy in kWh, as the cards ask for it. */
+export const statisticUnit = (metadata: StatisticMetadata | undefined): string =>
+  metadata?.unit_class === "energy" ? "kWh" : (metadata?.statistics_unit_of_measurement ?? "");
+
+/** Why statistics cannot be shares of one whole: a measurement has no total,
+ * and amounts in different units do not add up. Undefined when they can. */
+export function sharesProblem(
+  ids: string[],
+  metadata: Record<string, StatisticMetadata>
+): { problem: "no_sum"; ids: string[] } | { problem: "units"; units: string[] } | undefined {
+  const known = ids.filter((id) => metadata[id]);
+  const withoutSum = known.filter((id) => !metadata[id].has_sum);
+  if (withoutSum.length) return { problem: "no_sum", ids: withoutSum };
+  const units = [...new Set(known.map((id) => statisticUnit(metadata[id])))];
+  return units.length > 1 ? { problem: "units", units } : undefined;
+}
 
 /** What a key figure card shows: a figure of the integration, a statistic, or
  * an entity. */

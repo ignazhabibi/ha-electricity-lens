@@ -3,8 +3,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { figuresOf, statisticsOf, valueOf, type Figure } from "../src/figures";
-import type { FigureArea } from "../src/types";
+import { figuresOf, sharesProblem, statisticValues, statisticsOf, valueOf, type Figure } from "../src/figures";
+import { entityName, entityStateParts } from "../src/format";
+import type { FigureArea, HomeAssistant } from "../src/types";
 
 const area = (
   kind: FigureArea["kind"],
@@ -118,4 +119,54 @@ test("costs per 100 km divide by the distance", () => {
 
 test("a forecast shows what it is given", () => {
   assert.equal(value("forecast_today", area("solar", []), {}, 12).value, 12);
+});
+
+test("a statistic offers only the values it has", () => {
+  const meta = (extra: object) => ({ statistic_id: "sensor.x", ...extra });
+  assert.deepEqual(statisticValues(meta({ has_sum: true, mean_type: 0 })), ["change"]);
+  assert.deepEqual(statisticValues(meta({ has_sum: false, mean_type: 1 })), ["mean", "min", "max"]);
+  // Before Home Assistant 2025.4 the metadata said has_mean.
+  assert.deepEqual(statisticValues(meta({ has_sum: false, has_mean: true })), ["mean", "min", "max"]);
+  // Until the metadata is known, nothing is ruled out.
+  assert.deepEqual(statisticValues(undefined), ["change", "mean", "min", "max"]);
+});
+
+test("shares need totals in one unit", () => {
+  const meta = (id: string, extra: object) => ({ [id]: { statistic_id: id, ...extra } });
+  const heat = meta("sensor.heat", { has_sum: true, unit_class: "energy", statistics_unit_of_measurement: "MWh" });
+  const water = meta("sensor.water", { has_sum: true, unit_class: "energy", statistics_unit_of_measurement: "kWh" });
+  const gas = meta("sensor.gas", { has_sum: true, unit_class: "volume", statistics_unit_of_measurement: "m³" });
+  const outside = meta("sensor.outside", { has_sum: false, mean_type: 1, statistics_unit_of_measurement: "°C" });
+  // Energy comes in kWh, whatever the meter counts in.
+  assert.equal(sharesProblem(["sensor.heat", "sensor.water"], { ...heat, ...water }), undefined);
+  assert.deepEqual(sharesProblem(["sensor.heat", "sensor.gas"], { ...heat, ...gas }), {
+    problem: "units",
+    units: ["kWh", "m³"],
+  });
+  assert.deepEqual(sharesProblem(["sensor.heat", "sensor.outside"], { ...heat, ...outside }), {
+    problem: "no_sum",
+    ids: ["sensor.outside"],
+  });
+  // A statistic without metadata is not judged.
+  assert.equal(sharesProblem(["sensor.heat", "sensor.unknown"], heat), undefined);
+});
+
+test("an entity shows as Home Assistant formats it", () => {
+  const state = { entity_id: "sensor.price", state: "0.31234", attributes: { friendly_name: "Price" } };
+  const hass = {
+    states: { "sensor.price": state },
+    formatEntityName: () => "Grid price",
+    formatEntityStateToParts: () => [
+      { type: "value" as const, value: "0.31" },
+      { type: "literal" as const, value: " " },
+      { type: "unit" as const, value: "€/kWh" },
+    ],
+  } as unknown as HomeAssistant;
+  assert.equal(entityName(hass, "sensor.price"), "Grid price");
+  assert.deepEqual(entityStateParts(hass, "sensor.price"), ["0.31", "€/kWh"]);
+  // Older versions have no formatter: the friendly name, and the card's own format.
+  const older = { states: { "sensor.price": state } } as unknown as HomeAssistant;
+  assert.equal(entityName(older, "sensor.price"), "Price");
+  assert.equal(entityStateParts(older, "sensor.price"), undefined);
+  assert.equal(entityName(older, "sensor.missing"), undefined);
 });

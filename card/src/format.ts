@@ -1,6 +1,7 @@
 // Numbers, energy, money, prices, and shares in the user's format.
 
 import type { Unit } from "./figures";
+import type { HomeAssistant } from "./types";
 
 /** The user's profile settings for numbers and times. */
 export interface LocaleSettings {
@@ -123,4 +124,27 @@ export function formatter(locale: LocaleSettings | undefined, currency: string):
       .formatToParts(0)
       .find((part) => part.type === "currency")?.value ?? "";
   return { number, value, currencySymbol };
+}
+
+/** An entity's name as Home Assistant shows it, with its device's name where
+ * the entity's own name needs it; the friendly name on older versions. */
+export function entityName(hass: HomeAssistant | undefined, entityId: string): string | undefined {
+  const state = hass?.states[entityId];
+  if (!state) return undefined;
+  return hass?.formatEntityName?.(state) || (state.attributes.friendly_name as string | undefined) || undefined;
+}
+
+/** An entity's state as Home Assistant shows it: translated, with the
+ * entity's precision, and its unit apart. Undefined on older versions. */
+export function entityStateParts(hass: HomeAssistant | undefined, entityId: string): [string, string] | undefined {
+  const state = hass?.states[entityId];
+  const parts = state && hass?.formatEntityStateToParts?.(state);
+  if (!parts?.length) return undefined;
+  const join = (unit: boolean) =>
+    parts
+      .filter((part) => (part.type === "unit") === unit)
+      .map((part) => part.value)
+      .join("")
+      .trim();
+  return [join(false), join(true)];
 }

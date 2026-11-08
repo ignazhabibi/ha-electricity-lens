@@ -13,12 +13,13 @@ import {
 } from "lit";
 
 import { checkCollectionKey, followEnergyDate } from "./energy-date";
-import { formatter, numberFormat, splitUnit, type Format } from "./format";
+import { entityName, entityStateParts, formatter, numberFormat, splitUnit, type Format } from "./format";
 import {
   figuresOf,
   isForecast,
   isInvestment,
   sourceOf,
+  statisticValues,
   statisticsOf,
   valueOf,
   type Figure,
@@ -439,7 +440,7 @@ export class ElectricityLensFiguresCard extends LensCard {
     const known =
       config.name ??
       metadata?.name ??
-      (this.hass?.states[id]?.attributes.friendly_name as string | undefined);
+      entityName(this.hass, id);
     // Until the statistic's name is known, a blank keeps the card's height.
     if (!this._loaded) return this._card(known ?? "\u00a0", "…");
     const label = known ?? id;
@@ -455,6 +456,11 @@ export class ElectricityLensFiguresCard extends LensCard {
         .map((row) => row[key])
         .filter((value): value is number => typeof value === "number");
     const kind = config.value ?? "change";
+    if (this._loaded.failed) return this._card(label, "–", t("figures_not_loaded"));
+    // A meter has no mean and a measurement no total: no number rather than a wrong one.
+    if (metadata && !statisticValues(metadata).includes(kind)) {
+      return this._card(label, "–", t(kind === "change" ? "statistic_no_sum" : "statistic_no_mean"));
+    }
     let value: number | null = null;
     if (kind === "change") {
       value = rows.length ? rows.reduce((sum, row) => sum + (row.change ?? 0), 0) : null;
@@ -477,19 +483,21 @@ export class ElectricityLensFiguresCard extends LensCard {
         });
       }
     }
-    if (this._loaded.failed) return this._card(label, "–", t("figures_not_loaded"));
     return this._card(label, show(value), config.secondary === "none" ? undefined : line);
   }
 
   private _entityCard(config: FigureConfig): TemplateResult {
     const t = this._localize;
     const state = this.hass?.states[config.entity ?? ""];
-    const label =
-      config.name ??
-      (state?.attributes.friendly_name as string | undefined) ??
-      config.entity ??
-      "";
+    const label = config.name ?? entityName(this.hass, config.entity ?? "") ?? config.entity ?? "";
     if (!state) return this._card(label, "–", t("figures_unavailable"));
+    if (["unknown", "unavailable"].includes(state.state)) {
+      return this._card(label, "–", t("figures_unavailable"), config.entity);
+    }
+    // As Home Assistant shows it, with the entity's precision and translated states.
+    const parts = entityStateParts(this.hass, state.entity_id);
+    if (parts) return this._card(label, parts, undefined, config.entity);
+    // Before Home Assistant had the formatter: the card's own format.
     const number = Number(state.state);
     const currency = this.hass?.config.currency ?? "";
     // Units such as "EUR/a" show the currency's symbol, as amounts do.
@@ -559,8 +567,9 @@ export class ElectricityLensFiguresCard extends LensCard {
    * value with its unit, and the line that explains it. Nothing wraps; what
    * does not fit ends in an ellipsis and shows whole as a tooltip. An entity's
    * card opens its dialog, as Home Assistant's cards do. */
-  private _card(label: string, value: string, line?: string, entity?: string): TemplateResult {
-    const [number, unit] = splitUnit(value);
+  private _card(label: string, value: string | [string, string], line?: string, entity?: string): TemplateResult {
+    const [number, unit] = typeof value === "string" ? splitUnit(value) : value;
+    const whole = typeof value === "string" ? value : value.filter(Boolean).join(" ");
     const open = () => {
       this.dispatchEvent(
         new CustomEvent("hass-more-info", {
@@ -586,7 +595,7 @@ export class ElectricityLensFiguresCard extends LensCard {
       <div class="header"><h2 class="title" title=${label}>${label}</h2></div>
       <div class="stat">
         <div class="value">
-          <span class="number" title=${value}>${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
+          <span class="number" title=${whole}>${number}</span>${unit ? html`<span class="unit">${unit}</span>` : nothing}
         </div>
         ${line ? html`<div class="line" title=${line}>${line}</div>` : nothing}
       </div>
