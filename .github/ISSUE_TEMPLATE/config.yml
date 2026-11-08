@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: FAQ and troubleshooting
+    url: https://github.com/ignazhabibi/ha-electricity-lens#faq
+    about: Why costs differ from the energy dashboard, how to fix a wrong reading, and more.
