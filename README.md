@@ -66,7 +66,7 @@ hour Electricity Lens derives:
 Costs and savings answer different questions, so they value solar power
 differently: a device's costs count its solar power at the lost feed-in
 compensation; the savings below give the benefit of solar power to the solar
-panels. In the balance a device's electricity counts at the grid price, solar
+panels. In the economics a device's electricity counts at the grid price, solar
 power or not, so nothing counts twice. On the key figures and charts of a heat
 pump or car, the saving includes its solar power, with that part below the key
 figure.
@@ -201,7 +201,7 @@ where it stopped.
    |---|---|
    | Electricity consumption | The heat pump's meters from the energy dashboard's individual devices. |
    | Produced heat (optional) | Heat meters for the same parts as the electricity meters. An hour counts as measured when every heat meter has data for it. |
-   | Former heating | Gas, heating oil, LPG, pellets, district heating, or an electric heating such as storage heaters; or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the balance, but its heat, COP, heat price, and the Heating view. |
+   | Former heating | Gas, heating oil, LPG, pellets, district heating, or an electric heating such as storage heaters; or none, as in a new build. Without one there is nothing to compare with: the heat pump has no saving, no saving sensors, and no place in the economics, but its heat, COP, heat price, and the Heating view. |
    | Extra cost (optional) | Extra purchase cost over the former heating, for the payback. Not with no former heating. |
 5. **Heat pump, average since the first data**:
    | Field | Description |
@@ -213,7 +213,7 @@ where it stopped.
 6. **Electric car**: charging meters, what it is compared with, a combustion
    car or nothing, and the extra purchase cost over a combustion car
    (optional). Compared with nothing, as for a second car, the car has no
-   saving, no saving sensors, and no place in the balance, but its charging
+   saving, no saving sensors, and no place in the economics, but its charging
    costs, mix, and the Charging view.
 7. **Electric car, average since the first data**: consumption of the electric
    car (measured at the wallbox, with charging losses; with several cars,
@@ -335,7 +335,7 @@ phones and desktops, and can be used with keyboard and screen reader.
 What was saved in the selected period, as a table: by self-consumption, by the
 feed-in, by the heat pump, and by the electric car, each with its energy and
 amount. The info icon says what each row counts, for example what the former
-heating would have cost. The amounts are the balance's, so
+heating would have cost. The amounts are those of the economics card, so
 they add up without counting solar power twice; the saving on the Heating and
 Charging views includes the device's solar power and can be higher. The card
 follows the energy date selection, without one this month.
@@ -344,9 +344,9 @@ household's figures can begin later than the savings.
 
 With `area: heat_pump` or `area: wallbox` it reckons up that area's saving
 instead: what the former heating or a combustion car would have cost, less the
-heat pump's electricity costs or the car's charging costs, how
-much of it is solar power, and how much of it the balance counts, which gives
-the benefit of solar power to the solar panels. The card editor offers only the
+heat pump's electricity costs or the car's charging costs, and how the saving
+splits: the part the economics card counts for the heat pump or car, and the
+part it counts for solar, which gets the benefit of solar power. The card editor offers only the
 areas that are set up.
 
 ### Electricity Lens heat meters

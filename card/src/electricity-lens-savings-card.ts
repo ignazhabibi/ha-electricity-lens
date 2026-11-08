@@ -179,7 +179,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
         t("info.reckoning.electricity"),
       ],
       ...(area?.statistics.solar_saving?.length
-        ? ([[t("savings_in_balance"), t("info.reckoning.balance")]] as Explanation)
+        ? ([[t("info.reckoning.split_term"), t("info.reckoning.split")]] as Explanation)
         : []),
     ];
   }
@@ -193,9 +193,9 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const alternative = addUp(values, area?.statistics.alternative_cost);
     const cost = addUp(values, area?.statistics.cost);
     const solar = addUp(values, area?.statistics.solar_saving);
-    // The balance gives the benefit of solar power to the PV plant alone.
-    const inBalance = addUp(values, area?.statistics.saving);
-    const saving = inBalance + solar;
+    // The economics count the benefit of PV power for the PV plant alone.
+    const own = addUp(values, area?.statistics.saving);
+    const saving = own + solar;
     const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
     const instead: Key = area?.id === "wallbox" ? "savings_instead_fuel" : `savings_instead_${heating ?? "gas"}`;
     const hasSolar = Math.abs(solar) >= 0.005;
@@ -215,8 +215,12 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
           { name: t("savings_saved"), cells: [fmt.value(saving, "money")] },
           ...(hasSolar
             ? [
-                { name: t("savings_solar_part"), cells: [fmt.value(solar, "money")], kind: "quiet" as const },
-                { name: t("savings_in_balance"), cells: [fmt.value(inBalance, "money")], kind: "quiet" as const },
+                {
+                  name: t(area?.id === "wallbox" ? "savings_part_wallbox" : "savings_part_heat_pump"),
+                  cells: [fmt.value(own, "money")],
+                  kind: "quiet" as const,
+                },
+                { name: t("savings_part_pv"), cells: [fmt.value(solar, "money")], kind: "quiet" as const },
               ]
             : []),
         ],
