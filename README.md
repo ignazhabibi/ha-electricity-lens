@@ -20,7 +20,14 @@ It takes everything it can from the energy dashboard and computes your whole
 history, hour by hour, right after setup. There is no YAML, no helper, and no
 template sensor to write.
 
-<!-- Screenshot: images/costs.png, the Costs view of the dashboard, desktop, light theme -->
+> [!IMPORTANT]
+> Electricity Lens is carefully reviewed and tested, but you use it at your own
+> risk. It is provided as is, without warranty (see the [license](LICENSE)).
+> Its figures are computed from the data in your Home Assistant and can only be
+> as right as that data. They are not financial, tax, or investment advice:
+> check decisions that matter against your bills.
+
+![The Costs view of the Electricity Lens dashboard: the electricity bill and the costs by source per month, key figures, the cost distribution by device, and the savings of the year](https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/images/costs.png)
 
 ## Contents
 
@@ -175,9 +182,20 @@ The other views follow the energy date selection.
 | Heating | How efficiently does the heat pump heat, and what does it save? | Heat with the COP; its electricity by source; its costs by source with the average price; COP, heat price, its electricity mix, heat, electricity, and COP per meter, and, with a former heating, its saving reckoned up |
 | Charging | What does charging cost, and where does the power come from? | Charged energy by source; charging costs by source with the average price; average grid price and average price, the charging mix, and, compared with a combustion car, the saving reckoned up |
 
-<!-- Screenshot: images/now.png, the Now view, desktop, light theme -->
-<!-- Screenshot: images/heating.png, the Heating view, desktop, dark theme -->
-<!-- Screenshot: images/phone.png, the Costs view on a phone -->
+**Now**: the power right now, the economics, the solar forecast, and today's
+figures.
+
+![The Now view: power flow, economics table, solar forecast gauges, costs and consumption today, and the payback of solar and heat pump](https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/images/now.png)
+
+**Heating**: heat and COP, the heat pump's electricity by source, its mix, the
+COP per meter, and its saving against the former heating.
+
+![The Heating view: heat per month with the COP, electricity by source, COP and heat price, electricity mix, COP by device, and the saving against gas heating](https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/images/heating.png)
+
+**Charging**: charged energy and charging costs by source, the charging mix,
+and the saving against a combustion car.
+
+![The Charging view: charged energy and charging costs per month by source, average prices, electricity mix, and the saving against a combustion car](https://raw.githubusercontent.com/ignazhabibi/ha-electricity-lens/main/images/charging.png)
 
 Whoever wants more takes control of the dashboard (⋮ › *Take control*) and
 builds on with the same cards. A dashboard taken over keeps its views, so later
@@ -225,8 +243,6 @@ the icon; a tap keeps it open.
 | [History](#history) | A figure over time as bars | Period, area, figure, split, lines |
 | [Key figures](#key-figures) | One figure for a period | Period, source, area, figure |
 | [Breakdown](#breakdown) | Shares of a whole as a ring or bars | Period, area, split, display |
-
-<!-- Screenshot: images/cards.png, a collage of the cards, desktop, light theme -->
 
 ### Power flow
 
