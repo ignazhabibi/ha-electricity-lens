@@ -1,0 +1,80 @@
+name: Bug report
+description: A figure looks wrong, the setup fails, or a card does not work.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Before you start, two things often explain a problem:
+
+        - The [FAQ](https://github.com/ignazhabibi/ha-electricity-lens#faq), for example why costs differ from the energy dashboard.
+        - A wrong meter reading: fix it under **Developer tools › Statistics**, then choose **Configure › Recompute** on the integration page.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Which card, view, or step, and which period. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: For a figure, what you compared it with, such as your bill or the energy dashboard, and its value.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Electricity Lens version
+      placeholder: v0.33.2
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: tariff
+    attributes:
+      label: Electricity tariff
+      options:
+        - Flat price
+        - Time windows, such as a cheap night rate
+        - Dynamic, such as Tibber, Octopus, or Nord Pool
+        - Something else (please describe above)
+    validations:
+      required: true
+  - type: checkboxes
+    id: setup
+    attributes:
+      label: What your energy dashboard has
+      options:
+        - label: Solar production
+        - label: Feed-in meter
+        - label: Home battery
+        - label: Heat pump meters under Individual devices
+        - label: Heat meters
+        - label: Wallbox meters under Individual devices
+        - label: Own tariff for heat pump or electric car
+  - type: input
+    id: currency
+    attributes:
+      label: Country and currency
+      placeholder: Germany, EUR
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        On **Settings › Devices & services › Electricity Lens**, open the menu (⋮), choose **Download diagnostics**, and drag the file here.
+        It holds your settings, the energy dashboard's meters and prices, and the computed figures; no passwords or tokens.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: Lines about `electricity_lens` from **Settings › System › Logs**, if there are any.
+      render: text

@@ -1,0 +1,21 @@
+name: Feature request
+description: A question about your electricity that Electricity Lens does not answer yet.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you want to know or do?
+      description: The question you want answered, rather than the card or option you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you do it today?
+      description: Another integration, a template sensor, a spreadsheet, or not at all.
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: What your energy dashboard has, your tariff, and your country, as far as it matters for the request.
