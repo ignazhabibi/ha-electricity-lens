@@ -28,16 +28,12 @@
       },
       "household": {
         "title": "Haushalt",
-        "description": "Alles optional. Der Grundpreis kommt zu den Netzkosten dazu. Mit Preisstufen siehst du, wie viel Netzstrom du in günstigen und in teuren Stunden bezogen hast.",
+        "description": "Optional. Der Grundpreis kommt zu den Netzkosten dazu. Günstige und teure Stunden ergeben sich von selbst aus deinem Netzpreis.",
         "data": {
-          "standing_charge": "Grundpreis pro Monat (optional)",
-          "cheap_until": "Günstig bis (optional)",
-          "expensive_from": "Teuer ab (optional)"
+          "standing_charge": "Grundpreis pro Monat (optional)"
         },
         "data_description": {
-          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
-          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig, wenn es in den letzten 24 Stunden einen höheren Preis gab",
-          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer, wenn es in den letzten 24 Stunden einen niedrigeren Preis gab"
+          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt"
         }
       },
       "pv": {
@@ -433,7 +429,6 @@
       }
     },
     "error": {
-      "levels_order": "Teuer muss über günstig liegen.",
       "meters_required": "Wähle mindestens einen Zähler.",
       "heating_required": "Wähle die frühere Heizung.",
       "value_required": "Gib einen Wert über 0 an.",
@@ -454,31 +449,24 @@
       "init": {
         "title": "Was möchtest du ändern?",
         "menu_options": {
-          "household": "Grundpreis und Preisstufen",
+          "household": "Grundpreis",
           "recompute": "Neu berechnen"
         }
       },
       "household": {
-        "title": "Grundpreis und Preisstufen",
-        "description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde. Neue Preisstufen ordnen die ganze Vergangenheit neu ein.",
+        "title": "Grundpreis",
+        "description": "Ein neuer Grundpreis gilt ab der nächsten vollen Stunde.",
         "data": {
-          "standing_charge": "Grundpreis pro Monat (optional)",
-          "cheap_until": "Günstig bis (optional)",
-          "expensive_from": "Teuer ab (optional)"
+          "standing_charge": "Grundpreis pro Monat (optional)"
         },
         "data_description": {
-          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
-          "cheap_until": "Netzstrom zu diesem Preis oder darunter zählt als günstig, wenn es in den letzten 24 Stunden einen höheren Preis gab",
-          "expensive_from": "Netzstrom zu diesem Preis oder darüber zählt als teuer, wenn es in den letzten 24 Stunden einen niedrigeren Preis gab"
+          "standing_charge": "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt"
         }
       },
       "recompute": {
         "title": "Neu berechnen",
         "description": "Rechnet alles mit den aktuellen Messdaten neu: den Haushalt und alle Ersparnisse. Zum Beispiel nachdem du einen falschen Messwert in den Statistiken korrigiert hast. Deine Werte bleiben, wie sie sind."
       }
-    },
-    "error": {
-      "levels_order": "Teuer muss über günstig liegen."
     },
     "abort": {
       "household_saved": "Gespeichert. Der Grundpreis gilt ab {time} Uhr.",
@@ -540,7 +528,6 @@
         }
       },
       "error": {
-        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -1123,7 +1110,6 @@
         }
       },
       "error": {
-        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -1267,7 +1253,6 @@
         }
       },
       "error": {
-        "levels_order": "Teuer muss über günstig liegen.",
         "meters_required": "Wähle mindestens einen Zähler.",
         "heating_required": "Wähle die frühere Heizung.",
         "value_required": "Gib einen Wert über 0 an.",
@@ -1455,6 +1440,9 @@
         "grid_feed_in": "Einspeisevergütung",
         "grid_standing_charge": "Grundpreis",
         "grid_cheap_saving": "Tarifersparnis",
+        "grid_hours": "Gezählte Stunden",
+        "grid_cheap_hours": "Günstige Stunden",
+        "grid_expensive_hours": "Teure Stunden",
         "heat": "Wärme",
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten",

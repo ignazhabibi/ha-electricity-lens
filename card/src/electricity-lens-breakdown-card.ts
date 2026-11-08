@@ -485,13 +485,13 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
             ${(["solar", "cheap", "grid", "expensive"] as const)
               .filter(
                 (key) =>
-                  (key !== "cheap" || this._info?.levels.cheap_until != null) &&
-                  (key !== "expensive" || this._info?.levels.expensive_from != null)
+                  (key !== "cheap" || this._info?.levels.cheap != null) &&
+                  (key !== "expensive" || this._info?.levels.expensive != null)
               )
               .map(
               (key) => html`<span><span class="dot" style="--c: ${CSS_COLORS[key]}"></span>${t(
                 key === "grid"
-                  ? this._info?.levels.cheap_until != null || this._info?.levels.expensive_from != null
+                  ? this._info?.levels.cheap != null || this._info?.levels.expensive != null
                     ? "source.normal"
                     : "source.grid"
                   : `source.${key}`

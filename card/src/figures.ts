@@ -78,6 +78,9 @@ const LINE_NEEDS: Partial<Record<Figure, string[]>> = {
   saving: ["solar_saving"],
   heat: ["energy"],
   distance: ["energy"],
+  // The household compares its share with the share of hours of the level.
+  cheap_share: ["hours", "cheap_hours"],
+  expensive_share: ["hours", "expensive_hours"],
 };
 
 export const FIGURES = Object.keys(NEEDS) as Figure[];
@@ -281,6 +284,21 @@ export function valueOf(
         return { value: null, unit: "percent" };
       const grid = Math.max(energy - solar, 0);
       const percent = share(level, grid);
+      const key = figure === "cheap_share" ? "cheap" : "expensive";
+      const hours = sum("hours");
+      if (hours && area.statistics[`${key}_hours`]?.length) {
+        // Drawn evenly, the share would be that of the hours.
+        return {
+          value: percent,
+          unit: "percent",
+          line: {
+            key: `line_${key}_hours`,
+            values: {
+              percent: { value: share(sum(`${key}_hours`) ?? 0, hours) ?? 0, unit: "percent" },
+            },
+          },
+        };
+      }
       return {
         value: percent,
         unit: "percent",

@@ -34,7 +34,6 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     entry = make_entry(
         ("pv", PV_DATA),
         ("heat_pump", {**HEAT_PUMP_DATA, "heat_meters": ["sensor.heat"]}),
-        options={"cheap_until": 0.25},
     )
     await setup_entry(hass, entry)
     response = await _figures(hass, hass_ws_client)
@@ -42,7 +41,8 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     result = response["result"]
     assert result["calculating"] is False
     assert result["progress"] is None
-    assert result["levels"] == {"cheap_until": 0.25, "expensive_from": None}
+    # A flat price has no levels, so no statistics of cheap grid power.
+    assert result["levels"] == {"cheap": None, "expensive": None}
     areas = {area["id"]: area for area in result["areas"]}
     assert list(areas) == [
         "household",
@@ -60,8 +60,7 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "solar": ["electricity_lens:household_solar"],
         "cost": ["electricity_lens:household_cost"],
         "solar_cost": ["electricity_lens:household_solar_cost"],
-        "cheap": ["electricity_lens:household_cheap"],
-        "cheap_cost": ["electricity_lens:household_cheap_cost"],
+        "hours": ["electricity_lens:grid_hours"],
     }
     assert areas["grid"]["statistics"] == {
         "energy": ["sensor.grid_import"],
@@ -70,7 +69,6 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "import_cost": ["electricity_lens:grid_import_cost"],
         "feed_in": ["electricity_lens:grid_feed_in"],
         "standing_charge": ["electricity_lens:grid_standing_charge"],
-        "cheap_saving": ["electricity_lens:grid_cheap_saving"],
     }
     assert areas["solar"]["statistics"]["saving"] == ["electricity_lens:pv_saving"]
     assert areas["solar"]["forecast"] is False
@@ -81,8 +79,6 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
         "solar": ["electricity_lens:device_sensor_heat_pump_solar"],
         "cost": ["electricity_lens:device_sensor_heat_pump_cost"],
         "solar_cost": ["electricity_lens:device_sensor_heat_pump_solar_cost"],
-        "cheap": ["electricity_lens:device_sensor_heat_pump_cheap"],
-        "cheap_cost": ["electricity_lens:device_sensor_heat_pump_cheap_cost"],
         "saving": ["electricity_lens:heat_pump_saving"],
         "heat": ["electricity_lens:heat_pump_heat"],
         "alternative_cost": ["electricity_lens:heat_pump_alternative_cost"],
@@ -101,6 +97,34 @@ async def test_figures(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     # Without power sensors in the energy dashboard there is nothing to show now.
     assert washer["power"] == []
     assert result["power"] == {"grid": [], "solar": [], "battery": []}
+
+
+@pytest.mark.usefixtures("energy")
+async def test_figures_levels(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A level the grid price had brings its statistics and the tariff saving."""
+    entry = make_entry(("heat_pump", HEAT_PUMP_DATA))
+    await setup_entry(hass, entry)
+    entry.runtime_data.household_state.levels = {"cheap": 1_700_000_000.0}
+
+    result = (await _figures(hass, hass_ws_client))["result"]
+
+    assert result["levels"] == {"cheap": 1_700_000_000.0, "expensive": None}
+    areas = {area["id"]: area for area in result["areas"]}
+    assert areas["household"]["statistics"]["cheap"] == [
+        "electricity_lens:household_cheap"
+    ]
+    assert "expensive" not in areas["household"]["statistics"]
+    assert areas["household"]["statistics"]["cheap_hours"] == [
+        "electricity_lens:grid_cheap_hours"
+    ]
+    assert areas["grid"]["statistics"]["cheap_saving"] == [
+        "electricity_lens:grid_cheap_saving"
+    ]
+    assert areas["heat_pump"]["statistics"]["cheap_cost"] == [
+        "electricity_lens:device_sensor_heat_pump_cheap_cost"
+    ]
 
 
 @pytest.mark.usefixtures("energy")

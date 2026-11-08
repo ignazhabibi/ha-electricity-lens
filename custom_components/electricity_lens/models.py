@@ -17,10 +17,8 @@ from .const import (
     COMPARISON_NONE,
     CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
-    CONF_CHEAP_UNTIL,
     CONF_COMPARISON,
     CONF_CURRENT,
-    CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
     CONF_HEATING,
     CONF_INVESTMENT,
@@ -262,8 +260,6 @@ class HouseholdConfig:
     """What the user entered for the household, all optional."""
 
     standing_charge: float | None = None
-    cheap_until: float | None = None
-    expensive_from: float | None = None
     recompute: float | None = None
 
     @classmethod
@@ -272,15 +268,8 @@ class HouseholdConfig:
         numbers = _numbers(options)
         return cls(
             standing_charge=numbers.get(CONF_STANDING_CHARGE),
-            cheap_until=numbers.get(CONF_CHEAP_UNTIL),
-            expensive_from=numbers.get(CONF_EXPENSIVE_FROM),
             recompute=numbers.get(CONF_RECOMPUTE),
         )
-
-    @property
-    def levels(self) -> tuple[float | None, float | None]:
-        """Return the thresholds of cheap and expensive grid power."""
-        return self.cheap_until, self.expensive_from
 
 
 @dataclass(slots=True)
@@ -300,7 +289,9 @@ class HouseholdState:
     debts: dict[str, float] = field(default_factory=dict[str, float])
     """What meters reported beyond the household, to be paid back by "other"."""
     recent_prices: list[list[float]] = field(default_factory=list[list[float]])
-    """Start, lowest, and highest price of the hours of the last day."""
+    """Start and mean price of the hours of the last seven days."""
+    levels: dict[str, float] = field(default_factory=dict[str, float])
+    """Start of the last hour of each price level, cheap or expensive."""
 
     def reset(self, fingerprint: str) -> None:
         """Forget the computed past, keeping the standing charge's timeline."""
@@ -312,6 +303,7 @@ class HouseholdState:
         self.last_prices = {}
         self.debts = {}
         self.recent_prices = []
+        self.levels = {}
 
     @property
     def computing_past(self) -> bool:
@@ -330,6 +322,7 @@ class HouseholdState:
             "standing_charge": self.standing_charge.as_list(),
             "debts": self.debts,
             "recent_prices": self.recent_prices,
+            "levels": self.levels,
         }
 
     @classmethod
@@ -345,6 +338,7 @@ class HouseholdState:
             standing_charge=Timeline.from_list(data.get("standing_charge", [])),
             debts=_numbers(data.get("debts")),
             recent_prices=[list(row) for row in data.get("recent_prices", [])],
+            levels=_numbers(data.get("levels")),
         )
 
 

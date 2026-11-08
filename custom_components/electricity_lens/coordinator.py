@@ -22,15 +22,18 @@ from homeassistant.util import dt as dt_util
 from .calculation import (
     AREA_HOUSEHOLD,
     AREA_OTHER,
-    DAY,
+    GRID_CHEAP_HOURS,
     GRID_CHEAP_SAVING,
     GRID_COST,
+    GRID_EXPENSIVE_HOURS,
     GRID_FEED_IN,
+    GRID_HOURS,
     GRID_IMPORT_COST,
     GRID_STANDING_CHARGE,
     HOUR,
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
+    NORMAL_SPAN,
     GridPrices,
     average_price,
     battery_saving,
@@ -117,9 +120,10 @@ STORAGE_VERSION = 1
 # were one: 2 brought prices paid, price levels that need a contrast,
 # consumers that add up to the household, and meters that run back; 3 no hour
 # counted twice after a failed update; 4 the standing charge and the saving by
-# solar power per category. Categories: 5 the battery's part of the PV plant's
-# saving.
-HOUSEHOLD_CALCULATION_VERSION = 4
+# solar power per category; 5 price levels against the normal price instead of
+# thresholds, and the hours of each level. Categories: 5 the battery's part of
+# the PV plant's saving.
+HOUSEHOLD_CALCULATION_VERSION = 5
 CATEGORY_CALCULATION_VERSION = 5
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
@@ -869,7 +873,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
     def _household_fingerprint(self, setup: EnergySetup) -> str:
         """Identify what changes the household's computed past.
 
-        The energy dashboard's meters, the price levels, recomputing, and the
+        The energy dashboard's meters, recomputing, and the
         own tariffs before the setup of heat pump and car, which price their
         devices. The standing charge applies from now on, like current values.
         """
@@ -887,7 +891,6 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 "devices": sorted(
                     [device.stat, device.included_in or ""] for device in setup.devices
                 ),
-                "levels": list(self.household.levels),
                 "recompute": self.household.recompute,
                 "calculation": HOUSEHOLD_CALCULATION_VERSION,
                 "tariffs": sorted(
@@ -966,6 +969,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     currency
                     if key.endswith("_cost")
                     or key in (GRID_FEED_IN, GRID_CHEAP_SAVING, GRID_STANDING_CHARGE)
+                    else "h"
+                    if key in (GRID_HOURS, GRID_CHEAP_HOURS, GRID_EXPENSIVE_HOURS)
                     else "kWh",
                     series,
                     replace=False,
@@ -1011,6 +1016,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 GRID_FEED_IN,
                 GRID_STANDING_CHARGE,
                 GRID_CHEAP_SAVING,
+                GRID_HOURS,
+                GRID_CHEAP_HOURS,
+                GRID_EXPENSIVE_HOURS,
             )
         }
         for area, area_name in areas.items():
@@ -1091,14 +1099,20 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 )
                 if tariff is not None:
                     tariffs[device_area(stat)] = tariff
-            price = prices.paid[index] or 0.0
+            paid = prices.paid[index]
+            price = paid or 0.0
+            mean = prices.mean[index]
             state.recent_prices = [
-                row for row in state.recent_prices if row[0] > hour - DAY
+                row for row in state.recent_prices if row[0] > hour - NORMAL_SPAN
             ]
-            state.recent_prices.append(
-                [hour, prices.low[index] or price, prices.high[index] or price]
-            )
-            cheap_until, expensive_from = self.household.levels
+            if mean is not None:
+                state.recent_prices.append([hour, mean])
+            normal = normal_price(row[1] for row in state.recent_prices)
+            level = price_level(paid, normal) if paid is not None else None
+            hour_level = price_level(mean, normal) if mean is not None else None
+            for seen in (level, hour_level):
+                if seen is not None:
+                    state.levels[seen] = hour
             figures = household_hour(
                 grid_import=sum(change(stat, hour) for stat in imports),
                 export=sum(exported.values()),
@@ -1121,16 +1135,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 ),
                 standing_charge=_standing_charge(state, hour),
                 tariffs=tariffs,
-                level=price_level(
-                    price,
-                    cheap_until,
-                    expensive_from,
-                    min(row[1] for row in state.recent_prices),
-                    max(row[2] for row in state.recent_prices),
-                ),
-                normal=normal_price(
-                    (row[2] for row in state.recent_prices), cheap_until
-                ),
+                level=level,
+                hour_level=hour_level,
+                normal=normal,
                 debts=state.debts,
             )
             for key, value in figures.items():

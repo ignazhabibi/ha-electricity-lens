@@ -24,7 +24,7 @@ const hass = (progress: unknown): HomeAssistant =>
 const info = (progress: number | null): FiguresInfo => ({
   calculating: progress !== null,
   progress,
-  levels: { cheap_until: null, expensive_from: null },
+  levels: { cheap: null, expensive: null },
   areas: [],
 });
 

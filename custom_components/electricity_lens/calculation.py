@@ -20,7 +20,7 @@ YEAR = 365.25 * DAY
 # Below this an hour's import is too small to derive a price from its costs.
 MIN_PRICED_ENERGY = 0.01
 # Prices closer than half a cent are one price: the sensor's rounding noise
-# neither makes a price level nor an implausible cost.
+# does not make an implausible cost.
 SAME_PRICE = 0.005
 
 type TimelineValue = float | str | None
@@ -375,47 +375,40 @@ GRID_IMPORT_COST = "grid_import_cost"
 GRID_FEED_IN = "grid_feed_in"
 GRID_STANDING_CHARGE = "grid_standing_charge"
 GRID_CHEAP_SAVING = "grid_cheap_saving"
+GRID_HOURS = "grid_hours"
+GRID_CHEAP_HOURS = "grid_cheap_hours"
+GRID_EXPENSIVE_HOURS = "grid_expensive_hours"
 LEVEL_CHEAP = "cheap"
 LEVEL_EXPENSIVE = "expensive"
+# A price this far below or above the normal price is cheap or expensive.
+LEVEL_SPAN = 0.10
+# The normal price is the median of the hourly prices of this span.
+NORMAL_SPAN = 7 * DAY
 
 
-def price_level(
-    price: float,
-    cheap_until: float | None,
-    expensive_from: float | None,
-    recent_low: float,
-    recent_high: float,
-) -> str | None:
-    """Return the price level of an hour's grid power, None for normal.
+def normal_price(prices: Iterable[float]) -> float | None:
+    """Return the normal price: the median of the hourly prices given.
 
-    A level needs a contrast: with one price all day, as on a flat tariff,
-    nothing is cheap or expensive, whatever the thresholds say. recent_low and
-    recent_high are the lowest and highest price of the last day, the past of
-    the hour only, as an hour's level stays once it is computed.
+    The price that holds in most hours, such as the high rate of a tariff with
+    a cheap night window. Seven days, so that weekends count. A median, so that
+    a few cheap windows or price peaks do not move it.
     """
-    if cheap_until is not None and price <= cheap_until:
-        if recent_high - price > SAME_PRICE:
-            return LEVEL_CHEAP
-    elif (
-        expensive_from is not None
-        and price >= expensive_from
-        and price - recent_low > SAME_PRICE
-    ):
+    ordered = sorted(prices)
+    return ordered[len(ordered) // 2] if ordered else None
+
+
+def price_level(price: float, normal: float | None) -> str | None:
+    """Return the level of a price against the normal price, None for normal.
+
+    A flat tariff has no levels: every hour costs the normal price.
+    """
+    if normal is None or normal <= 0:
+        return None
+    if price <= normal * (1 - LEVEL_SPAN):
+        return LEVEL_CHEAP
+    if price >= normal * (1 + LEVEL_SPAN):
         return LEVEL_EXPENSIVE
     return None
-
-
-def normal_price(highs: Iterable[float], cheap_until: float | None) -> float | None:
-    """Return what grid power cost outside the cheap hours of the last day.
-
-    highs are the highest price of each of those hours. An average, so that a
-    single price peak of a dynamic tariff does not make every cheap hour look
-    like a great saving.
-    """
-    if cheap_until is None:
-        return None
-    normal = [high for high in highs if high > cheap_until]
-    return sum(normal) / len(normal) if normal else None
 
 
 def household_hour(
@@ -433,6 +426,7 @@ def household_hour(
     standing_charge: float,
     tariffs: Mapping[str, float],
     level: str | None,
+    hour_level: str | None,
     normal: float | None,
     debts: dict[str, float],
 ) -> dict[str, float]:
@@ -449,7 +443,13 @@ def household_hour(
     grid power costs the hour's price, or a device's own tariff. The battery
     belongs to the PV plant, as in pv_saving. GRID_COST is what the grid
     connection cost: imports minus feed-in compensation plus the standing charge.
-    GRID_CHEAP_SAVING is what cheap grid power saved against the normal price.
+
+    level is the level of the price paid in the hour, hour_level that of the
+    hour's mean price, against the normal price. A device's own tariff has one
+    price, so its grid power has no level. GRID_CHEAP_SAVING is what cheap grid
+    power cost less and expensive grid power cost more than at the normal
+    price. GRID_HOURS counts the hours, grid_cheap_hours and
+    grid_expensive_hours those of each level, whatever the household drew.
 
     "Other" is what remains of each figure, so all consumers add up to the
     household. A meter that books a day at once reports more than the household
@@ -465,11 +465,16 @@ def household_hour(
         GRID_IMPORT_COST: grid_import * price,
         GRID_FEED_IN: export_revenue,
         GRID_STANDING_CHARGE: standing_charge,
+        GRID_HOURS: 1.0,
     }
-    if level == LEVEL_CHEAP and normal is not None:
-        result[GRID_CHEAP_SAVING] = grid_import * max(normal - price, 0.0)
+    if hour_level == LEVEL_CHEAP:
+        result[GRID_CHEAP_HOURS] = 1.0
+    elif hour_level == LEVEL_EXPENSIVE:
+        result[GRID_EXPENSIVE_HOURS] = 1.0
 
-    def add(area: str, energy: float, unit_price: float) -> dict[str, float]:
+    def add(
+        area: str, energy: float, unit_price: float, own_level: str | None
+    ) -> dict[str, float]:
         solar_part = energy * share
         grid_part = energy - solar_part
         figures = {
@@ -477,28 +482,46 @@ def household_hour(
             "cost": grid_part * unit_price + solar_part * feed_in,
             "solar_cost": solar_part * feed_in,
         }
-        if level is not None:
-            figures[level] = grid_part
-            figures[f"{level}_cost"] = grid_part * unit_price
+        if own_level is not None:
+            figures[own_level] = grid_part
+            figures[f"{own_level}_cost"] = grid_part * unit_price
         for figure, value in figures.items():
             result[f"{area}_{figure}"] = value
         return figures
 
-    household = add(AREA_HOUSEHOLD, consumption, price) | {"energy": consumption}
+    household = add(AREA_HOUSEHOLD, consumption, price, level) | {"energy": consumption}
     remaining = dict(household)
     top = set(top_level)
+    own_grid = 0.0
     for stat, energy in devices.items():
-        figures = add(stat, energy, tariffs.get(stat, price))
+        tariff = tariffs.get(stat)
+        figures = add(
+            stat,
+            energy,
+            price if tariff is None else tariff,
+            level if tariff is None else None,
+        )
         if stat not in top:
             continue
-        # An own tariff changes what the household costs, not what it used.
-        gap = energy * (1 - share) * (tariffs.get(stat, price) - price)
-        for figure in ("cost", f"{level}_cost"):
-            if figure in household:
-                household[figure] += gap
-                remaining[figure] += gap
+        if tariff is not None:
+            grid_part = energy * (1 - share)
+            own_grid += grid_part
+            # An own tariff changes what the household costs, not what it used,
+            gap = grid_part * (tariff - price)
+            household["cost"] += gap
+            remaining["cost"] += gap
+            # and its grid power is not part of the levels of the household's.
+            if level is not None:
+                for figure, value in (
+                    (level, grid_part),
+                    (f"{level}_cost", grid_part * price),
+                ):
+                    household[figure] = max(household[figure] - value, 0.0)
+                    remaining[figure] -= value
         for figure, value in (figures | {"energy": energy}).items():
             remaining[figure] -= value
+    if level is not None and normal is not None:
+        result[GRID_CHEAP_SAVING] = max(grid_import - own_grid, 0.0) * (normal - price)
     for figure, value in remaining.items():
         left = value - debts.get(figure, 0.0)
         result[f"{AREA_OTHER}_{figure}"] = max(left, 0.0)
@@ -506,6 +529,7 @@ def household_hour(
     result[f"{AREA_HOUSEHOLD}_energy"] = consumption
     result[f"{AREA_HOUSEHOLD}_cost"] = household["cost"]
     if level is not None:
+        result[f"{AREA_HOUSEHOLD}_{level}"] = household[level]
         result[f"{AREA_HOUSEHOLD}_{level}_cost"] = household[f"{level}_cost"]
     return result
 

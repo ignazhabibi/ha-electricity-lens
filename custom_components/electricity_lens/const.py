@@ -33,10 +33,9 @@ CONF_RECOMPUTE: Final = "recompute"
 # Config entry options: the household
 CONF_STANDING_CHARGE: Final = "standing_charge"
 """Standing charge per month, shared evenly over the hours of its month."""
-CONF_CHEAP_UNTIL: Final = "cheap_until"
-"""Grid power at or below this price per kWh counts as cheap."""
-CONF_EXPENSIVE_FROM: Final = "expensive_from"
-"""Grid power at or above this price per kWh counts as expensive."""
+RETIRED_OPTIONS: Final = ("cheap_until", "expensive_from")
+"""Options of earlier versions, removed by the entry's migration: the price
+levels follow the grid price on their own since 0.33.0."""
 
 # Keys inside CONF_BEFORE and CONF_CURRENT
 VALUE_PRICE: Final = "price"

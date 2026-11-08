@@ -123,10 +123,10 @@ async def test_full_setup(hass: HomeAssistant) -> None:
         result["flow_id"], {"categories": ["pv", "heat_pump", "wallbox"]}
     )
     assert result["step_id"] == "household"
-    assert _fields(result) == ["standing_charge", "cheap_until", "expensive_from"]
+    assert _fields(result) == ["standing_charge"]
     assert _suggested(result) == {}
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"standing_charge": 12.5, "cheap_until": 0.2}
+        result["flow_id"], {"standing_charge": 12.5}
     )
     assert result["step_id"] == "pv"
     assert "since" in result["description_placeholders"]  # pyright: ignore[reportOperatorIssue]
@@ -160,8 +160,8 @@ async def test_full_setup(hass: HomeAssistant) -> None:
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     entry = result["result"]
-    assert entry.minor_version == 2
-    assert entry.options == {"standing_charge": 12.5, "cheap_until": 0.2}
+    assert entry.minor_version == 3
+    assert entry.options == {"standing_charge": 12.5}
     subentries = {s.subentry_type: s for s in entry.subentries.values()}
     assert subentries["pv"].data["investment"] == 14500
     assert subentries["pv"].title == "Solar"
@@ -244,25 +244,21 @@ async def test_scop_only_where_heat_data_is_missing(
 
 
 async def test_household_only(hass: HomeAssistant) -> None:
-    """Without categories only the household is set up; its levels are checked."""
+    """Without categories only the household is set up."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["step_id"] == "household"
     assert result["last_step"] is True
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"cheap_until": 0.3, "expensive_from": 0.3}
-    )
-    assert result["errors"] == {"expensive_from": "levels_order"}
     with patch(
         "custom_components.electricity_lens.async_setup_entry", return_value=True
     ):
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"cheap_until": 0.2, "expensive_from": 0.35}
+            result["flow_id"], {"standing_charge": 9}
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["result"].options == {"cheap_until": 0.2, "expensive_from": 0.35}
+    assert result["result"].options == {"standing_charge": 9}
     assert not result["result"].subentries
 
 
@@ -788,37 +784,24 @@ async def test_reconfigure_interface_error(hass: HomeAssistant) -> None:
 
 
 async def test_options_household(hass: HomeAssistant) -> None:
-    """A new standing charge applies from the next hour; new levels recompute."""
+    """A new standing charge applies from the next hour."""
     entry = make_entry()
     entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(entry, options={"cheap_until": 0.2})
+    hass.config_entries.async_update_entry(entry, options={"standing_charge": 12})
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["household", "recompute"]
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"next_step_id": "household"}
     )
-    assert _suggested(result)["cheap_until"] == 0.2
+    assert _fields(result) == ["standing_charge"]
+    assert _suggested(result)["standing_charge"] == 12
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"cheap_until": 0.4, "expensive_from": 0.3}
-    )
-    assert result["errors"] == {"expensive_from": "levels_order"}
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"cheap_until": 0.2, "standing_charge": 14}
+        result["flow_id"], {"standing_charge": 14}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "household_saved"
     assert result["description_placeholders"]["time"]  # pyright: ignore[reportOptionalSubscript]
-    assert entry.options == {"cheap_until": 0.2, "standing_charge": 14}
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"next_step_id": "household"}
-    )
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"standing_charge": 14}
-    )
-    assert result["reason"] == "recomputing"
     assert entry.options == {"standing_charge": 14}
 
 

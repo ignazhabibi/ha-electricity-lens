@@ -28,16 +28,12 @@
       },
       "household": {
         "title": "Household",
-        "description": "All optional. The standing charge is added to the grid costs. With price levels you see how much grid power you drew in cheap and in expensive hours.",
+        "description": "Optional. The standing charge is added to the grid costs. Cheap and expensive hours follow from your grid price on their own.",
         "data": {
-          "standing_charge": "Standing charge per month (optional)",
-          "cheap_until": "Cheap up to (optional)",
-          "expensive_from": "Expensive from (optional)"
+          "standing_charge": "Standing charge per month (optional)"
         },
         "data_description": {
-          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
-          "cheap_until": "Grid power at this price or below counts as cheap, if a higher price occurred within the last 24 hours",
-          "expensive_from": "Grid power at this price or above counts as expensive, if a lower price occurred within the last 24 hours"
+          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month"
         }
       },
       "pv": {
@@ -433,7 +429,6 @@
       }
     },
     "error": {
-      "levels_order": "Expensive must be above cheap.",
       "meters_required": "Choose at least one meter.",
       "heating_required": "Choose the former heating.",
       "value_required": "Enter a value above 0.",
@@ -454,31 +449,24 @@
       "init": {
         "title": "What do you want to change?",
         "menu_options": {
-          "household": "Standing charge and price levels",
+          "household": "Standing charge",
           "recompute": "Recompute"
         }
       },
       "household": {
-        "title": "Standing charge and price levels",
-        "description": "A new standing charge applies from the next full hour. New price levels sort the whole past again.",
+        "title": "Standing charge",
+        "description": "A new standing charge applies from the next full hour.",
         "data": {
-          "standing_charge": "Standing charge per month (optional)",
-          "cheap_until": "Cheap up to (optional)",
-          "expensive_from": "Expensive from (optional)"
+          "standing_charge": "Standing charge per month (optional)"
         },
         "data_description": {
-          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month",
-          "cheap_until": "Grid power at this price or below counts as cheap, if a higher price occurred within the last 24 hours",
-          "expensive_from": "Grid power at this price or above counts as expensive, if a lower price occurred within the last 24 hours"
+          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month"
         }
       },
       "recompute": {
         "title": "Recompute",
         "description": "Computes everything again with the current data: the household and all savings. For example after you corrected a wrong reading in the statistics. Your values stay as they are."
       }
-    },
-    "error": {
-      "levels_order": "Expensive must be above cheap."
     },
     "abort": {
       "household_saved": "Saved. The standing charge applies from {time}.",
@@ -540,7 +528,6 @@
         }
       },
       "error": {
-        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -1123,7 +1110,6 @@
         }
       },
       "error": {
-        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -1267,7 +1253,6 @@
         }
       },
       "error": {
-        "levels_order": "Expensive must be above cheap.",
         "meters_required": "Choose at least one meter.",
         "heating_required": "Choose the former heating.",
         "value_required": "Enter a value above 0.",
@@ -1455,6 +1440,9 @@
         "grid_feed_in": "Feed-in compensation",
         "grid_standing_charge": "Standing charge",
         "grid_cheap_saving": "Tariff saving",
+        "grid_hours": "Counted hours",
+        "grid_cheap_hours": "Cheap hours",
+        "grid_expensive_hours": "Expensive hours",
         "heat": "heat",
         "distance": "distance",
         "alternative_cost": "comparison costs",

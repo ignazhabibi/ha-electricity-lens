@@ -237,29 +237,23 @@ def test_internal_rate_of_return() -> None:
     assert rate(investment=1000, saving=2000, years=0.05) is None
 
 
-def test_price_level() -> None:
-    """Thresholds include their price; without them there are no levels."""
-    assert price_level(0.20, 0.20, 0.35, 0.20, 0.35) == "cheap"
-    assert price_level(0.35, 0.20, 0.35, 0.20, 0.35) == "expensive"
-    assert price_level(0.30, 0.20, 0.35, 0.20, 0.35) is None
-    assert price_level(0.10, None, None, 0.10, 0.35) is None
-
-
-def test_price_level_needs_a_contrast() -> None:
-    """With one price, as on a flat tariff, nothing is cheap or expensive."""
-    assert price_level(0.27, 0.30, None, 0.27, 0.27) is None
-    assert price_level(0.40, None, 0.35, 0.40, 0.40) is None
-    # Rounding noise of the sensor is no contrast.
-    assert price_level(0.27, 0.30, None, 0.27, 0.274) is None
-    assert price_level(0.27, 0.30, None, 0.27, 0.318) == "cheap"
-
-
 def test_normal_price() -> None:
-    """The average outside the cheap hours, so one peak does not rule it."""
-    assert normal_price([0.18, 0.32, 0.32], 0.30) == pytest.approx(0.32)
-    assert normal_price([0.18, 0.40, 1.20], 0.30) == pytest.approx(0.80)
-    assert normal_price([0.18, 0.18], 0.30) is None
-    assert normal_price([0.18, 0.32], None) is None
+    """The price of most hours: the high rate beside a cheap night window."""
+    assert normal_price([0.182] * 5 + [0.318] * 19) == pytest.approx(0.318)
+    # A few price peaks or cheap windows do not move it.
+    assert normal_price([0.25, 0.26, 0.27, 0.28, 1.20]) == pytest.approx(0.27)
+    assert normal_price([]) is None
+
+
+def test_price_level() -> None:
+    """Ten percent below or above the normal price; a flat tariff has none."""
+    assert price_level(0.182, 0.318) == "cheap"
+    assert price_level(0.318, 0.318) is None
+    assert price_level(0.378, 0.318) == "expensive"
+    # Within ten percent, a dynamic tariff's hour is normal.
+    assert price_level(0.29, 0.30) is None
+    assert price_level(0.27, 0.27) is None
+    assert price_level(0.20, None) is None
 
 
 def _hour(**changes: object) -> dict[str, float]:
@@ -277,6 +271,7 @@ def _hour(**changes: object) -> dict[str, float]:
         "standing_charge": 0.02,
         "tariffs": {"pump": 0.20},
         "level": "cheap",
+        "hour_level": "cheap",
         "normal": 0.40,
         "debts": {},
     }
@@ -289,7 +284,9 @@ def test_household_hour() -> None:
     # 4 kWh used, 3 of them solar power: 75 %.
     assert hour["household_energy"] == 4.0
     assert hour["household_solar"] == 3.0
-    assert hour["household_cheap"] == pytest.approx(1.0)
+    # The pump's own tariff has one price: its grid power has no level.
+    assert hour["household_cheap"] == pytest.approx(1.0 - 0.25)
+    assert "pump_cheap" not in hour
     assert hour["car_solar"] == pytest.approx(1.5)
     assert hour["car_cost"] == pytest.approx(0.5 * 0.30 + 1.5 * 0.08)
     assert hour["pump_cost"] == pytest.approx(0.25 * 0.20 + 0.75 * 0.08)
@@ -304,26 +301,46 @@ def test_household_hour() -> None:
     assert hour["grid_cost"] == pytest.approx(1.0 * 0.30 + 0.02)
     assert hour["grid_import_cost"] == pytest.approx(0.30)
     assert hour["grid_feed_in"] == 0.0
-    assert hour["grid_cheap_saving"] == pytest.approx(1.0 * (0.40 - 0.30))
+    assert hour["grid_cheap_saving"] == pytest.approx(0.75 * (0.40 - 0.30))
     assert "household_expensive" not in hour
+    assert hour["grid_hours"] == 1.0
+    assert hour["grid_cheap_hours"] == 1.0
+
+
+def test_household_hour_levels() -> None:
+    """Expensive grid power costs more than at the normal price; hours count."""
+    hour = _hour(level="expensive", hour_level="expensive", normal=0.25)
+    assert hour["household_expensive"] == pytest.approx(0.75)
+    assert hour["grid_cheap_saving"] == pytest.approx(0.75 * (0.25 - 0.30))
+    assert hour["grid_expensive_hours"] == 1.0
+    # A charge in the cheap minutes of a dearer hour: the kWh is cheap, the hour not.
+    hour = _hour(hour_level=None)
+    assert hour["household_cheap"] == pytest.approx(0.75)
+    assert "grid_cheap_hours" not in hour
+    assert hour["grid_hours"] == 1.0
 
 
 def test_household_hour_costs_by_source() -> None:
     """What the solar power and each level cost add up to a consumer's costs."""
     hour = _hour()
-    for area in ("household", "car", "pump", "other"):
+    for area in ("car", "other"):
         assert hour[f"{area}_solar_cost"] == pytest.approx(hour[f"{area}_solar"] * 0.08)
         assert hour[f"{area}_cost"] == pytest.approx(
             hour[f"{area}_solar_cost"] + hour[f"{area}_cheap_cost"]
         )
-    assert hour["pump_cheap_cost"] == pytest.approx(0.25 * 0.20)
+    # The pump's grid power at its own tariff has no level.
+    assert hour["pump_cost"] == pytest.approx(hour["pump_solar_cost"] + 0.25 * 0.20)
+    assert hour["household_cost"] == pytest.approx(
+        hour["household_solar_cost"] + hour["household_cheap_cost"] + 0.25 * 0.20
+    )
     # The household's cheap power costs what its consumers' cheap power costs.
     assert hour["household_cheap_cost"] == pytest.approx(
-        hour["car_cheap_cost"] + hour["pump_cheap_cost"] + hour["other_cheap_cost"]
+        hour["car_cheap_cost"] + hour["other_cheap_cost"]
     )
-    normal = _hour(level=None)
+    normal = _hour(level=None, hour_level=None)
     assert "household_cheap_cost" not in normal
     assert "grid_cheap_saving" not in normal
+    assert "grid_cheap_hours" not in normal
 
 
 def test_consumers_add_up_when_a_meter_books_a_day_at_once() -> None:

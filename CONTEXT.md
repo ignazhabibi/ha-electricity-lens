@@ -24,7 +24,9 @@ from their bills and devices.
 | Stromrechnung | Electricity bill | What the supplier bills: grid power, standing charge; the feed-in compensation is apart | |
 | Ø Netzpreis | Avg. grid price | Grid costs per kWh of grid import | |
 | Ø Strompreis | Avg. price | Costs per kWh of consumption: grid and PV / solar power together; "inkl. PV" / "incl. solar" where there is a PV plant | |
-| Netz günstig / normal / teuer | Grid cheap / normal / expensive | Grid power by the price levels of the options | |
+| Normalpreis | Normal price | The price of most hours of the last 7 days, their median | An average |
+| Netz günstig / normal / teuer | Grid cheap / normal / expensive | Grid power at least 10 % below the normal price, within 10 % of it, at least 10 % above | Fixed price limits |
+| Tarifersparnis | Tariff saving | What cheap grid power cost less and expensive grid power more than at the normal price | A saving of an area; it is not in the balance |
 | Strommix | Electricity mix | The shares of PV / solar power and grid power in a consumption | |
 | Ersparnis | Saving | What an area saves against its comparison, in money | Energy |
 | Vergleich | Comparison | What a heat pump or car is compared with: the former heating, a combustion car | |

@@ -1,7 +1,7 @@
 """Config flow for Electricity Lens.
 
 The config entry stands for the whole household, which is always computed;
-its standing charge and price levels are the entry's options. Each category
+its standing charge is the entry's option. Each category
 (PV plant, heat pump, electric car) is a config subentry with its own device,
 so categories can be added, changed, and removed on their own.
 
@@ -50,10 +50,8 @@ from .const import (
     COMPARISON_NONE,
     CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
-    CONF_CHEAP_UNTIL,
     CONF_COMPARISON,
     CONF_CURRENT,
-    CONF_EXPENSIVE_FROM,
     CONF_HEAT_METERS,
     CONF_HEATING,
     CONF_INVESTMENT,
@@ -81,7 +79,7 @@ from .sources import (
 )
 
 CONF_CATEGORIES = "categories"
-HOUSEHOLD_FIELDS = (CONF_STANDING_CHARGE, CONF_CHEAP_UNTIL, CONF_EXPENSIVE_FROM)
+HOUSEHOLD_FIELDS = (CONF_STANDING_CHARGE,)
 # The price fields are named after the former heating, so their label and unit
 # fit. They are stored as VALUE_PRICE and VALUE_PRICE_ENTITY. Without a former
 # heating there is no price to ask for.
@@ -180,24 +178,10 @@ def meter_selector(setup: EnergySetup, taken: Iterable[str]) -> SelectSelector: 
 
 
 def household_schema(hass: HomeAssistant) -> probatio.Schema:
-    """Return the household's form: standing charge and price levels."""
-    currency = hass.config.currency
+    """Return the household's form: the standing charge."""
     return probatio.Schema(
-        {
-            probatio.Optional(CONF_STANDING_CHARGE): _number(currency),
-            probatio.Optional(CONF_CHEAP_UNTIL): _number(f"{currency}/kWh"),
-            probatio.Optional(CONF_EXPENSIVE_FROM): _number(f"{currency}/kWh"),
-        }
+        {probatio.Optional(CONF_STANDING_CHARGE): _number(hass.config.currency)}
     )
-
-
-def validate_household(user_input: Mapping[str, Any]) -> dict[str, str]:
-    """Return the errors of the household's form."""
-    cheap = user_input.get(CONF_CHEAP_UNTIL)
-    expensive = user_input.get(CONF_EXPENSIVE_FROM)
-    if cheap is not None and expensive is not None and cheap >= expensive:
-        return {CONF_EXPENSIVE_FROM: "levels_order"}
-    return {}
 
 
 def household_data(user_input: Mapping[str, Any]) -> dict[str, Any]:
@@ -416,7 +400,7 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up the household: an overview, then the chosen categories."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         """Initialize the flow."""
@@ -487,18 +471,13 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_household(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the standing charge and the price levels, all optional."""
-        errors: dict[str, str] = {}
-        if user_input is not None and not (errors := validate_household(user_input)):
+        """Ask for the standing charge, which is optional."""
+        if user_input is not None:
             self._options = household_data(user_input)
             return await self._async_next_category()
-        schema = household_schema(self.hass)
-        if user_input is not None:
-            schema = self.add_suggested_values_to_schema(schema, user_input)
         return self.async_show_form(
             step_id="household",
-            data_schema=schema,
-            errors=errors,
+            data_schema=household_schema(self.hass),
             last_step=not self._pending,
         )
 
@@ -1047,7 +1026,7 @@ for _heating in (*FUELS, HEATING_NONE):
 
 
 class HouseholdOptionsFlow(OptionsFlow):
-    """Change the household: standing charge and price levels, or recompute."""
+    """Change the household's standing charge, or recompute."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -1070,19 +1049,15 @@ class HouseholdOptionsFlow(OptionsFlow):
     async def async_step_household(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Change the standing charge and the price levels."""
+        """Change the standing charge, which applies from the next full hour."""
         options = self.config_entry.options
-        errors: dict[str, str] = {}
-        if user_input is not None and not (errors := validate_household(user_input)):
+        if user_input is not None:
             new = {
                 key: value
                 for key, value in options.items()
                 if key not in HOUSEHOLD_FIELDS
             }
             new.update(household_data(user_input))
-            levels = (CONF_CHEAP_UNTIL, CONF_EXPENSIVE_FROM)
-            if any(new.get(key) != options.get(key) for key in levels):
-                return self._async_save(new, "recomputing", {})
             valid_from = dt_util.as_local(dt_util.utc_from_timestamp(next_full_hour()))
             return self._async_save(
                 new, "household_saved", {"time": valid_from.strftime("%H:%M")}
@@ -1090,10 +1065,8 @@ class HouseholdOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="household",
             data_schema=self.add_suggested_values_to_schema(
-                household_schema(self.hass),
-                user_input if user_input is not None else options,
+                household_schema(self.hass), options
             ),
-            errors=errors,
         )
 
     async def async_step_recompute(

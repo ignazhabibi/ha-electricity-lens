@@ -1047,6 +1047,21 @@ async def test_entries_of_other_versions_are_refused(
     assert (entry.version, entry.minor_version) == (version, minor_version)
 
 
+@pytest.mark.usefixtures("energy")
+async def test_entries_of_1_2_lose_the_price_thresholds(hass: HomeAssistant) -> None:
+    """Up to 0.32 the price levels had thresholds; the grid price replaced them."""
+    entry = make_entry(
+        minor_version=2,
+        options={"standing_charge": 12, "cheap_until": 0.2, "expensive_from": 0.35},
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+
+    assert entry.minor_version == 3
+    assert entry.options == {"standing_charge": 12}
+
+
 async def test_forecast_sensors(hass: HomeAssistant) -> None:
     """With a forecast in the energy dashboard, two sensors show it.
 

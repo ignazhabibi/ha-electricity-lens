@@ -20,6 +20,7 @@ from .calculation import (
     GRID_CHEAP_SAVING,
     GRID_COST,
     GRID_FEED_IN,
+    GRID_HOURS,
     GRID_IMPORT_COST,
     GRID_STANDING_CHARGE,
     LEVEL_CHEAP,
@@ -80,8 +81,9 @@ async def async_figures(
     """
     setup = coordinator.setup or await async_get_energy_setup(hass)
     text = await coordinator.async_texts()
-    cheap_until, expensive_from = coordinator.household.levels
-    levels = ((LEVEL_CHEAP, cheap_until), (LEVEL_EXPENSIVE, expensive_from))
+    # The levels the grid price has had: the start of each one's last hour.
+    seen = coordinator.household_state.levels
+    levels = [level for level in (LEVEL_CHEAP, LEVEL_EXPENSIVE) if level in seen]
 
     def household(area: str, **extra: list[str]) -> dict[str, list[str]]:
         statistics = {
@@ -89,12 +91,11 @@ async def async_figures(
             "cost": [household_statistic_id(f"{area}_cost")],
             "solar_cost": [household_statistic_id(f"{area}_solar_cost")],
         }
-        for level, threshold in levels:
-            if threshold is not None:
-                statistics[level] = [household_statistic_id(f"{area}_{level}")]
-                statistics[f"{level}_cost"] = [
-                    household_statistic_id(f"{area}_{level}_cost")
-                ]
+        for level in levels:
+            statistics[level] = [household_statistic_id(f"{area}_{level}")]
+            statistics[f"{level}_cost"] = [
+                household_statistic_id(f"{area}_{level}_cost")
+            ]
         return {**extra, **statistics}
 
     def area(kind: str, area_id: str, name: str, **statistics: Any) -> dict[str, Any]:
@@ -108,6 +109,12 @@ async def async_figures(
             **household(
                 AREA_HOUSEHOLD,
                 energy=[household_statistic_id(f"{AREA_HOUSEHOLD}_energy")],
+                # The hours, and those of each level, beside its grid power.
+                hours=[household_statistic_id(GRID_HOURS)],
+                **{
+                    f"{level}_hours": [household_statistic_id(f"grid_{level}_hours")]
+                    for level in levels
+                },
             ),
         ),
         area(
@@ -122,7 +129,7 @@ async def async_figures(
             standing_charge=[household_statistic_id(GRID_STANDING_CHARGE)],
             **(
                 {"cheap_saving": [household_statistic_id(GRID_CHEAP_SAVING)]}
-                if cheap_until is not None
+                if levels
                 else {}
             ),
         ),
@@ -181,8 +188,7 @@ async def async_figures(
                             household_statistic_id(f"{device}_{key}")
                             for device in devices
                         ]
-                        for level, threshold in levels
-                        if threshold is not None
+                        for level in levels
                         for key in (level, f"{level}_cost")
                     },
                     # Without a comparison there is no saving, only its own figures.
@@ -262,7 +268,7 @@ async def async_figures(
         "calculating": coordinator.household_state.computing_past
         or any(result.calculating for result in coordinator.data.categories.values()),
         "progress": coordinator.progress(),
-        "levels": {"cheap_until": cheap_until, "expensive_from": expensive_from},
+        "levels": {level: seen.get(level) for level in (LEVEL_CHEAP, LEVEL_EXPENSIVE)},
         "areas": areas,
         # The sensors of the power right now: the grid's positive while
         # importing, the batteries' positive while discharging.
