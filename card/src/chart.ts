@@ -61,11 +61,23 @@ export interface ChartLine extends ChartSeries {
   step?: boolean;
 }
 
+/** The time axis, as Home Assistant's energy graphs set it: from the first
+ * slot to the last, so `ha-chart-base` labels it as theirs. Months and years
+ * name themselves, as on Home Assistant's monthly energy graphs. */
+export interface TimeAxis {
+  min: number;
+  max: number;
+  /** Bars per month or per year; else `ha-chart-base` labels by the range. */
+  period?: "month" | "year";
+  language: string;
+}
+
 export interface ChartInput {
-  /** Axis label and tooltip heading of each slot. */
-  labels: Array<{ axis: string; tooltip: string }>;
-  /** A label on every so many slots, from the first; without it as ECharts fits them. */
-  labelEvery?: number;
+  /** The start of each slot, where its bar stands. */
+  slots: number[];
+  axis: TimeAxis;
+  /** The tooltip heading of each slot. */
+  labels: string[];
   series: ChartSeries[];
   /** The same bars for the period compared with, slot by slot, as HA's energy
    * graphs show them: paler, next to the bars of the selection. */
@@ -119,8 +131,11 @@ interface TooltipParam {
   seriesId?: string;
   seriesName?: string;
   color?: string;
-  value?: number | null;
+  /** The slot's time and its value. */
+  value?: [number, number | null] | null;
 }
+
+const valueOf = (p: TooltipParam): number | null => p.value?.[1] ?? null;
 
 /** The next round step at or above a value: 1, 2, 2.5, or 5 times a power of ten. */
 function roundStep(value: number): number {
@@ -159,7 +174,7 @@ export function alignedAxes(
 }
 
 /** Bars of one stack. The outermost bar of each side gets the rounded cap. */
-function stackedBars(series: ChartSeries[], stack: string, compare: boolean) {
+function stackedBars(series: ChartSeries[], slots: number[], stack: string, compare: boolean) {
   return series.map((item, k) => ({
     id: compare ? COMPARE + item.id : item.id,
     type: "bar",
@@ -175,7 +190,7 @@ function stackedBars(series: ChartSeries[], stack: string, compare: boolean) {
         .slice(k + 1)
         .every((other) => Math.sign(other.values[i] ?? 0) !== Math.sign(value ?? 0));
       return {
-        value,
+        value: [slots[i], value],
         itemStyle: !value
           ? { borderWidth: 0 }
           : outer
@@ -198,6 +213,48 @@ function stackedExtent(series: ChartSeries[], slots: number): { min: number; max
   return { min, max };
 }
 
+/** Days around the first and last month, as Home Assistant's monthly graphs. */
+const MONTH_PADDING_MS = 5 * 24 * 3_600_000;
+
+/** The x axis. `ha-chart-base` labels a time axis as Home Assistant's graphs:
+ * hours with the date bold at midnight, days with the first of a month bold.
+ * Months and years get the labels of Home Assistant's monthly graphs. */
+export function timeAxis(axis: TimeAxis): Record<string, unknown> {
+  const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(axis.language, options);
+  if (axis.period === "month") {
+    const month = format({ month: "long" });
+    const monthYear = format({ month: "long", year: "numeric" });
+    const first = new Date(axis.min);
+    const last = new Date(axis.max);
+    const months = (last.getFullYear() - first.getFullYear()) * 12 + last.getMonth() - first.getMonth();
+    return {
+      type: "time",
+      min: new Date(axis.min - MONTH_PADDING_MS),
+      max: new Date(axis.max + MONTH_PADDING_MS),
+      axisLabel: {
+        formatter: (value: number) => {
+          const date = new Date(value);
+          return date.getMonth() === 0 ? `{bold|${monthYear.format(date)}}` : month.format(date);
+        },
+      },
+      splitNumber: Math.min(months, 5),
+    };
+  }
+  if (axis.period === "year") {
+    const year = format({ year: "numeric" });
+    const years = new Date(axis.max).getFullYear() - new Date(axis.min).getFullYear();
+    return {
+      type: "time",
+      min: new Date(axis.min - 6 * MONTH_PADDING_MS),
+      max: new Date(axis.max + 6 * MONTH_PADDING_MS),
+      axisLabel: { formatter: (value: number) => year.format(new Date(value)) },
+      minInterval: 365 * 24 * 3_600_000,
+      splitNumber: Math.max(years, 1),
+    };
+  }
+  return { type: "time", min: new Date(axis.min), max: new Date(axis.max) };
+}
+
 /** The data and options for `ha-chart-base`. Values can be negative, for
  * example a heat pump's saving in a month of cheap gas: those bars stack
  * downwards. Series are told apart by their ids, never by their names. */
@@ -206,8 +263,8 @@ export function barChart(input: ChartInput) {
   const compare = input.compare;
   // Compared bars come first, so they stand left of the selection's.
   const bars = [
-    ...(compare ? stackedBars(compare.series, "compare", true) : []),
-    ...stackedBars(input.series, "main", false),
+    ...(compare ? stackedBars(compare.series, input.slots, "compare", true) : []),
+    ...stackedBars(input.series, input.slots, "main", false),
   ];
   // Lines explain the bars and stay behind them: thin, dashed, no symbols.
   const lineData = lines.map((line) => ({
@@ -222,7 +279,7 @@ export function barChart(input: ChartInput) {
     lineStyle: { width: 1.5, type: line.dash ?? "dashed", color: line.color },
     z: 1,
     connectNulls: true,
-    data: line.values,
+    data: line.values.map((value, i) => [input.slots[i], value]),
   }));
   const data = [...bars, ...lineData];
   const lineFormat = new Map(lines.map((line) => [line.id, line.format]));
@@ -234,14 +291,14 @@ export function barChart(input: ChartInput) {
 
   /** The bars of one period in the tooltip, with their total. */
   const section = (heading: string, params: TooltipParam[]): string => {
-    const shown = params.filter((p) => p.value);
+    const shown = params.filter((p) => valueOf(p));
     if (!shown.length) return "";
     const rows = shown.map(
-      (p) => `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.format(p.value ?? 0)}`
+      (p) => `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${input.format(valueOf(p) ?? 0)}`
     );
     const sum = shown
       .filter((p) => !excluded.has(p.seriesId ?? ""))
-      .reduce((total, p) => total + (p.value ?? 0), 0);
+      .reduce((total, p) => total + (valueOf(p) ?? 0), 0);
     return (
       `<b>${escape(heading)}</b><br>${rows.join("<br>")}` +
       (shown.length > 1 ? `<br><b>${escape(input.total)}: ${input.format(sum)}</b>` : "")
@@ -256,12 +313,12 @@ export function barChart(input: ChartInput) {
     const isLine = (p: TooltipParam) => lineFormat.has(p.seriesId ?? "");
     const isCompared = (p: TooltipParam) => (p.seriesId ?? "").startsWith(COMPARE);
     const lineRows = list
-      .filter((p) => isLine(p) && p.value !== null && p.value !== undefined)
+      .filter((p) => isLine(p) && valueOf(p) !== null)
       .map(
         (p) =>
-          `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesId ?? "")?.(p.value ?? 0) ?? ""}`
+          `${marker(String(p.color ?? ""))}${escape(p.seriesName ?? "")}: ${lineFormat.get(p.seriesId ?? "")?.(valueOf(p) ?? 0) ?? ""}`
       );
-    const heading = input.labels[index]?.tooltip ?? "";
+    const heading = input.labels[index] ?? "";
     const main = section(heading, list.filter((p) => !isLine(p) && !isCompared(p)));
     const compared = compare
       ? section(compare.labels[index] ?? "", list.filter((p) => isCompared(p)))
@@ -291,7 +348,7 @@ export function barChart(input: ChartInput) {
   };
   if (lines.length) {
     // Bars stack, so each side's extent is the sum of a slot.
-    const slots = input.labels.length;
+    const slots = input.slots.length;
     const own = stackedExtent(input.series, slots);
     const other = compare ? stackedExtent(compare.series, slots) : own;
     const lineValues = lines.flatMap((line) =>
@@ -313,12 +370,7 @@ export function barChart(input: ChartInput) {
     }
   }
   const options = {
-    xAxis: {
-      type: "category",
-      data: input.labels.map((label) => label.axis),
-      axisTick: { show: false },
-      ...(input.labelEvery ? { axisLabel: { interval: input.labelEvery - 1 } } : {}),
-    },
+    xAxis: timeAxis(input.axis),
     // One axis is given as an object, as HA's own energy graphs do.
     yAxis: lines.length ? [barAxis, lineAxis] : barAxis,
     grid: { top: 15, bottom: 0, left: 1, right: 1, containLabel: true },

@@ -296,8 +296,8 @@ Like Home Assistant's energy cards, the cards that follow the energy date
 selection take `collection_key` in YAML, for a date selection with a key of its
 own. Without one they follow the dashboard's.
 
-Where the numbers need a rule to be understood, an info icon next to the title
-explains them, as on Home Assistant's self-sufficiency gauge: the power flow,
+Where the numbers need a rule to be understood, an info icon at the end of the
+header explains them, as on Home Assistant's self-sufficiency gauge: the
 economics, savings, and heat meters, costs by source and the electricity bill,
 and the key figures of the average price with solar, the heat price, the payback,
 and the return. A pointer shows it while over the icon; a tap keeps it open.

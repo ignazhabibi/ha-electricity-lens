@@ -553,15 +553,15 @@ export class ElectricityLensHistoryCard extends LensCard {
       inTotal: !bar.negative,
     }));
     let lines = this._lines();
-    let labels = this._labels(loaded.slots, plan.period);
     // "All years" begins with the first year that has a value.
     const first = plan.fromFirstValue
-      ? fromFirstValue([...series, ...lines].map((item) => item.values), labels.length)
+      ? fromFirstValue([...series, ...lines].map((item) => item.values), loaded.slots.length)
       : 0;
     const from = <T,>(values: T[]) => values.slice(first);
     series.forEach((item) => (item.values = from(item.values)));
     lines = lines.map((line) => ({ ...line, values: from(line.values) }));
-    labels = from(labels);
+    const slots = from(loaded.slots);
+    const labels = this._labels(slots, plan.period);
     const compare = plan.compare
       ? {
           series: plan.bars.map(({ series: bar, name }) => ({
@@ -571,7 +571,7 @@ export class ElectricityLensHistoryCard extends LensCard {
             values: this._barValues(bar, true),
             inTotal: !bar.negative,
           })),
-          labels: this._labels(loaded.compareSlots, plan.period).map((label) => label.tooltip),
+          labels: this._labels(loaded.compareSlots, plan.period),
         }
       : undefined;
     const lineUnits: Partial<Record<Unit, string>> = {
@@ -583,10 +583,17 @@ export class ElectricityLensHistoryCard extends LensCard {
       plan.lineFigure && !plan.lines.length
         ? (lineUnits[valueOf(plan.lineFigure.figure, plan.lineFigure.area, () => 0, null).unit] ?? "")
         : "";
+    const last = slots[slots.length - 1] ?? plan.range.start;
     const chart = barChart({
+      slots,
+      // As Home Assistant's energy graphs: hours end half an hour after the last.
+      axis: {
+        min: slots[0] ?? plan.range.start,
+        max: plan.period === "hour" ? last + 1_800_000 : last,
+        period: plan.period === "month" || plan.period === "year" ? plan.period : undefined,
+        language: this._language,
+      },
       labels,
-      // Hours as Home Assistant's energy graphs tick them: every four, every eight over two days.
-      labelEvery: plan.period === "hour" ? (labels.length > 25 ? 8 : 4) : undefined,
       series,
       compare,
       unit: plan.unit === "money" ? fmt.currencySymbol() : plan.unit === "distance" ? "km" : "kWh",
@@ -606,35 +613,22 @@ export class ElectricityLensHistoryCard extends LensCard {
     return { ...chart, total, hasData };
   }
 
-  private _labels(slots: number[], period: Period): Array<{ axis: string; tooltip: string }> {
+  /** Each slot's tooltip heading; the axis labels come from `ha-chart-base`. */
+  private _labels(slots: number[], period: Period): string[] {
     const format = (options: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(this._language, options);
     const hour = format({ hour: "numeric", minute: "2-digit", hour12: hour12(this.hass?.locale) });
-    // A new day shows its date, as on Home Assistant's energy graphs.
-    const date = format({ day: "numeric", month: "short" });
-    const severalYears =
-      slots.length > 0 &&
-      new Date(slots[0]).getFullYear() !== new Date(slots[slots.length - 1]).getFullYear();
-    const axis = {
-      hour,
-      day: format({ day: "numeric" }),
-      month: format(severalYears ? { month: "short", year: "2-digit" } : { month: "short" }),
-      year: format({ year: "numeric" }),
-    }[period];
     const tooltip = {
       hour,
       day: format({ weekday: "short", day: "numeric", month: "short" }),
       month: format({ month: "long", year: "numeric" }),
       year: format({ year: "numeric" }),
     }[period];
-    return slots.map((slot) => ({
-      axis: period === "hour" && new Date(slot).getHours() === 0 ? date.format(slot) : axis.format(slot),
-      tooltip:
-        period === "hour"
-          ? `${hour.format(slot)} – ${hour.format(slot + 3_600_000)}`
-          : tooltip.format(slot),
-    }));
+    return slots.map((slot) =>
+      period === "hour" ? `${hour.format(slot)} – ${hour.format(slot + 3_600_000)}` : tooltip.format(slot)
+    );
   }
+
 
   /** How the costs are valued, where the bars need it: the bill's items, or
    * PV power at the feed-in compensation. */
@@ -681,10 +675,10 @@ export class ElectricityLensHistoryCard extends LensCard {
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${title}</h2>
-        ${calculating ? nothing : explanation(t("info_label"), this._explanation())}
         ${loaded && !loaded.failed && hasData && this._chart
           ? html`<span class="chip">${this._fmt.value(this._chart.total, unit)}</span>`
           : nothing}
+        ${calculating ? nothing : explanation(t("info_label"), this._explanation())}
       </div>
       ${calculating
         ? html`<p class="summary">${calculatingText(t, readProgress(this.hass, this._info))}</p>`
