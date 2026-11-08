@@ -2,13 +2,15 @@
 // seasonal COP of each of the heat pump's meters, for example heating and hot
 // water, in the selected period. It needs no options.
 
-import { checkCollectionKey } from "./energy-date";
 import { html, type TemplateResult } from "lit";
+
+import { checkCollectionKey } from "./energy-date";
 
 import { consumerColors, palette } from "./colors";
 import { heatDevices } from "./history-figures";
 import { PeriodSumsCard, addUp } from "./period-sums-card";
 import { cardStyles, tableStyles } from "./styles";
+import { lensTable, type TableRow } from "./table";
 
 export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
   static getStubConfig(): Record<string, never> {
@@ -57,41 +59,27 @@ export class ElectricityLensHeatMetersCard extends PeriodSumsCard {
     const heat = devices.reduce((sum, device) => sum + addUp(values, device.statistics.heat), 0);
     const energy = devices.reduce((sum, device) => sum + addUp(values, device.statistics.energy), 0);
     const ratio = (of: number, by: number) => (by > 0 ? fmt.number(of / by, 2) : "–");
-    return html`<table>
-      <thead>
-        <tr>
-          <th class="swatch-cell"></th>
-            <th scope="col" class="name">${t("meters_consumer")}</th>
-          <th scope="col">${t("figure.heat")}</th>
-          <th scope="col">${t("meters_electricity")}</th>
-          <th scope="col">${t("figure.scop")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${devices.map((device) => {
-          const heat = addUp(values, device.statistics.heat);
-          const energy = addUp(values, device.statistics.energy);
-          return html`<tr>
-            <td class="swatch-cell">
-              <span class="swatch" style="--color: ${colors.get(device.id) ?? ""}" aria-hidden="true"></span>
-            </td>
-            <td class="name">${device.name}</td>
-            <td>${fmt.value(heat, "energy")}</td>
-            <td>${fmt.value(energy, "energy")}</td>
-            <td>${ratio(heat, energy)}</td>
-          </tr>`;
-        })}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td class="swatch-cell"></td>
-            <th scope="row" class="name">${t("savings_total")}</th>
-          <td>${fmt.value(heat, "energy")}</td>
-          <td>${fmt.value(energy, "energy")}</td>
-          <td>${ratio(heat, energy)}</td>
-        </tr>
-      </tfoot>
-    </table>`;
+    const row = (name: string, heat: number, energy: number, color?: string): TableRow => ({
+      name,
+      color,
+      cells: [fmt.value(heat, "energy"), fmt.value(energy, "energy"), ratio(heat, energy)],
+    });
+    return lensTable(
+      {
+        head: [t("meters_consumer"), t("figure.heat"), t("meters_electricity"), t("figure.scop")],
+        rows: devices.map((device) =>
+          row(
+            device.name,
+            addUp(values, device.statistics.heat),
+            addUp(values, device.statistics.energy),
+            colors.get(device.id) ?? ""
+          )
+        ),
+        foot: [row(t("savings_total"), heat, energy)],
+        swatches: true,
+      },
+      this
+    );
   }
 
   static styles = [cardStyles, tableStyles];

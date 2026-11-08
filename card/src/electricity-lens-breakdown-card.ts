@@ -12,6 +12,8 @@ import { shareChart, shares, watchChart } from "./chart";
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import { PERIODS, type PeriodOption } from "./electricity-lens-figures-card";
 import { checkCollectionKey } from "./energy-date";
+import { sharesProblem, statisticUnit } from "./figures";
+import { entityName } from "./format";
 import { barSeries, type BarSeries } from "./history-figures";
 import { hasText } from "./localize";
 import { PeriodSumsCard } from "./period-sums-card";
@@ -202,11 +204,25 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
   /** The unit of the statistics shown, from their metadata; energy in kWh. */
   private get _unit(): string | undefined {
     if (!this._byStatistics) return undefined;
-    const units = (this._config.statistics ?? []).map((item) => {
-      const metadata = this._sums?.metadata[item.statistic];
-      return metadata?.unit_class === "energy" ? "kWh" : (metadata?.statistics_unit_of_measurement ?? "");
-    });
-    return units[0];
+    const first = this._config.statistics?.[0]?.statistic;
+    return statisticUnit(first ? this._sums?.metadata[first] : undefined);
+  }
+
+  /** Why the chosen statistics cannot be shown as shares, if they cannot. */
+  private _sharesProblem(): string | undefined {
+    if (!this._byStatistics || !this._sums) return undefined;
+    const ids = (this._config.statistics ?? []).map((item) => item.statistic);
+    const found = sharesProblem(ids, this._sums.metadata);
+    if (!found) return undefined;
+    const t = this._localize;
+    if (found.problem === "units") return t("breakdown_units", { units: found.units.join(", ") });
+    const names = found.ids.map(
+      (id) =>
+        this._config.statistics?.find((item) => item.statistic === id)?.name ||
+        this._sums?.metadata[id]?.name ||
+        id
+    );
+    return t("breakdown_no_sum", { names: names.join(", ") });
   }
 
   private _parts(): Part[] {
@@ -228,7 +244,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
             item.name ??
             device?.name ??
             (this._sums?.metadata[item.statistic]?.name ||
-              (this.hass?.states[item.statistic]?.attributes.friendly_name as string | undefined) ||
+              entityName(this.hass, item.statistic) ||
               item.statistic),
           color: (device && known.get(device.id)) ?? colors.consumers[index % colors.consumers.length],
           value: this._sum([item.statistic]),
@@ -490,6 +506,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
     else if (missing) body = html`<p class="summary">${t(this._info === null ? "editor_not_loaded" : "figures_unavailable")}</p>`;
     else if (this._sums && !this._sums.values) body = html`<p class="summary">${t("figures_failed")}</p>`;
     else if (!this._sums) body = html`<p class="summary">${t("loading")}</p>`;
+    else if (this._sharesProblem()) body = html`<p class="summary">${this._sharesProblem()}</p>`;
     else if (total <= 0) body = html`<p class="summary">${t("history_empty_figure")}</p>`;
     else body = display === "bars" ? this._bars(parts) : this._ring(parts);
     return html`<ha-card>
@@ -581,7 +598,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
         width: 12px;
         height: 12px;
         border-radius: var(--ha-border-radius-circle, 50%);
-        margin-right: 6px;
+        margin-inline-end: 6px;
         vertical-align: -1px;
       }
       .percent,
@@ -590,7 +607,7 @@ export class ElectricityLensBreakdownCard extends PeriodSumsCard {
       }
       .amount,
       .percent {
-        text-align: right;
+        text-align: end;
         white-space: nowrap;
       }
       .bars {

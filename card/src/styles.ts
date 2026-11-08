@@ -126,6 +126,30 @@ export const tableStyles = css`
     font-weight: var(--ha-font-weight-normal, 400);
     color: var(--secondary-text-color);
   }
+  /* A part of the row above: indented and quieter, as its share. */
+  .part .name,
+  .part td {
+    color: var(--secondary-text-color);
+  }
+  .part .name {
+    padding-inline-start: 16px;
+  }
+  /* A row that opens its entity's dialog. */
+  tr.clickable {
+    cursor: pointer;
+  }
+  tr.clickable:hover {
+    background-color: rgba(var(--rgb-primary-text-color), 0.04);
+  }
+  /* Reaches the row by keyboard and for screen readers; the row takes the click. */
+  tr.clickable button {
+    all: unset;
+    cursor: pointer;
+  }
+  tr.clickable button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
   @container (max-width: 480px) {
     .swatch-cell {
       display: none;

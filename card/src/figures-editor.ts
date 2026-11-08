@@ -9,17 +9,17 @@ import {
   type FiguresCardConfig,
 } from "./electricity-lens-figures-card";
 import {
-  STATISTIC_VALUES,
   figuresOf,
   isForecast,
   isInvestment,
   sourceOf,
+  statisticValues,
   type FigureConfig,
   type Source,
 } from "./figures";
 import { localizer, type Localize } from "./localize";
 import { DOMAIN } from "./model";
-import type { FiguresInfo, HomeAssistant } from "./types";
+import type { FiguresInfo, HomeAssistant, StatisticMetadata } from "./types";
 
 type FormData = Record<string, unknown>;
 const SOURCES: Source[] = ["energy", "statistic", "entity"];
@@ -33,6 +33,7 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
     hass: { attribute: false },
     _config: { state: true },
     _info: { state: true },
+    _metadata: { state: true },
   };
 
   hass?: HomeAssistant;
@@ -40,6 +41,9 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
   /** The integration's areas; undefined while loading, null when it is not loaded. */
   private _info?: FiguresInfo | null;
   private _requested = false;
+  /** The chosen statistic's metadata, which tells the values it has. */
+  private _metadata?: { id: string; value: StatisticMetadata | undefined };
+  private _metadataFor?: string;
 
   setConfig(config: FiguresCardConfig): void {
     this._config = config;
@@ -61,6 +65,31 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
           this._info = null;
         });
     }
+    const statistic = this._config?.statistic;
+    if (this.hass && statistic && this._metadataFor !== statistic) {
+      this._metadataFor = statistic;
+      this.hass
+        .callWS<StatisticMetadata[]>({ type: "recorder/get_statistics_metadata", statistic_ids: [statistic] })
+        .then((found) => this._metadataLoaded(statistic, found[0]))
+        .catch(() => undefined);
+    }
+  }
+
+  /** The values the chosen statistic has; all of them until that is known. */
+  private _values(config: FiguresCardConfig) {
+    const metadata = this._metadata && this._metadata.id === config.statistic ? this._metadata.value : undefined;
+    return statisticValues(metadata);
+  }
+
+  /** A value the new statistic does not have gives way to one it has. */
+  private _metadataLoaded(id: string, metadata: StatisticMetadata | undefined): void {
+    this._metadata = { id, value: metadata };
+    const config = this._config;
+    if (!config || config.statistic !== id) return;
+    const values = this._values(config);
+    if (!values.length || values.includes(config.value ?? "change")) return;
+    const { secondary, ...rest } = config;
+    this._fire({ ...rest, value: values[0], ...(values[0] === "mean" && secondary ? { secondary } : {}) });
   }
 
   private _schema(config: FiguresCardConfig) {
@@ -100,7 +129,7 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
         {
           name: "value",
           selector: select(
-            STATISTIC_VALUES.map((value) => ({ value, label: t(`value.${value}`) }))
+            this._values(config).map((value) => ({ value, label: t(`value.${value}`) }))
           ),
         }
       );
@@ -176,6 +205,10 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
       ...this._figureFrom(value, this._config),
     };
     if (typeof value.name === "string" && value.name) config.name = value.name;
+    this._fire(config);
+  }
+
+  private _fire(config: FiguresCardConfig): void {
     this._config = config;
     this.dispatchEvent(
       new CustomEvent("config-changed", {

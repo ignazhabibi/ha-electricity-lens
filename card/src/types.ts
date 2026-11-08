@@ -6,6 +6,12 @@ export interface HassEntityState {
   attributes: Record<string, unknown>;
 }
 
+/** A part of a formatted state: the number, the unit, or what stands between. */
+export interface ValuePart {
+  type: "value" | "literal" | "unit";
+  value: string;
+}
+
 export interface HassEntityRegistryEntry {
   entity_id: string;
   device_id?: string | null;
@@ -24,6 +30,11 @@ export interface HomeAssistant {
   /** The websocket connection; the energy date selection keeps its period here. */
   connection?: object;
   callWS<T>(message: Record<string, unknown>): Promise<T>;
+  /** A state as Home Assistant shows it: translated, with the entity's precision and unit. */
+  formatEntityStateToParts?(stateObj: HassEntityState): ValuePart[];
+  formatEntityState?(stateObj: HassEntityState): string;
+  /** An entity's name as Home Assistant shows it. */
+  formatEntityName?(stateObj: HassEntityState): string;
 }
 
 /** Rows of `recorder/statistics_during_period`, by statistic id. */
@@ -128,6 +139,10 @@ export interface StatisticMetadata {
   statistic_id: string;
   name?: string | null;
   has_sum?: boolean;
+  /** 0 without a mean, 1 arithmetic, 2 circular, as for wind directions. */
+  mean_type?: number;
+  /** Before Home Assistant 2025.4; replaced by mean_type. */
+  has_mean?: boolean;
   statistics_unit_of_measurement?: string | null;
   unit_class?: string | null;
 }

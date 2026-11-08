@@ -112,7 +112,7 @@ const escape = (text: string) =>
   );
 
 const marker = (color: string) =>
-  `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${color}"></span>`;
+  `<span style="display:inline-block;margin-inline-end:4px;border-radius:10px;width:10px;height:10px;background-color:${color}"></span>`;
 
 interface TooltipParam {
   dataIndex: number;

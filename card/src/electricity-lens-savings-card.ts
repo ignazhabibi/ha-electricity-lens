@@ -3,7 +3,7 @@
 // balance's amounts, so they add up to the same total and nothing counts twice.
 // With an area it reckons up that area's saving, including its solar power.
 
-import { html, nothing, type TemplateResult } from "lit";
+import { html, type TemplateResult } from "lit";
 
 import { CSS_COLORS, consumerColors, palette } from "./colors";
 import type { Key } from "./localize";
@@ -11,6 +11,7 @@ import { checkCollectionKey } from "./energy-date";
 import { readCategories } from "./model";
 import { PeriodSumsCard, addUp } from "./period-sums-card";
 import { cardStyles, tableStyles } from "./styles";
+import { lensTable } from "./table";
 import type { CategoryFigures, FigureArea, FiguresInfo } from "./types";
 
 export interface SavingsCardConfig {
@@ -151,38 +152,30 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const heating = readCategories(this.hass!).find((category) => category.category === area?.id)?.heating;
     const instead: Key = area?.id === "wallbox" ? "savings_instead_fuel" : `savings_instead_${heating ?? "gas"}`;
     const hasSolar = Math.abs(solar) >= 0.005;
-    return html`<table>
-        <tbody>
-          <tr>
-            <td class="name">${t(instead)}</td>
-            <td>${fmt.value(alternative, "money")}</td>
-          </tr>
-          <tr>
-            <td class="name">
-              ${area?.id === "wallbox"
+    return lensTable(
+      {
+        rows: [
+          { name: t(instead), cells: [fmt.value(alternative, "money")] },
+          {
+            name:
+              area?.id === "wallbox"
                 ? t("strategy.charging_cost")
-                : t("savings_electricity", { name: area?.name ?? "" })}
-            </td>
-            <td>${fmt.value(-cost, "money")}</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <th scope="row" class="name">${t("savings_saved")}</th>
-            <td>${fmt.value(saving, "money")}</td>
-          </tr>
-          ${hasSolar
-            ? html`<tr class="quiet">
-                <th scope="row" class="name">${t("savings_solar_part")}</th>
-                <td>${fmt.value(solar, "money")}</td>
-              </tr>
-              <tr class="quiet">
-                <th scope="row" class="name">${t("savings_in_balance")}</th>
-                <td>${fmt.value(inBalance, "money")}</td>
-              </tr>`
-            : nothing}
-        </tfoot>
-      </table>`;
+                : t("savings_electricity", { name: area?.name ?? "" }),
+            cells: [fmt.value(-cost, "money")],
+          },
+        ],
+        foot: [
+          { name: t("savings_saved"), cells: [fmt.value(saving, "money")] },
+          ...(hasSolar
+            ? [
+                { name: t("savings_solar_part"), cells: [fmt.value(solar, "money")], kind: "quiet" as const },
+                { name: t("savings_in_balance"), cells: [fmt.value(inBalance, "money")], kind: "quiet" as const },
+              ]
+            : []),
+        ],
+      },
+      this
+    );
   }
 
   private _table(): TemplateResult {
@@ -192,38 +185,23 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const values = this._sums?.values ?? {};
     const amount = (row: Row) => addUp(values, row.plus) - addUp(values, row.minus);
     const total = rows.reduce((sum, row) => sum + amount(row), 0);
-    return html`<table>
-        <thead>
-          <tr>
-            <th class="swatch-cell"></th>
-            <th scope="col" class="name">${t("savings_source")}</th>
-            <th scope="col">${t("savings_energy")}</th>
-            <th scope="col">${t("savings_amount")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => {
-            const energy = addUp(values, row.energy);
-            return html`<tr>
-              <td class="swatch-cell">
-                <span class="swatch" style="--color: ${row.color}" aria-hidden="true"></span>
-              </td>
-              <td class="name">${t(row.name)}</td>
-              <!-- Older periods may hold savings, but no energy to go with them. -->
-              <td>${energy || !amount(row) ? fmt.value(energy, "energy") : "–"}</td>
-              <td>${fmt.value(amount(row), "money")}</td>
-            </tr>`;
-          })}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td class="swatch-cell"></td>
-            <th scope="row" class="name">${t("savings_total")}</th>
-            <td></td>
-            <td>${fmt.value(total, "money")}</td>
-          </tr>
-        </tfoot>
-      </table>`;
+    return lensTable(
+      {
+        head: [t("savings_source"), t("savings_energy"), t("savings_amount")],
+        rows: rows.map((row) => {
+          const energy = addUp(values, row.energy);
+          return {
+            name: t(row.name),
+            color: row.color,
+            // Older periods may hold savings, but no energy to go with them.
+            cells: [energy || !amount(row) ? fmt.value(energy, "energy") : "–", fmt.value(amount(row), "money")],
+          };
+        }),
+        foot: [{ name: t("savings_total"), cells: ["", fmt.value(total, "money")] }],
+        swatches: true,
+      },
+      this
+    );
   }
 
   static styles = [cardStyles, tableStyles];
