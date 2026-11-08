@@ -94,8 +94,10 @@ these places goes into its list there.
 
 ## Info
 
-A card whose numbers need a rule to be understood has an info icon next to its
-title, as Home Assistant's self-sufficiency gauge has. Its text says in two to
+A card whose numbers need a rule to be understood has an info icon at the end
+of its header, right of a chip, as Home Assistant's self-sufficiency gauge has
+one. A card that explains itself, such as the power flow, has none. Its text
+says in two to
 four short sentences what the numbers count, how they are valued, and what is
 left out. It uses the terms above and names the comparison, such as "Was die
 Gasheizung für dieselbe Wärme gekostet hätte".
