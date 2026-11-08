@@ -6,6 +6,7 @@
 import { css, html, nothing, type TemplateResult } from "lit";
 
 import { consumerColors, palette } from "./colors";
+import { explanation, type Explanation } from "./explain";
 import { numberFormat } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
@@ -112,12 +113,13 @@ export class ElectricityLensBalanceCard extends LensCard {
     if (!this.hass) return html``;
     const categories = readCategories(this.hass);
     const balance = readBalance(this.hass);
-    const title = html`<div class="header">
+    const heading = (info: Explanation = []) => html`<div class="header">
       <h2 class="title">${this._config?.title || t("title")}</h2>
+      ${explanation(t("info_label"), info)}
     </div>`;
     if (!categories.length || !balance) {
       return html`<ha-card>
-        ${title}
+        ${heading()}
         <p class="summary">${t(noCategoriesText(this.hass))}</p>
       </ha-card>`;
     }
@@ -176,8 +178,21 @@ export class ElectricityLensBalanceCard extends LensCard {
       t("column_saving"),
       ...(columns.invested ? [t("column_investment"), t("column_balance")] : []),
     ];
+    const info: Explanation = [
+      [t("column_saving"), t("info.economics.saving")],
+      ...(columns.invested
+        ? ([
+            [t("column_investment"), t("info.economics.investment")],
+            [t("column_balance"), t("info.economics.balance")],
+          ] as Explanation)
+        : []),
+      ...(categories.some((category) => category.battery)
+        ? ([[t("battery_part"), t("info.economics.battery")]] as Explanation)
+        : []),
+      t("info.economics.note"),
+    ];
     return html`<ha-card>
-      ${title}
+      ${heading(info)}
       ${!calculating ? this._summary(balance) : nothing}
       <div class="table">${lensTable({ head, rows, foot: [total], swatches: true }, this)}</div>
       ${calculating ? html`<p class="note">${calculatingText(t, balance.progress)}</p>` : nothing}

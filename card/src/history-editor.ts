@@ -3,7 +3,7 @@
 
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
-import { PERIODS, figureLabel } from "./electricity-lens-figures-card";
+import { PERIODS, ownFigureLabel } from "./electricity-lens-figures-card";
 import type { HistoryCardConfig, HistoryLine } from "./electricity-lens-history-card";
 import { barFiguresOf, lineFiguresOf, stacksOf, type BarFigure } from "./history-figures";
 import { localizer, type Localize } from "./localize";
@@ -81,7 +81,7 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
         {
           name: "figure",
           selector: select(
-            figures.map((value) => ({ value, label: figureLabel(t, value, area) }))
+            figures.map((value) => ({ value, label: ownFigureLabel(t, value, area) }))
           ),
         },
         {
@@ -96,7 +96,7 @@ export class ElectricityLensHistoryCardEditor extends LitElement {
             { value: "none", label: t("editor_line_none") },
             ...lineFiguresOf(area).map((value) => ({
               value,
-              label: figureLabel(t, value, area),
+              label: ownFigureLabel(t, value, area),
             })),
           ]),
         },

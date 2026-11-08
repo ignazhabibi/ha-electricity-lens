@@ -48,8 +48,12 @@ affect the solution.
   from `card/src/`. HACS installs exactly what is published. Edit the sources and
   regenerate; the quality gate fails when the generated files are stale.
 - User-facing text exists in English and German. Card texts are in
-  `card/src/localize.ts`. Keep names short, and use the words users know from
-  their bills and devices.
+  `card/src/localize.ts`, the integration's in `scripts/translations.py`.
+  Before writing or changing any text on a card, in a card editor, in the
+  setup or options, or of an entity or statistic, read
+  [CONTEXT.md](CONTEXT.md): its terms, the terms by area, and the space each
+  place has. Keep names short, and use the words users know from their bills
+  and devices.
 - Prefer public Home Assistant interfaces. Where none exists, isolate the
   dependency (`sources.py`) and fail with a clear repair notice instead of wrong
   numbers.
@@ -110,8 +114,9 @@ periods too, not only against recent days.
 
 ## Documentation
 
-`README.md` is for users, `CONTRIBUTING.md` for contributors, and this file for
-agents. There is no other documentation; do not add concept or design documents.
+`README.md` is for users, `CONTRIBUTING.md` for contributors, `CONTEXT.md` for
+the words and the space of user-facing text, and this file for agents. There is
+no other documentation; do not add concept or design documents.
 
 After changes to architecture, dependencies, setup, tests, CI, GitHub policy,
 or releases, check `README.md`, `CONTRIBUTING.md`, `AGENTS.md`,

@@ -137,14 +137,14 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
     card("electricity-lens-figures-card", {
       area: areaOfCategory(category),
       figure: "payback",
-      name: t(`strategy.payback_${category}`),
+      name: t(`category.${category}`),
       visibility: [{ condition: "numeric_state", entity: payback, below: 100 }],
       ...half,
     }),
     card("electricity-lens-figures-card", {
       area: areaOfCategory(category),
       figure: "annual_return",
-      name: t(`strategy.return_${category}`),
+      name: t(`category.${category}`),
       // The sensor has a number only from then on.
       visibility: [{ condition: "numeric_state", entity: annualReturn, above: -1 }],
       ...half,
@@ -202,7 +202,8 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
       t("strategy.electricity"),
       "household",
       [
-        titled("energy-usage-graph", "strategy.usage_graph"),
+        // "by source" only where "by device" stands next to it.
+        titled("energy-usage-graph", devices ? "strategy.usage_graph" : "figure.energy"),
         ...(solar ? [titled("energy-solar-graph", "strategy.solar_graph")] : []),
         ...(devices
           ? [
@@ -236,7 +237,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         }),
         ...(solar
           ? [
-              titled("electricity-lens-history-card", "strategy.cost_with_solar", {
+              titled("electricity-lens-history-card", devices ? "strategy.cost_by_source" : "figure.cost", {
                 area: "household",
                 figure: "cost",
                 stack: "source",
@@ -289,12 +290,12 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
             line: "scop",
             line_name: t("figure.scop"),
           }),
-          titled("electricity-lens-history-card", "strategy.usage_graph", {
+          titled("electricity-lens-history-card", "figure.energy.heat_pump", {
             area: "heat_pump",
             figure: "energy",
             stack: "source",
           }),
-          titled("electricity-lens-history-card", solar ? "strategy.cost_with_solar" : "figure.cost", {
+          titled("electricity-lens-history-card", "figure.cost.heat_pump", {
             area: "heat_pump",
             figure: "cost",
             stack: "source",
@@ -323,7 +324,7 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
                 ...((heatPump.statistics.heat_meters?.length ?? 0) > 1
                   ? [
                       card("electricity-lens-breakdown-card", {
-                        title: t("figure.heat"),
+                        title: t("strategy.heat_distribution"),
                         statistics: (heatPump.statistics.heat_meters ?? []).map((statistic) => ({ statistic })),
                         display: "bars",
                         ...wide,
@@ -343,12 +344,12 @@ export function dashboardViews(info: FiguresInfo, t: Localize, sensors: Sensors 
         t("strategy.charging"),
         "charging",
         [
-          titled("electricity-lens-history-card", "strategy.charged_energy", {
+          titled("electricity-lens-history-card", "figure.energy.wallbox", {
             area: "wallbox",
             figure: "energy",
             stack: "source",
           }),
-          titled("electricity-lens-history-card", "strategy.charging_cost", {
+          titled("electricity-lens-history-card", "figure.cost.wallbox", {
             area: "wallbox",
             figure: "cost",
             stack: "source",

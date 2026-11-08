@@ -7,6 +7,7 @@ import { css, html, nothing, type TemplateResult } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 
 import { palette, type Palette } from "./colors";
+import { explanation } from "./explain";
 import { powerFlow, powerSensors, readKw, type Flow, type FlowPart, type FlowSummary } from "./flow";
 import { formatPower, formatter } from "./format";
 import { cachedInfo, infoStale, loadInfo } from "./info";
@@ -188,7 +189,8 @@ export class ElectricityLensFlowCard extends LensCard {
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${this._config?.title || t("flow.title")}</h2>
-        ${flow ? html`<span class="chip">${t("flow.consumption", { power: this._power(flow.home) })}</span>` : nothing}
+        ${flow ? explanation(t("info_label"), [t("info.flow")]) : nothing}
+        ${flow ? html`<span class="chip">${this._power(flow.home)}</span>` : nothing}
       </div>
       ${body}
     </ha-card>`;

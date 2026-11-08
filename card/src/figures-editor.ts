@@ -5,7 +5,7 @@ import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 
 import {
   PERIODS,
-  figureLabel,
+  ownFigureLabel,
   type FiguresCardConfig,
 } from "./electricity-lens-figures-card";
 import {
@@ -117,7 +117,7 @@ export class ElectricityLensFiguresCardEditor extends LitElement {
             area
               ? figuresOf(area).map((figure) => ({
                   value: figure,
-                  label: figureLabel(t, figure, area),
+                  label: ownFigureLabel(t, figure, area),
                 }))
               : []
           ),

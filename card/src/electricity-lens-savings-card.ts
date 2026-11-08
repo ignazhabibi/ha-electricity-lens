@@ -3,16 +3,17 @@
 // balance's amounts, so they add up to the same total and nothing counts twice.
 // With an area it reckons up that area's saving, including its solar power.
 
-import { html, type TemplateResult } from "lit";
+import { html, nothing, type TemplateResult } from "lit";
 
 import { CSS_COLORS, consumerColors, palette } from "./colors";
+import { explanation, type Explanation } from "./explain";
 import type { Key } from "./localize";
 import { checkCollectionKey } from "./energy-date";
 import { readCategories } from "./model";
 import { PeriodSumsCard, addUp } from "./period-sums-card";
 import { cardStyles, tableStyles } from "./styles";
 import { lensTable } from "./table";
-import type { CategoryFigures, FigureArea, FiguresInfo } from "./types";
+import type { CategoryFigures, FigureArea, FiguresInfo, Heating } from "./types";
 
 export interface SavingsCardConfig {
   type?: string;
@@ -58,7 +59,7 @@ export function savingsRows(
       }
     } else if (category.category === "heat_pump") {
       rows.push({
-        name: `savings_${category.heating ?? "gas"}`,
+        name: "category.heat_pump",
         color: colors.heat ?? CSS_COLORS.heat,
         plus: saving,
         minus: [],
@@ -66,7 +67,7 @@ export function savingsRows(
       });
     } else {
       rows.push({
-        name: "savings_fuel",
+        name: "category.wallbox",
         color: colors.car ?? CSS_COLORS.car,
         plus: saving,
         minus: [],
@@ -128,13 +129,59 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     if (!this.hass) return html``;
     const waiting = this._waiting();
     return html`<ha-card>
-      <div class="header"><h2 class="title">${t("savings_title")}</h2></div>
+      <div class="header">
+        <h2 class="title">${t("savings_title")}</h2>
+        ${waiting ? nothing : explanation(t("info_label"), this._config.area ? this._reckoningInfo() : this._tableInfo())}
+      </div>
       ${waiting
         ? html`<p class="summary">${this._waitingText(waiting)}</p>`
         : this._config.area
           ? this._reckoning()
           : this._table()}
     </ha-card>`;
+  }
+
+  /** The former heating, as the texts name it. */
+  private get _heating(): Heating {
+    return readCategories(this.hass!).find((category) => category.category === "heat_pump")?.heating ?? "gas";
+  }
+
+  /** What each row of the table counts. */
+  private _tableInfo(): Explanation {
+    const t = this._localize;
+    const categories = readCategories(this.hass!).map((category) => category.category);
+    const info: Explanation = [];
+    for (const row of this._rows()) {
+      if (row.name === "savings_pv") info.push([t("savings_pv"), t("info.savings.pv")]);
+      else if (row.name === "savings_feed_in") info.push([t("savings_feed_in"), t("info.savings.feed_in")]);
+      else if (row.name === "category.heat_pump") {
+        info.push([t(row.name), t("info.savings.heat_pump", { heating: t(`heating.${this._heating}`) })]);
+      } else if (row.name === "category.wallbox") info.push([t(row.name), t("info.savings.wallbox")]);
+    }
+    if (categories.includes("pv") && categories.length > 1) info.push(t("info.savings.note"));
+    return info;
+  }
+
+  /** What the rows of an area's reckoning count. */
+  private _reckoningInfo(): Explanation {
+    const t = this._localize;
+    const car = this._config.area === "wallbox";
+    const area = this._area;
+    return [
+      car
+        ? [t("savings_instead_fuel"), t("info.reckoning.fuel")]
+        : [
+            t(`savings_instead_${this._heating}`),
+            t("info.reckoning.heating", { heating: t(`heating.${this._heating}`) }),
+          ],
+      [
+        car ? t("figure.cost.wallbox") : t("figure_of", { figure: t("figure.cost.heat_pump"), area: area?.name ?? "" }),
+        t("info.reckoning.electricity"),
+      ],
+      ...(area?.statistics.solar_saving?.length
+        ? ([[t("savings_in_balance"), t("info.reckoning.balance")]] as Explanation)
+        : []),
+    ];
   }
 
   /** One area's saving: what the alternative would have cost, less its power. */
@@ -159,8 +206,8 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
           {
             name:
               area?.id === "wallbox"
-                ? t("strategy.charging_cost")
-                : t("savings_electricity", { name: area?.name ?? "" }),
+                ? t("figure.cost.wallbox")
+                : t("figure_of", { figure: t("figure.cost.heat_pump"), area: area?.name ?? "" }),
             cells: [fmt.value(-cost, "money")],
           },
         ],

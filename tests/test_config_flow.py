@@ -164,7 +164,7 @@ async def test_full_setup(hass: HomeAssistant) -> None:
     assert entry.options == {"standing_charge": 12.5, "cheap_until": 0.2}
     subentries = {s.subentry_type: s for s in entry.subentries.values()}
     assert subentries["pv"].data["investment"] == 14500
-    assert subentries["pv"].title == "PV plant"
+    assert subentries["pv"].title == "Solar"
     heat_pump = dict(subentries["heat_pump"].data)
     assert heat_pump.pop("setup_at") > 0
     assert heat_pump == {

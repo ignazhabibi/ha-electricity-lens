@@ -51,6 +51,7 @@ import { LensCard } from "./lens-card";
 import { calculatingText, hasText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readCategories, readProgress } from "./model";
 import { cardStyles } from "./styles";
+import { explanation, type Explanation } from "./explain";
 import type {
   Category,
   FigureArea,
@@ -66,6 +67,18 @@ export interface HistoryLine {
   statistic: string;
   value?: "mean" | "change";
   name?: string;
+}
+
+/** A history's title without one of its own: its figure in its area's words,
+ * or the savings. See CONTEXT.md. */
+export function historyTitle(t: Localize, config: HistoryCardConfig, info?: FiguresInfo | null): string {
+  if (config.title) return config.title;
+  if (!config.area) return t("history_title");
+  const figure = config.figure ?? "energy";
+  const area = info?.areas.find((item) => item.id === config.area);
+  if (area) return figureLabel(t, figure, area);
+  const generic = `figure.${figure}`;
+  return hasText(generic) ? t(generic) : t("history_title");
 }
 
 export interface HistoryCardConfig {
@@ -623,16 +636,23 @@ export class ElectricityLensHistoryCard extends LensCard {
     }));
   }
 
-  private _title(): string {
+  /** How the costs are valued, where the bars need it: the bill's items, or
+   * PV power at the feed-in compensation. */
+  private _explanation(): Explanation {
     const t = this._localize;
-    if (this._config.title) return this._config.title;
-    if (this._savings) return t("history_title");
-    const figure = this._config.figure ?? "energy";
     const area = this._info?.areas.find((item) => item.id === this._config.area);
-    if (area) return figureLabel(t, figure, area);
-    const generic = `figure.${figure}`;
-    return hasText(generic) ? t(generic) : t("history_title");
+    if (this._savings || !area || this._config.figure !== "cost") return [];
+    const stacks = stacksOf(area, "cost");
+    const stack = this._config.stack && stacks.includes(this._config.stack) ? this._config.stack : stacks[0];
+    if (stack === "bill") return [t("info.bill")];
+    if (stack !== "source" || !area.statistics.solar_cost?.length) return [];
+    return [t("info.cost_by_source"), ...(area.kind === "household" ? [t("info.cost_by_source.feed_in")] : [])];
   }
+
+  private _title(): string {
+    return historyTitle(this._localize, this._config, this._info);
+  }
+
 
   protected render(): TemplateResult {
     const t = this._localize;
@@ -661,6 +681,7 @@ export class ElectricityLensHistoryCard extends LensCard {
     return html`<ha-card>
       <div class="header">
         <h2 class="title">${title}</h2>
+        ${calculating ? nothing : explanation(t("info_label"), this._explanation())}
         ${loaded && !loaded.failed && hasData && this._chart
           ? html`<span class="chip">${this._fmt.value(this._chart.total, unit)}</span>`
           : nothing}
