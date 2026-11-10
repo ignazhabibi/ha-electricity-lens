@@ -124,3 +124,8 @@ title, run `UPDATE_SNAPSHOT=1 npm --prefix card test` and review the diff.
 `main` is protected: changes land through pull requests with a Conventional
 Commit title, once `quality-check` passes. [AGENTS.md](AGENTS.md) describes the
 release process, which applies to people too.
+
+Renovate opens the dependency updates; its Dependency Dashboard issue lists
+them. It cannot build the card, so an update of `lit`, `@mdi/js`, or `esbuild`
+that changes the bundle fails `quality-check`. Then check out its branch, run
+`npm --prefix card ci` and `npm --prefix card run build`, and push the bundle.
