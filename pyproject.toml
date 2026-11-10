@@ -12,7 +12,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "home-assistant-frontend==20261028.2",
+    "home-assistant-frontend==20261028.5",
     "pre-commit==4.7.0",
     "pyright==1.1.414",
     "pytest-cov==7.1.0",
