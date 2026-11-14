@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { barChart, shareChart, timeAxis } from "../src/chart";
-import { fromFirstValue, periodOf } from "../src/history";
+import { fromFirstValue, meansPerSlot, periodOf, slotsOf, valuesPerSlot } from "../src/history";
 
 const range = (from: Date, to: Date) => ({ start: from.getTime(), end: to.getTime() - 1 });
 
@@ -21,6 +21,31 @@ test("bars are as long as in Home Assistant's energy graphs", () => {
   // The change to summer time (in Europe on 29 March 2026) costs no day.
   assert.equal(periodOf(range(new Date(2026, 2, 28), new Date(2026, 2, 31))), "hour");
   assert.equal(periodOf(range(new Date(2026, 2, 28), new Date(2026, 3, 1))), "day");
+});
+
+test("the day after the period stays out of the last bar", () => {
+  // Home Assistant also returns the day that begins at the end asked for.
+  const period = range(new Date(2026, 8, 12), new Date(2026, 9, 12));
+  const slots = slotsOf(period, periodOf(period));
+  const rows = [
+    { start: new Date(2026, 8, 12).getTime(), change: 1, mean: 10 },
+    { start: new Date(2026, 9, 11).getTime(), change: 2, mean: 20 },
+    { start: new Date(2026, 9, 12).getTime(), change: 4, mean: 40 },
+  ];
+  assert.equal(slots.length, 30);
+  const values = valuesPerSlot(rows, slots, "day");
+  assert.equal(values[0], 1);
+  assert.equal(values[29], 2);
+  assert.equal(values.reduce<number>((sum, value) => sum + (value ?? 0), 0), 3);
+  assert.equal(meansPerSlot(rows, slots, "day")[29], 20);
+  // Months: the January after a year stays out of its December.
+  const year = range(new Date(2025, 0, 1), new Date(2026, 0, 1));
+  const months = slotsOf(year, "month");
+  const monthly = [
+    { start: new Date(2025, 11, 1).getTime(), change: 5 },
+    { start: new Date(2026, 0, 1).getTime(), change: 7 },
+  ];
+  assert.equal(valuesPerSlot(monthly, months, "month")[11], 5);
 });
 
 test("all years begin with the first value of any series", () => {
