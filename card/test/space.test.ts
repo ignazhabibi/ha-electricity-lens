@@ -90,6 +90,13 @@ const PLACES: Record<string, Place> = {
       "savings_feed_in",
       "savings_total",
       "meters_consumer",
+      // The lines of the electricity bill's table.
+      "mix.grid",
+      "source.cheap",
+      "source.normal",
+      "source.expensive",
+      "source.standing_charge",
+      "history_total",
     ],
   },
   "row next to one number": {

@@ -40,6 +40,8 @@ import {
 } from "./history";
 import {
   barSeries,
+  billLines,
+  billStatistics,
   stacksOf,
   type BarFigure,
   type BarSeries,
@@ -50,7 +52,8 @@ import { RETRY_MS, cachedInfo, infoStale, loadInfo } from "./info";
 import { LensCard } from "./lens-card";
 import { calculatingText, hasText, localizer, type Localize } from "./localize";
 import { noCategoriesText, readCategories, readProgress } from "./model";
-import { cardStyles } from "./styles";
+import { cardStyles, tableStyles } from "./styles";
+import { lensTable, type TableRow } from "./table";
 import { explanation, type Explanation } from "./explain";
 import type {
   Category,
@@ -125,6 +128,8 @@ interface Plan {
   unit: Unit;
   lineFigure?: { figure: LineFigure; area: FigureArea; name: string };
   lines: HistoryLine[];
+  /** The household, where the bars are its bill: a table of its lines follows. */
+  bill?: FigureArea;
   ids: string[];
 }
 
@@ -330,7 +335,9 @@ export class ElectricityLensHistoryCard extends LensCard {
       config.line && area.statistics
         ? { figure: config.line, area: lineArea, name: config.line_name ?? figureLabel(t, config.line, lineArea) }
         : undefined;
-    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? []);
+    // The bill's table adds up the kWh and the price levels beside the bars.
+    const bill = stack === "bill" && figure === "cost" ? area : undefined;
+    return this._plan(shown, bars, UNITS[figure], lineFigure, config.lines ?? [], bill);
   }
 
   private _plan(
@@ -338,10 +345,12 @@ export class ElectricityLensHistoryCard extends LensCard {
     bars: Plan["bars"],
     unit: Unit,
     lineFigure: Plan["lineFigure"],
-    lines: HistoryLine[]
+    lines: HistoryLine[],
+    bill?: FigureArea
   ): Plan {
     const ids = new Set<string>();
     for (const { series } of bars) [...series.plus, ...series.minus].forEach((id) => ids.add(id));
+    if (bill && this._info) billStatistics(this._info, bill).forEach((id) => ids.add(id));
     if (lineFigure) {
       for (const list of Object.values(lineFigure.area.statistics)) {
         (list ?? []).forEach((id) => ids.add(id));
@@ -369,6 +378,7 @@ export class ElectricityLensHistoryCard extends LensCard {
       unit,
       lineFigure,
       lines,
+      bill,
       ids: sorted,
     };
   }
@@ -715,11 +725,67 @@ export class ElectricityLensHistoryCard extends LensCard {
             ${t(this._savings ? "history_empty" : "history_empty_figure")}
           </div>`
         : nothing}
-    </div>`;
+    </div>
+    ${loaded && hasData ? this._billTable(loaded) : nothing}`;
+  }
+
+  /** The bill of the period as a table, as the supplier lists it: grid power
+   * with its price levels, the standing charge, and the total. Its sums are
+   * those of the bars, so the total is the chip's. */
+  private _billTable(loaded: Loaded): TemplateResult | typeof nothing {
+    const household = loaded.plan.bill;
+    if (!household || !this._info) return nothing;
+    const t = this._localize;
+    const fmt = this._fmt;
+    const colors = palette(this);
+    const sum = (ids: string[]) => this._perSlot(ids).reduce<number>((total, value) => total + (value ?? 0), 0);
+    const { lines, total } = billLines(this._info, household, sum);
+    const levels = lines.some((line) => line.part);
+    const names = {
+      grid: t("mix.grid"),
+      cheap: t("source.cheap"),
+      normal: t("source.normal"),
+      expensive: t("source.expensive"),
+      standing_charge: t("source.standing_charge"),
+    };
+    const swatches = {
+      // Grid power with levels is their sum, not a bar of its own.
+      grid: levels ? undefined : colors.grid,
+      cheap: colors.cheap,
+      normal: colors.grid,
+      expensive: colors.expensive,
+      standing_charge: colors.standing,
+    };
+    const price = (cost: number, energy: number | null) =>
+      energy !== null && energy >= 0.05 ? fmt.value(cost / energy, "price") : "";
+    const rows: TableRow[] = lines.map((line) => ({
+      name: names[line.id],
+      color: swatches[line.id],
+      kind: line.part ? "part" : undefined,
+      cells: [
+        line.energy === null ? "" : fmt.value(line.energy, "energy"),
+        { text: price(line.cost, line.energy), class: "price" },
+        fmt.value(line.cost, "money"),
+      ],
+    }));
+    return lensTable(
+      {
+        swatches: true,
+        rows,
+        foot: [
+          {
+            name: t("history_total"),
+            cells: [fmt.value(total.energy, "energy"), { text: "", class: "price" }, fmt.value(total.cost, "money")],
+          },
+        ],
+      },
+      this
+    );
   }
 
   static styles = [
     cardStyles,
+    tableStyles,
     css`
       .chart {
         position: relative;
@@ -735,6 +801,15 @@ export class ElectricityLensHistoryCard extends LensCard {
         text-align: center;
         color: var(--secondary-text-color);
         background: color-mix(in srgb, var(--card-background-color, #fff) 70%, transparent);
+      }
+      table {
+        margin-top: 0;
+      }
+      /* A phone: the names need the room of the average price. */
+      @container (max-width: 360px) {
+        .price {
+          display: none;
+        }
       }
     `,
   ];
