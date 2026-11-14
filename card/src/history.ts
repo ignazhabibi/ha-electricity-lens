@@ -100,6 +100,21 @@ export function fromFirstValue(columns: Array<Array<number | null>>, slots: numb
   return 0;
 }
 
+/** The slot a statistics row belongs to; -1 outside the slots. Home
+ * Assistant also returns the day or month that begins at the end of the
+ * period asked for: it belongs to the next period, not to the last slot. */
+function slotIndex(start: number | string, slots: number[], period: Period): number {
+  if (!slots.length) return -1;
+  // Days and longer begin at midnight of the server's time zone, which may
+  // be a few hours off the browser's.
+  const tolerance = period === "hour" ? 0 : 12 * HOUR;
+  const at = (typeof start === "number" ? start : Date.parse(start)) + tolerance;
+  if (at >= nextSlot(slots[slots.length - 1], period)) return -1;
+  let index = -1;
+  for (let i = 0; i < slots.length && slots[i] <= at; i += 1) index = i;
+  return index;
+}
+
 /** The change of one statistic summed per slot; null where it has no rows. */
 export function valuesPerSlot(
   rows: StatisticsResult[string],
@@ -107,16 +122,9 @@ export function valuesPerSlot(
   period: Period
 ): Array<number | null> {
   const values: Array<number | null> = slots.map(() => null);
-  // Days and longer begin at midnight of the server's time zone, which may
-  // be a few hours off the browser's.
-  const tolerance = period === "hour" ? 0 : 12 * HOUR;
   for (const row of rows ?? []) {
     if (row.change === null || row.change === undefined) continue;
-    const at =
-      (typeof row.start === "number" ? row.start : Date.parse(row.start)) +
-      tolerance;
-    let index = -1;
-    for (let i = 0; i < slots.length && slots[i] <= at; i += 1) index = i;
+    const index = slotIndex(row.start, slots, period);
     if (index < 0) continue;
     values[index] = (values[index] ?? 0) + row.change;
   }
@@ -189,14 +197,9 @@ export function meansPerSlot(
 ): Array<number | null> {
   const sums = slots.map(() => 0);
   const counts = slots.map(() => 0);
-  const tolerance = period === "hour" ? 0 : 12 * HOUR;
   for (const row of rows ?? []) {
     if (row.mean === null || row.mean === undefined) continue;
-    const at =
-      (typeof row.start === "number" ? row.start : Date.parse(row.start)) +
-      tolerance;
-    let index = -1;
-    for (let i = 0; i < slots.length && slots[i] <= at; i += 1) index = i;
+    const index = slotIndex(row.start, slots, period);
     if (index < 0) continue;
     sums[index] += row.mean;
     counts[index] += 1;
