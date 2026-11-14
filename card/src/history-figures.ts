@@ -151,6 +151,69 @@ function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
   return series;
 }
 
+/** A line of the bill under its chart: grid power, a price level of it, or
+ * the standing charge. */
+export interface BillLine {
+  id: "grid" | "cheap" | "normal" | "expensive" | "standing_charge";
+  /** A price level of the grid power above it. */
+  part: boolean;
+  /** kWh; the standing charge has none. */
+  energy: number | null;
+  cost: number;
+}
+
+/** The statistics the bill's lines add up, beside those of its bars. */
+export function billStatistics(info: FiguresInfo, household: FigureArea): string[] {
+  const grid = info.areas.find((item) => item.kind === "grid")?.statistics ?? {};
+  const own = household.statistics;
+  return [
+    ...(grid.energy ?? []),
+    ...(grid.import_cost ?? []),
+    ...(grid.standing_charge ?? []),
+    ...["cheap", "cheap_cost", "expensive", "expensive_cost"].flatMap((key) => own[key] ?? []),
+  ];
+}
+
+/** The bill of a period as lines, from the sums of its statistics: grid
+ * power with its price levels below it, where any occurs, then the standing
+ * charge, and the total of both. Normal grid power is what remains of the
+ * grid power beside the cheap and the expensive, as in the bars. */
+export function billLines(
+  info: FiguresInfo,
+  household: FigureArea,
+  sum: (ids: string[]) => number
+): { lines: BillLine[]; total: { energy: number; cost: number } } {
+  const grid = info.areas.find((item) => item.kind === "grid")?.statistics ?? {};
+  const of = (ids: string[] | undefined) => sum(ids ?? []);
+  const own = (key: string) => of(household.statistics[key]);
+  const energy = of(grid.energy);
+  const cost = of(grid.import_cost);
+  const charge = of(grid.standing_charge);
+  const lines: BillLine[] = [{ id: "grid", part: false, energy, cost }];
+  const levels = {
+    cheap: { energy: own("cheap"), cost: own("cheap_cost") },
+    expensive: { energy: own("expensive"), cost: own("expensive_cost") },
+  };
+  // Below a cent and a tenth of a kWh, a level reads as nothing.
+  const occurs = (level: { energy: number; cost: number }) =>
+    Math.abs(level.energy) >= 0.05 || Math.abs(level.cost) >= 0.005;
+  if (occurs(levels.cheap) || occurs(levels.expensive)) {
+    const normal = {
+      energy: Math.max(energy - levels.cheap.energy - levels.expensive.energy, 0),
+      cost: Math.max(cost - levels.cheap.cost - levels.expensive.cost, 0),
+    };
+    for (const [id, level] of [
+      ["cheap", levels.cheap],
+      ["normal", normal],
+      ["expensive", levels.expensive],
+    ] as const) {
+      if (occurs(level)) lines.push({ id, part: true, ...level });
+    }
+  }
+  if (Math.abs(charge) >= 0.005) lines.push({ id: "standing_charge", part: false, energy: null, cost: charge });
+  return { lines, total: { energy, cost: cost + charge } };
+}
+
 /** What an area's consumption costs, as consumption by source in money: solar
  * power at the feed-in compensation it did not earn, and grid power by price
  * level. The household's feed-in shows below the line but is no part of the
