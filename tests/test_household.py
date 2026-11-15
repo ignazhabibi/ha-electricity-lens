@@ -273,7 +273,7 @@ async def test_meter_running_back_is_no_energy(
 
 @pytest.mark.usefixtures("energy")
 async def test_standing_charge(hass: HomeAssistant, data_start: datetime) -> None:
-    """The standing charge is shared over the hours of its month."""
+    """The standing charge is billed by the day."""
     await setup_entry(hass, make_entry(options={"standing_charge": 30}))
     state = HouseholdState()
     state.standing_charge.set(30, 0)
@@ -282,7 +282,7 @@ async def test_standing_charge(hass: HomeAssistant, data_start: datetime) -> Non
         _standing_charge(state, (data_start + timedelta(hours=index)).timestamp())
         for index in range(HOURS)
     )
-    assert 30 / 31 / 24 * HOURS <= charge <= 30 / 28 / 24 * HOURS
+    assert charge == pytest.approx(30 * 12 / 365 / 24 * HOURS, rel=0.05)
     assert await _total(hass, "grid_standing_charge", data_start) == pytest.approx(
         charge
     )

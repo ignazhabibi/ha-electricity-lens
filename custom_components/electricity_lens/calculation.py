@@ -198,15 +198,17 @@ def combine_grid_prices(
 
 
 def standing_charge_share(monthly: float, hour: float, time_zone: tzinfo) -> float:
-    """Return the standing charge of an hour: an even share of its month's.
+    """Return the standing charge of an hour: an even share of its day's.
 
-    Months begin at local midnight, so a month with a change to or from
-    summer time has an hour less or more.
+    Suppliers bill the standing charge by the day, so every day costs twelve
+    months over 365 days, whatever its month; a bill from the 12th to the 11th
+    then holds its days at the same price. Days begin at local midnight, so a
+    day with a change to or from summer time has an hour less or more.
     """
     local = datetime.fromtimestamp(hour, time_zone)
-    month = local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month = (month + timedelta(days=32)).replace(day=1)
-    return monthly / ((next_month.timestamp() - month.timestamp()) / HOUR)
+    day = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    next_day = day + timedelta(days=1)
+    return monthly * 12 / 365 / ((next_day.timestamp() - day.timestamp()) / HOUR)
 
 
 def pv_saving(

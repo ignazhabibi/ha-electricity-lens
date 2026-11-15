@@ -32,7 +32,7 @@ CONF_RECOMPUTE: Final = "recompute"
 
 # Config entry options: the household
 CONF_STANDING_CHARGE: Final = "standing_charge"
-"""Standing charge per month, shared evenly over the hours of its month."""
+"""Standing charge per month, billed by the day: twelve months over 365 days."""
 RETIRED_OPTIONS: Final = ("cheap_until", "expensive_from")
 """Options of earlier versions, removed by the entry's migration: the price
 levels follow the grid price on their own since 0.33.0."""

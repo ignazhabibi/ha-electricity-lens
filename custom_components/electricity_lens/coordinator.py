@@ -121,9 +121,10 @@ STORAGE_VERSION = 1
 # consumers that add up to the household, and meters that run back; 3 no hour
 # counted twice after a failed update; 4 the standing charge and the saving by
 # solar power per category; 5 price levels against the normal price instead of
-# thresholds, and the hours of each level. Categories: 5 the battery's part of
-# the PV plant's saving.
-HOUSEHOLD_CALCULATION_VERSION = 5
+# thresholds, and the hours of each level; 6 the standing charge by the day
+# instead of by the month. Categories: 5 the battery's part of the PV plant's
+# saving.
+HOUSEHOLD_CALCULATION_VERSION = 6
 CATEGORY_CALCULATION_VERSION = 5
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
@@ -174,7 +175,7 @@ def _done(state: CategoryState | HouseholdState) -> float:
 
 
 def _standing_charge(state: HouseholdState, hour: float) -> float:
-    """Return the standing charge of an hour: its month's share."""
+    """Return the standing charge of an hour: its day's share."""
     monthly = state.standing_charge.value_at(hour)
     if not isinstance(monthly, int | float):
         return 0.0

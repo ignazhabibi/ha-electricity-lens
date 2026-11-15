@@ -33,7 +33,7 @@
           "standing_charge": "Standing charge per month (optional)"
         },
         "data_description": {
-          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month"
+          "standing_charge": "As on the electricity bill; billed by the day, as suppliers do"
         }
       },
       "pv": {
@@ -460,7 +460,7 @@
           "standing_charge": "Standing charge per month (optional)"
         },
         "data_description": {
-          "standing_charge": "As on the electricity bill; shared evenly over the hours of the month"
+          "standing_charge": "As on the electricity bill; billed by the day, as suppliers do"
         }
       },
       "recompute": {
