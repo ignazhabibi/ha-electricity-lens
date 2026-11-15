@@ -151,12 +151,10 @@ function billSeries(info: FiguresInfo, household: FigureArea, colors: Palette): 
   return series;
 }
 
-/** A line of the bill under its chart: grid power, a price level of it, or
- * the standing charge. */
+/** A line of the bill under its chart: grid power, or one of its price
+ * levels where any occurs, or the standing charge. */
 export interface BillLine {
   id: "grid" | "cheap" | "normal" | "expensive" | "standing_charge";
-  /** A price level of the grid power above it. */
-  part: boolean;
   /** kWh; the standing charge has none. */
   energy: number | null;
   cost: number;
@@ -175,9 +173,10 @@ export function billStatistics(info: FiguresInfo, household: FigureArea): string
 }
 
 /** The bill of a period as lines, from the sums of its statistics: grid
- * power with its price levels below it, where any occurs, then the standing
- * charge, and the total of both. Normal grid power is what remains of the
- * grid power beside the cheap and the expensive, as in the bars. */
+ * power, or in its place its price levels where any occurs, then the standing
+ * charge, and the total of all. The lines are the bars, so the total is the
+ * only sum. Normal grid power is what remains of the grid power beside the
+ * cheap and the expensive, as in the bars. */
 export function billLines(
   info: FiguresInfo,
   household: FigureArea,
@@ -189,7 +188,7 @@ export function billLines(
   const energy = of(grid.energy);
   const cost = of(grid.import_cost);
   const charge = of(grid.standing_charge);
-  const lines: BillLine[] = [{ id: "grid", part: false, energy, cost }];
+  const lines: BillLine[] = [];
   const levels = {
     cheap: { energy: own("cheap"), cost: own("cheap_cost") },
     expensive: { energy: own("expensive"), cost: own("expensive_cost") },
@@ -207,10 +206,12 @@ export function billLines(
       ["normal", normal],
       ["expensive", levels.expensive],
     ] as const) {
-      if (occurs(level)) lines.push({ id, part: true, ...level });
+      if (occurs(level)) lines.push({ id, ...level });
     }
+  } else {
+    lines.push({ id: "grid", energy, cost });
   }
-  if (Math.abs(charge) >= 0.005) lines.push({ id: "standing_charge", part: false, energy: null, cost: charge });
+  if (Math.abs(charge) >= 0.005) lines.push({ id: "standing_charge", energy: null, cost: charge });
   return { lines, total: { energy, cost: cost + charge } };
 }
 

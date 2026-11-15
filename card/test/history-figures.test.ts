@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { formatter, type LocaleSettings } from "../src/format";
 import { barSeries, billLines, billStatistics, heatDevices, stacksOf, type BarSeries } from "../src/history-figures";
 import type { FigureArea, FiguresInfo } from "../src/types";
 import { colors } from "./palette";
@@ -117,7 +118,7 @@ test("the heat pump's devices with heat meters count only when there are several
   assert.deepEqual(heatDevices(infoOf([heatPump, deviceA, elsewhere])), []);
 });
 
-test("the bill's lines are its bars as a table: grid power, its levels, the standing charge", () => {
+test("the bill's lines are its bars as a table: grid power or its levels, the standing charge", () => {
   const grid = area("grid", "grid", {
     energy: ["import_a", "import_b"],
     import_cost: ["import_cost"],
@@ -143,7 +144,7 @@ test("the bill's lines are its bars as a table: grid power, its levels, the stan
   const sumOf = (sums: Record<string, number>) => (ids: string[]) =>
     ids.reduce((total, id) => total + (sums[id] ?? 0), 0);
   const round = (bill: ReturnType<typeof billLines>) => ({
-    lines: bill.lines.map((line) => [line.id, line.part, line.energy === null ? null : +line.energy.toFixed(1), +line.cost.toFixed(2)]),
+    lines: bill.lines.map((line) => [line.id, line.energy === null ? null : +line.energy.toFixed(1), +line.cost.toFixed(2)]),
     total: [+bill.total.energy.toFixed(1), +bill.total.cost.toFixed(2)],
   });
 
@@ -154,26 +155,34 @@ test("the bill's lines are its bars as a table: grid power, its levels, the stan
   }));
   assert.deepEqual(round(tou), {
     lines: [
-      ["grid", false, 963.9, 256.54],
-      ["cheap", true, 367.9, 67.23],
-      ["normal", true, 596, 189.31],
-      ["standing_charge", false, null, 14.32],
+      ["cheap", 367.9, 67.23],
+      ["normal", 596, 189.31],
+      ["standing_charge", null, 14.32],
     ],
     total: [963.9, 270.86],
   });
 
   // A flat price has no levels, and without a standing charge no such line.
   const flat = billLines(info, home, sumOf({ import_a: 500, import_cost: 150 }));
-  assert.deepEqual(round(flat), { lines: [["grid", false, 500, 150]], total: [500, 150] });
+  assert.deepEqual(round(flat), { lines: [["grid", 500, 150]], total: [500, 150] });
 
   // A dynamic price: cheap and expensive hours, normal is the rest.
   const dynamic = billLines(info, home, sumOf({
     import_a: 400, import_cost: 120, cheap: 100, cheap_cost: 20, expensive: 50, expensive_cost: 20, standing_charge: 12,
   }));
-  assert.deepEqual(round(dynamic).lines.map((line) => line[0]), ["grid", "cheap", "normal", "expensive", "standing_charge"]);
-  assert.deepEqual(round(dynamic).lines[2], ["normal", true, 250, 80]);
+  assert.deepEqual(round(dynamic).lines.map((line) => line[0]), ["cheap", "normal", "expensive", "standing_charge"]);
+  assert.deepEqual(round(dynamic).lines[1], ["normal", 250, 80]);
 
   // Levels that do not occur in the period leave grid power alone.
   const none = billLines(info, home, sumOf({ import_a: 300, import_cost: 90, cheap: 0.01, standing_charge: 10 }));
   assert.deepEqual(round(none).lines.map((line) => line[0]), ["grid", "standing_charge"]);
+});
+
+test("the bill's values are exact, to check them against the supplier's bill", () => {
+  const fmt = formatter({ language: "de", number_format: "decimal_comma" } as LocaleSettings, "EUR");
+  assert.equal(fmt.exact(963.84, "energy"), "963,8 kWh");
+  assert.equal(fmt.exact(270.86, "money"), "270,86\u00a0€");
+  assert.equal(fmt.exact(1234.5, "money"), "1.234,50\u00a0€");
+  // Elsewhere on the cards, large values stay round.
+  assert.equal(fmt.value(270.86, "money"), "271\u00a0€");
 });

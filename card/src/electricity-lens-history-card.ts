@@ -730,8 +730,9 @@ export class ElectricityLensHistoryCard extends LensCard {
   }
 
   /** The bill of the period as a table, as the supplier lists it: grid power
-   * with its price levels, the standing charge, and the total. Its sums are
-   * those of the bars, so the total is the chip's. */
+   * by price level, the standing charge, and the total. Its lines are the bars
+   * with their colors, so the total is the chip's; its values are exact, to
+   * check them against the bill. */
   private _billTable(loaded: Loaded): TemplateResult | typeof nothing {
     const household = loaded.plan.bill;
     if (!household || !this._info) return nothing;
@@ -740,7 +741,6 @@ export class ElectricityLensHistoryCard extends LensCard {
     const colors = palette(this);
     const sum = (ids: string[]) => this._perSlot(ids).reduce<number>((total, value) => total + (value ?? 0), 0);
     const { lines, total } = billLines(this._info, household, sum);
-    const levels = lines.some((line) => line.part);
     const names = {
       grid: t("mix.grid"),
       cheap: t("source.cheap"),
@@ -749,36 +749,26 @@ export class ElectricityLensHistoryCard extends LensCard {
       standing_charge: t("source.standing_charge"),
     };
     const swatches = {
-      // Grid power with levels is their sum, not a bar of its own.
-      grid: levels ? undefined : colors.grid,
+      grid: colors.grid,
       cheap: colors.cheap,
       normal: colors.grid,
       expensive: colors.expensive,
       standing_charge: colors.standing,
     };
-    const price = (cost: number, energy: number | null) =>
-      energy !== null && energy >= 0.05 ? fmt.value(cost / energy, "price") : "";
+    // A row's price is its money over its kWh; the total's includes the
+    // standing charge, what a kWh cost in the end.
+    const cells = (energy: number | null, cost: number) => [
+      energy === null ? "" : fmt.exact(energy, "energy"),
+      { text: energy !== null && energy >= 0.05 ? fmt.value(cost / energy, "price") : "", class: "price" },
+      fmt.exact(cost, "money"),
+    ];
     const rows: TableRow[] = lines.map((line) => ({
       name: names[line.id],
       color: swatches[line.id],
-      kind: line.part ? "part" : undefined,
-      cells: [
-        line.energy === null ? "" : fmt.value(line.energy, "energy"),
-        { text: price(line.cost, line.energy), class: "price" },
-        fmt.value(line.cost, "money"),
-      ],
+      cells: cells(line.energy, line.cost),
     }));
     return lensTable(
-      {
-        swatches: true,
-        rows,
-        foot: [
-          {
-            name: t("history_total"),
-            cells: [fmt.value(total.energy, "energy"), { text: "", class: "price" }, fmt.value(total.cost, "money")],
-          },
-        ],
-      },
+      { swatches: true, rows, foot: [{ name: t("history_total"), cells: cells(total.energy, total.cost) }] },
       this
     );
   }
