@@ -68,6 +68,9 @@ export function splitUnit(text: string): [string, string] {
 export interface Format {
   number(value: number, digits?: number): string;
   value(value: number, unit: Unit): string;
+  /** A value to check against a bill: kWh with a tenth, money with its
+   * cents, however large. */
+  exact(value: number, unit: "energy" | "money"): string;
   /** The currency's symbol, for example as an axis name. */
   currencySymbol(): string;
 }
@@ -119,11 +122,15 @@ export function formatter(locale: LocaleSettings | undefined, currency: string):
         }).format(amount)}/100 km`;
     }
   };
+  const exact = (amount: number, unit: "energy" | "money"): string =>
+    unit === "energy"
+      ? `${number(amount, 1)} kWh`
+      : numberFormat(locale, { style: "currency", currency }).format(amount);
   const currencySymbol = (): string =>
     numberFormat(locale, { style: "currency", currency })
       .formatToParts(0)
       .find((part) => part.type === "currency")?.value ?? "";
-  return { number, value, currencySymbol };
+  return { number, value, exact, currencySymbol };
 }
 
 /** An entity's name as Home Assistant shows it, with its device's name where

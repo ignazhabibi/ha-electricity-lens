@@ -128,8 +128,9 @@ household needs it.
    car are optional. Nothing is preselected, and only possible categories are
    offered.
 2. **Household**, optional: the **standing charge per month**, as on the
-   electricity bill. It is shared evenly over the hours of its month and added
-   to the grid costs. The first value applies from the beginning.
+   electricity bill. It is billed by the day, as suppliers do: twelve months
+   over 365 days, whatever the month, so a bill from the 12th to the 11th
+   matches. It is added to the grid costs. The first value applies from the beginning.
 3. **Solar**: since when it counts, and the purchase cost (optional). With a
    battery in the energy dashboard, its purchase cost too (optional), for its
    own payback; the solar payback counts both, so enter the plant's cost

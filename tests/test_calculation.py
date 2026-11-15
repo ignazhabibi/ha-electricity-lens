@@ -453,13 +453,23 @@ def test_combine_grid_prices() -> None:
 
 
 def test_standing_charge_share() -> None:
-    """A month's standing charge is shared evenly over its hours."""
+    """A standing charge per month is billed by the day, whatever the month."""
     berlin = ZoneInfo("Europe/Berlin")
+    daily = 365 / 12 * 24
     february = datetime(2025, 2, 10, 12, tzinfo=berlin).timestamp()
-    assert standing_charge_share(28 * 24, february, berlin) == pytest.approx(1.0)
-    # March 2025 has an hour less: summer time begins.
-    march = datetime(2025, 3, 10, 12, tzinfo=berlin).timestamp()
-    assert standing_charge_share(31 * 24 - 1, march, berlin) == pytest.approx(1.0)
+    july = datetime(2025, 7, 10, 12, tzinfo=berlin).timestamp()
+    assert standing_charge_share(daily, february, berlin) == pytest.approx(1.0)
+    assert standing_charge_share(daily, july, berlin) == pytest.approx(1.0)
+    # The day summer time begins has an hour less.
+    spring = datetime(2025, 3, 30, 12, tzinfo=berlin).timestamp()
+    assert standing_charge_share(daily, spring, berlin) == pytest.approx(24 / 23)
+    # A bill from 12 Aug to 11 Sep 2026: 31 days at 40.0537 ct net a day.
+    start = datetime(2026, 8, 12, tzinfo=berlin).timestamp()
+    bill = sum(
+        standing_charge_share(14.50, start + index * HOUR, berlin)
+        for index in range(31 * 24)
+    )
+    assert bill == pytest.approx(0.400537 * 1.19 * 31, abs=0.005)
 
 
 def test_estimated_heat() -> None:

@@ -127,7 +127,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "standing_charge": (
                 "Standing charge per month (optional)",
-                "As on the electricity bill; shared evenly over the hours of the month",
+                "As on the electricity bill; billed by the day, as suppliers do",
             ),
             "meters": (
                 "Electricity consumption",
@@ -449,7 +449,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             ),
             "standing_charge": (
                 "Grundpreis pro Monat (optional)",
-                "Laut Stromrechnung; wird gleichmäßig auf die Stunden des Monats verteilt",
+                "Laut Stromrechnung; wird tagesgenau berechnet, wie beim Versorger",
             ),
             "meters": (
                 "Stromverbrauch",
