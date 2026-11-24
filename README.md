@@ -23,6 +23,15 @@ template sensor to write.
 > [!IMPORTANT]
 > Electricity Lens is carefully reviewed and tested, but you use it at your own
 > risk. It is provided as is, without warranty (see the [license](LICENSE)).
+
+> [!NOTE]
+> This is a fork of
+> [ignazhabibi/ha-electricity-lens](https://github.com/ignazhabibi/ha-electricity-lens).
+> It differs from the original in one way: an hour without grid import, such as
+> one with solar power, is priced from the dashboard's costs per kWh of the
+> hours around it (a day, then three days, then a week) instead of the last
+> price seen. Past periods are computed again with it. Everything else is the
+> original's.
 > Its figures are computed from the data in your Home Assistant and can only be
 > as right as that data. They are not financial, tax, or investment advice:
 > check decisions that matter against your bills.
