@@ -56,7 +56,7 @@ def test_timeline() -> None:
 
 
 def test_electricity_prices_order() -> None:
-    """Entity price, then costs per kWh, then fixed price, then the last price."""
+    """Entity price, costs per kWh, fixed price, costs around it, the last price."""
     hours = [0.0, HOUR, 2 * HOUR, 3 * HOUR]
     prices = electricity_prices(
         hours,
@@ -66,7 +66,17 @@ def test_electricity_prices_order() -> None:
         fixed=None,
         last_known=0.2,
     )
-    assert prices == [0.40, 0.3, 0.3, 0.3]
+    # The hours without import take the price of the hours around them.
+    assert prices == pytest.approx([0.40, 0.3, 3.2, 3.2])
+    # A fixed price stands before the hours around it.
+    assert electricity_prices(
+        hours,
+        entity_prices={},
+        costs={HOUR: 0.6},
+        energy={HOUR: 2.0},
+        fixed=0.25,
+        last_known=0.2,
+    ) == pytest.approx([0.25, 0.3, 0.25, 0.25])
 
     assert electricity_prices(
         hours[:2], entity_prices={}, costs={}, energy={}, fixed=0.32, last_known=None
@@ -83,6 +93,29 @@ def test_electricity_prices_order() -> None:
     assert electricity_prices(
         hours[:1], entity_prices={}, costs={}, energy={}, fixed=None, last_known=None
     ) == [None]
+
+
+def test_electricity_prices_without_import() -> None:
+    """Sunny hours take the price of the nearest hours with grid import."""
+    hours = [day * 24 * HOUR + hour * HOUR for day in range(6) for hour in range(24)]
+    # Day 0 pays 0.20 at night; day 1 imports nothing; day 5 pays 0.40.
+    costs = {hours[3]: 0.2, hours[5 * 24 + 3]: 0.4}
+    energy = {hours[3]: 1.0, hours[5 * 24 + 3]: 1.0}
+    prices = electricity_prices(
+        hours, entity_prices={}, costs=costs, energy=energy, fixed=None, last_known=0.9
+    )
+    # Within half a day on either side the price is that of the night's import.
+    assert prices[12] == pytest.approx(0.20)
+    # Day 1 is within a day and a half of day 0 only.
+    assert prices[24 + 12] == pytest.approx(0.20)
+    # Day 4 is within a day and a half of day 5 only.
+    assert prices[4 * 24 + 12] == pytest.approx(0.40)
+    # Day 2 has no import within three days; the week around it holds both.
+    assert prices[2 * 24 + 12] == pytest.approx(0.30)
+    # Without any import the last price seen still stands.
+    assert electricity_prices(
+        hours[:3], entity_prices={}, costs={}, energy={}, fixed=None, last_known=0.9
+    ) == [0.9, 0.9, 0.9]
 
 
 def test_paid_prices() -> None:

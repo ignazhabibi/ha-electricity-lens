@@ -66,6 +66,41 @@ class Timeline:
         return cls([(float(start or 0.0), value) for start, value in points])
 
 
+# Spans, in hours either side of an hour, over which the dashboard's costs give
+# the price of an hour without grid import: a day, then three days, then a week.
+PRICE_SPANS = (12, 36, 168)
+
+
+def _surrounding_prices(
+    hours: Sequence[float], costs: Mapping[float, float], energy: Mapping[float, float]
+) -> list[float | None]:
+    """Return what a kWh imported around each hour cost, from the dashboard.
+
+    Hours with solar power use little or no grid power, so they have no price
+    of their own in the dashboard's costs. The price of the hours around them
+    stands in, weighted by what they imported: the nearest span with any
+    import counts, so a sunny day takes the price of the days next to it.
+    """
+    cost_sums = [0.0]
+    energy_sums = [0.0]
+    for hour in hours:
+        kwh = energy.get(hour, 0.0)
+        priced = hour in costs and kwh >= MIN_PRICED_ENERGY
+        cost_sums.append(cost_sums[-1] + (costs[hour] if priced else 0.0))
+        energy_sums.append(energy_sums[-1] + (kwh if priced else 0.0))
+    prices: list[float | None] = []
+    for index in range(len(hours)):
+        price = None
+        for span in PRICE_SPANS:
+            low = max(index - span, 0)
+            high = min(index + span + 1, len(hours))
+            if (kwh := energy_sums[high] - energy_sums[low]) >= MIN_PRICED_ENERGY:
+                price = (cost_sums[high] - cost_sums[low]) / kwh
+                break
+        prices.append(price)
+    return prices
+
+
 def electricity_prices(
     hours: Sequence[float],
     *,
@@ -78,12 +113,14 @@ def electricity_prices(
     """Return the price of one grid connection for each hour.
 
     In order of preference: the dashboard's price entity, the dashboard's
-    costs divided by the imported energy, its fixed price, the last price seen.
-    Hours before the first known price take the first known price.
+    costs divided by the imported energy, its fixed price, the costs per kWh of
+    the hours around it, the last price seen. Hours before the first known
+    price take the first known price.
     """
+    surrounding = _surrounding_prices(hours, costs, energy) if costs else []
     prices: list[float | None] = []
     previous = last_known
-    for hour in hours:
+    for index, hour in enumerate(hours):
         price = entity_prices.get(hour)
         if (
             price is None
@@ -92,7 +129,11 @@ def electricity_prices(
         ):
             price = costs[hour] / kwh
         if price is None:
-            price = fixed if fixed is not None else previous
+            price = fixed
+        if price is None and surrounding:
+            price = surrounding[index]
+        if price is None:
+            price = previous
         prices.append(price)
         if price is not None:
             previous = price

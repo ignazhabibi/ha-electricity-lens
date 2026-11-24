@@ -122,9 +122,10 @@ STORAGE_VERSION = 1
 # counted twice after a failed update; 4 the standing charge and the saving by
 # solar power per category; 5 price levels against the normal price instead of
 # thresholds, and the hours of each level; 6 the standing charge by the day
-# instead of by the month. Categories: 5 the battery's part of the PV plant's
-# saving.
-HOUSEHOLD_CALCULATION_VERSION = 6
+# instead of by the month; 7 the price of an hour without grid import from the
+# dashboard's costs around it, not the last price seen. Categories: 5 the
+# battery's part of the PV plant's saving.
+HOUSEHOLD_CALCULATION_VERSION = 7
 CATEGORY_CALCULATION_VERSION = 5
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]

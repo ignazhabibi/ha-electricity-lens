@@ -85,6 +85,10 @@ service and sends no data anywhere.
   with a grid import and an electricity price: a fixed price, a price entity,
   or a cost statistic. Dynamic tariffs such as Tibber, Octopus, or Nord Pool
   prices work through their price entity.
+  A price entity without long-term statistics is read as far back as the
+  recorder keeps its history; for older hours the price comes from the
+  dashboard's costs, and an hour with no grid import, such as one with solar
+  power, takes the price of the hours around it.
 - For **solar**: at least one solar production source. Several sources and
   home batteries count as one solar system. A feed-in meter is recommended;
   without one all solar power counts as used in the house, and the setup warns
