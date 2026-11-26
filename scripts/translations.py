@@ -71,6 +71,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "distance",
             "alternative_cost": "comparison costs",
             "solar_saving": "saving by solar power",
+            "reimbursement": "reimbursement",
             "battery_saving": "battery saving",
             "bonus_saving": "self-consumption bonus",
             "saving": "saving",
@@ -91,7 +92,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "electric": "For the time since {since}, Home Assistant does not know your heating electricity prices. Enter averages. They also apply from now on, until you change them.",
             "none": "Without a former heating there is nothing to compare with, so there is no saving. Electricity Lens shows the heat pump's heat, COP, and heat price. The values apply since {since} and from now on, until you change them.",
             "wallbox": "For the time since {since}, Home Assistant knows neither fuel prices nor consumptions. Enter averages. They also apply from now on, until you change them.",
-            "wallbox_none": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
+            "wallbox_none": "Without a comparison there is no saving, unless your employer reimburses the charging. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own and a reimbursement apply since {since} and from now on, until you change them.",
         },
         "now": {
             "title": "Values from now on",
@@ -230,6 +231,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "wallbox_tariff": (
                 "Own electricity tariff (optional)",
                 "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            ),
+            "reimbursement": (
+                "Reimbursement per kWh (optional)",
+                "For a company car: what your employer pays per kWh charged at home",
             ),
             "scop_until": (
                 "COP",
@@ -407,6 +412,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "distance": "Strecke",
             "alternative_cost": "Vergleichskosten",
             "solar_saving": "Ersparnis durch PV-Strom",
+            "reimbursement": "Erstattung",
             "battery_saving": "Batterie-Ersparnis",
             "bonus_saving": "Eigenverbrauchsvergütung",
             "saving": "Ersparnis",
@@ -427,7 +433,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "electric": "Für die Zeit seit dem {since} kennt Home Assistant deine Heizstrompreise nicht. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
             "none": "Ohne frühere Heizung gibt es keinen Vergleich und damit keine Ersparnis. Electricity Lens zeigt Wärme, COP und Wärmepreis der Wärmepumpe. Die Werte gelten seit dem {since} und ab jetzt, bis du sie änderst.",
             "wallbox": "Für die Zeit seit dem {since} kennt Home Assistant weder Spritpreise noch Verbräuche. Trage Durchschnittswerte ein. Sie gelten auch ab jetzt, bis du sie änderst.",
-            "wallbox_none": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+            "wallbox_none": "Ohne Vergleich gibt es keine Ersparnis, außer der Arbeitgeber erstattet das Laden. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif und eine Erstattung gelten seit dem {since} und ab jetzt, bis du sie änderst.",
         },
         "now": {
             "title": "Werte ab jetzt",
@@ -566,6 +572,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "wallbox_tariff": (
                 "Eigener Stromtarif (optional)",
                 "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            ),
+            "reimbursement": (
+                "Erstattung pro kWh (optional)",
+                "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt",
             ),
             "scop_until": (
                 "COP",
@@ -831,10 +841,16 @@ def wallbox_values_block(
     t: dict[str, Any], *, entity: bool, now: bool
 ) -> dict[str, Any]:
     """Return the fields of the car's values forms."""
-    keys = ["ev_consumption", "combustion_consumption", "fuel_price", "tariff"]
+    keys = [
+        "ev_consumption",
+        "combustion_consumption",
+        "fuel_price",
+        "tariff",
+        "reimbursement",
+    ]
     if entity:
         keys.append("fuel_price_entity")
-    overrides = {"tariff": "wallbox_tariff"}
+    overrides = {"tariff": "wallbox_tariff", "reimbursement": "reimbursement"}
     if now:
         overrides["fuel_price_entity"] = "now_fuel_price_entity"
     return fields(t, keys, overrides)
@@ -851,7 +867,11 @@ def wallbox_values_steps(t: dict[str, Any]) -> dict[str, Any]:
         "wallbox_values_none": form(
             t["values"]["title"],
             t["values"]["wallbox_none"],
-            fields(t, ["tariff"], {"tariff": "wallbox_tariff"}),
+            fields(
+                t,
+                ["tariff", "reimbursement"],
+                {"tariff": "wallbox_tariff", "reimbursement": "reimbursement"},
+            ),
         ),
     }
 
@@ -917,7 +937,11 @@ def subentry_steps(t: dict[str, Any], category: str) -> dict[str, Any]:
             steps |= heat_pump_values_steps(t, prefix)
     else:
         steps |= wallbox_values_steps(t)
-        tariff = fields(t, ["tariff"], {"tariff": "wallbox_tariff"})
+        tariff = fields(
+            t,
+            ["tariff", "reimbursement"],
+            {"tariff": "wallbox_tariff", "reimbursement": "reimbursement"},
+        )
         steps["now_none"] = form(t["now"]["title"], t["now"]["description"], tariff)
         steps["before_none"] = form(
             t["before"]["title"], t["before"]["description"], tariff

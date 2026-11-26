@@ -43,6 +43,7 @@ from .conftest import (
     PV_PER_HOUR,
     WALLBOX_DATA,
     WALLBOX_PER_HOUR,
+    WALLBOX_VALUES,
     import_hourly,
     import_hourly_mean,
     make_entry,
@@ -270,6 +271,55 @@ async def test_car_without_comparison(
     assert hass.states.get("sensor.electric_car_saving") is None
     balance = _state(hass, "sensor.electricity_lens_balance")
     assert float(balance.state) == pytest.approx(COUNTED * PV_PER_HOUR - 10000)
+
+
+@pytest.mark.usefixtures("energy")
+async def test_company_car_reimbursed_per_kwh(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """A reimbursed car compared with nothing saves what it earns over its cost."""
+    reimbursed = {"reimbursement": 0.45}
+    entry = make_entry(
+        (
+            "wallbox",
+            {
+                **WALLBOX_DATA,
+                "comparison": "none",
+                "before": reimbursed,
+                "current": reimbursed,
+            },
+        ),
+    )
+    await setup_entry(hass, entry)
+
+    # 1 kWh an hour, reimbursed at 0.45 and bought at the grid price.
+    earned = COUNTED * 1.0 * 0.45
+    sums = await statistic_sums(
+        hass, "electricity_lens:wallbox_reimbursement", data_start
+    )
+    assert sums[-1] == pytest.approx(earned)
+    car = _state(hass, "sensor.electric_car_saving")
+    assert float(car.state) == pytest.approx(earned - COUNTED * 1.0 * GRID_PRICE)
+    # Compared with nothing it has no distance and no comparison costs.
+    for figure in ("distance", "alternative_cost"):
+        assert (
+            await statistic_sums(hass, f"electricity_lens:wallbox_{figure}", data_start)
+            == []
+        )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_reimbursement_adds_to_the_comparison(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """Against a combustion car the reimbursement adds to the saving."""
+    values = {**WALLBOX_VALUES, "reimbursement": 0.30}
+    entry = make_entry(
+        ("wallbox", {**WALLBOX_DATA, "before": values, "current": values})
+    )
+    await setup_entry(hass, entry)
+    car = _state(hass, "sensor.electric_car_saving")
+    assert float(car.state) == pytest.approx(COUNTED * (WALLBOX_PER_HOUR + 0.30))
 
 
 def test_comparison_keeps_the_past_of_cars_compared_as_before() -> None:

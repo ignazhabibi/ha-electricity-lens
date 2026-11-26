@@ -259,6 +259,31 @@ async def test_figures_car_without_comparison(
 
 
 @pytest.mark.usefixtures("energy")
+async def test_figures_reimbursed_car_without_comparison(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    """A reimbursed car compared with nothing has its saving and reimbursement."""
+    reimbursed = {"reimbursement": 0.45}
+    entry = make_entry(
+        (
+            "wallbox",
+            {
+                **WALLBOX_DATA,
+                "comparison": "none",
+                "before": reimbursed,
+                "current": reimbursed,
+            },
+        )
+    )
+    await setup_entry(hass, entry)
+    response = await _figures(hass, hass_ws_client)
+    areas = {area["id"]: area for area in response["result"]["areas"]}
+    statistics = areas["wallbox"]["statistics"]
+    assert {"saving", "solar_saving", "reimbursement"} <= set(statistics)
+    assert not {"distance", "alternative_cost"} & set(statistics)
+
+
+@pytest.mark.usefixtures("energy")
 async def test_figures_interface_error(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:

@@ -111,6 +111,7 @@ const PLACES: Record<string, Place> = {
       "savings_instead_district_heating",
       "savings_instead_electric",
       "savings_instead_fuel",
+      "savings_reimbursement",
       "figure_of",
       "savings_saved",
       "savings_part_heat_pump",

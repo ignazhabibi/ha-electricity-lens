@@ -568,7 +568,7 @@ async def test_add_car_without_comparison(hass: HomeAssistant) -> None:
         result["flow_id"], {**WALLBOX_METERS, "comparison": "none"}
     )
     assert result["step_id"] == "wallbox_values_none"
-    assert _fields(result) == ["tariff"]
+    assert _fields(result) == ["tariff", "reimbursement"]
     result = await hass.config_entries.subentries.async_configure(
         result["flow_id"], {"tariff": 0.25}
     )
@@ -578,6 +578,24 @@ async def test_add_car_without_comparison(hass: HomeAssistant) -> None:
     assert data["comparison"] == "none"
     assert data["before"] == data["current"] == {"tariff": 0.25}
     assert hass.states.get("sensor.electric_car_saving") is None
+
+
+async def test_reimbursement_must_be_above_zero(hass: HomeAssistant) -> None:
+    """A reimbursement entered is above 0."""
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await _reconfigure(hass, entry, "wallbox", "now")
+    assert "reimbursement" in _fields(result)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {
+            "ev_consumption": 20,
+            "combustion_consumption": 7,
+            "fuel_price": 1.8,
+            "reimbursement": 0,
+        },
+    )
+    assert result["errors"] == {"reimbursement": "value_required"}
 
 
 async def test_reconfigure_car_without_comparison(hass: HomeAssistant) -> None:
@@ -595,7 +613,7 @@ async def test_reconfigure_car_without_comparison(hass: HomeAssistant) -> None:
 
     result = await _reconfigure(hass, entry, "wallbox", "now")
     assert result["step_id"] == "now_none"
-    assert _fields(result) == ["tariff"]
+    assert _fields(result) == ["tariff", "reimbursement"]
     await hass.config_entries.subentries.async_configure(
         result["flow_id"], {"tariff": 0.22}
     )

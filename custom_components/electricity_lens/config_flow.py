@@ -70,6 +70,7 @@ from .const import (
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
     VALUE_PRICE_ENTITY,
+    VALUE_REIMBURSEMENT,
     VALUE_SCOP,
     VALUE_TARIFF,
 )
@@ -345,6 +346,8 @@ def values_schema(
     if scop:
         fields[probatio.Required(VALUE_SCOP)] = _number(maximum=10, step=0.1)
     fields[probatio.Optional(VALUE_TARIFF)] = _number(f"{currency}/kWh")
+    if category == CATEGORY_WALLBOX:
+        fields[probatio.Optional(VALUE_REIMBURSEMENT)] = _number(f"{currency}/kWh")
     if price_entity and prices is not None:
         fields[probatio.Optional(prices[1])] = PRICE_ENTITY_SELECTOR
     return probatio.Schema(fields)
@@ -361,6 +364,7 @@ def validate_values(
         VALUE_TARIFF,
         VALUE_EV_CONSUMPTION,
         VALUE_COMBUSTION_CONSUMPTION,
+        VALUE_REIMBURSEMENT,
     )
     errors = {
         key: "value_required"

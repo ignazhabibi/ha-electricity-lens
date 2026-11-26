@@ -416,23 +416,27 @@
           "combustion_consumption": "Combustion car consumption",
           "fuel_price": "Fuel price",
           "tariff": "Own electricity tariff (optional)",
+          "reimbursement": "Reimbursement per kWh (optional)",
           "fuel_price_entity": "Fuel price sensor (optional)"
         },
         "data_description": {
           "ev_consumption": "At the wallbox with charging losses, usually 10–15 % above the car's display. With several cars, their average.",
           "combustion_consumption": "What a comparable combustion car would have used",
           "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+          "reimbursement": "For a company car: what your employer pays per kWh charged at home",
           "fuel_price_entity": "Replaces the average from now on"
         }
       },
       "wallbox_values_none": {
         "title": "Average since {since}",
-        "description": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
+        "description": "Without a comparison there is no saving, unless your employer reimburses the charging. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own and a reimbursement apply since {since} and from now on, until you change them.",
         "data": {
-          "tariff": "Own electricity tariff (optional)"
+          "tariff": "Own electricity tariff (optional)",
+          "reimbursement": "Reimbursement per kWh (optional)"
         },
         "data_description": {
-          "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+          "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+          "reimbursement": "For a company car: what your employer pays per kWh charged at home"
         }
       }
     },
@@ -1211,43 +1215,51 @@
             "combustion_consumption": "Combustion car consumption",
             "fuel_price": "Fuel price",
             "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)",
             "fuel_price_entity": "Fuel price sensor (optional)"
           },
           "data_description": {
             "ev_consumption": "At the wallbox with charging losses, usually 10–15 % above the car's display. With several cars, their average.",
             "combustion_consumption": "What a comparable combustion car would have used",
             "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home",
             "fuel_price_entity": "Replaces the average from now on"
           }
         },
         "wallbox_values_none": {
           "title": "Average since {since}",
-          "description": "Without a comparison there is no saving. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own applies since {since} and from now on, until you change it.",
+          "description": "Without a comparison there is no saving, unless your employer reimburses the charging. Electricity Lens shows the charging costs, their mix, and the average price. A tariff of your own and a reimbursement apply since {since} and from now on, until you change them.",
           "data": {
-            "tariff": "Own electricity tariff (optional)"
+            "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)"
           },
           "data_description": {
-            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home"
           }
         },
         "now_none": {
           "title": "Values from now on",
           "description": "New values apply from the next full hour. What was computed stays.",
           "data": {
-            "tariff": "Own electricity tariff (optional)"
+            "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)"
           },
           "data_description": {
-            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home"
           }
         },
         "before_none": {
           "title": "Before the setup",
           "description": "Averages for {since} to {until}. If you change them, this period is computed again.",
           "data": {
-            "tariff": "Own electricity tariff (optional)"
+            "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)"
           },
           "data_description": {
-            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home"
           }
         },
         "now": {
@@ -1258,12 +1270,14 @@
             "combustion_consumption": "Combustion car consumption",
             "fuel_price": "Fuel price",
             "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)",
             "fuel_price_entity": "Fuel price sensor (optional)"
           },
           "data_description": {
             "ev_consumption": "At the wallbox with charging losses, usually 10–15 % above the car's display. With several cars, their average.",
             "combustion_consumption": "What a comparable combustion car would have used",
             "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home",
             "fuel_price_entity": "Replaces the fuel price"
           }
         },
@@ -1274,12 +1288,14 @@
             "ev_consumption": "Electric car consumption",
             "combustion_consumption": "Combustion car consumption",
             "fuel_price": "Fuel price",
-            "tariff": "Own electricity tariff (optional)"
+            "tariff": "Own electricity tariff (optional)",
+            "reimbursement": "Reimbursement per kWh (optional)"
           },
           "data_description": {
             "ev_consumption": "At the wallbox with charging losses, usually 10–15 % above the car's display. With several cars, their average.",
             "combustion_consumption": "What a comparable combustion car would have used",
-            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts"
+            "tariff": "Only with a separate tariff for the car; otherwise the energy dashboard's price counts",
+            "reimbursement": "For a company car: what your employer pays per kWh charged at home"
           }
         }
       },
@@ -1479,6 +1495,7 @@
         "distance": "distance",
         "alternative_cost": "comparison costs",
         "solar_saving": "saving by solar power",
+        "reimbursement": "reimbursement",
         "battery_saving": "battery saving",
         "bonus_saving": "self-consumption bonus",
         "saving": "saving"
