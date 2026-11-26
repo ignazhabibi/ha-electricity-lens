@@ -11,8 +11,12 @@ from custom_components.electricity_lens.calculation import (
     DAY,
     HOUR,
     YEAR,
+    BatteryFlows,
+    BatteryHour,
     Timeline,
     average_price,
+    battery_flows,
+    battery_hour,
     battery_saving,
     combine_grid_prices,
     effective_meters,
@@ -116,7 +120,16 @@ def test_battery_saving() -> None:
     price, feed_in = 0.30, 0.08
 
     def saving(**flows: float) -> float:
-        return battery_saving(price=price, feed_in_price=feed_in, **flows)
+        return battery_saving(
+            battery_flows(
+                solar=flows["solar"],
+                export=flows["export"],
+                charge=flows["battery_in"],
+                discharge=flows["battery_out"],
+            ),
+            price=price,
+            feed_in_price=feed_in,
+        )
 
     # Noon: it stores solar power that would have been fed in.
     noon = {"solar": 5.0, "export": 1.0, "battery_out": 0.0, "battery_in": 3.0}
@@ -378,6 +391,96 @@ def test_consumers_with_debt_stay_at_zero() -> None:
     assert debts["energy"] == pytest.approx(3.0)
     assert debts["cost"] == pytest.approx(2.0 - (0.30 + 0.08))
     assert hour["household_energy"] == 2.0
+
+
+def test_battery_flows_measured_per_direction() -> None:
+    """What a battery measures counts; only the rest is estimated."""
+    # A sunny hour in which the battery charged from the grid: measured, it
+    # is grid power, estimated it would be solar power.
+    measured = battery_flows(solar=4.0, export=1.0, from_grid=2.0, to_grid=1.0)
+    assert measured == BatteryFlows(grid_in=2.0, to_grid=1.0)
+    estimated = battery_flows(solar=4.0, export=1.0, charge=2.0, discharge=1.0)
+    assert estimated == BatteryFlows(solar_in=2.0, to_house=1.0)
+    # A battery measured in total next to one measured per direction gets the
+    # solar power the other one left.
+    both = battery_flows(solar=3.0, export=0.0, charge=2.0, from_solar=2.0)
+    assert both == BatteryFlows(solar_in=3.0, grid_in=1.0)
+
+
+def test_battery_hour_keeps_where_its_energy_came_from() -> None:
+    """Grid power charged at night is grid power when it is used."""
+    store: dict[str, float] = {}
+    # Night: 4 kWh from the grid at 0.20, noon: 4 kWh solar power, which would
+    # have earned 0.08.
+    night = battery_hour(store, BatteryFlows(grid_in=4.0), price=0.20, feed_in=0.08)
+    assert night == BatteryHour(grid_in=4.0)
+    battery_hour(store, BatteryFlows(solar_in=4.0), price=0.30, feed_in=0.08)
+    # Evening: of 7.2 kWh given at 90 %, half is grid power, half solar power;
+    # 8 kWh charged, so the losses are in what it cost.
+    evening = battery_hour(
+        store, BatteryFlows(to_house=6.0, to_grid=1.2), price=0.40, feed_in=0.08
+    )
+    house = 6.0 / 7.2
+    assert evening.grid == pytest.approx(3.6 * house)
+    assert evening.solar == pytest.approx(3.6 * house)
+    assert evening.grid_cost == pytest.approx(4.0 * 0.20 * house)
+    assert evening.solar_cost == pytest.approx(4.0 * 0.08 * house)
+    assert store["grid"] == pytest.approx(0.0)
+    assert store["solar"] == pytest.approx(0.0)
+
+
+def test_battery_hour_energy_from_before_the_statistics() -> None:
+    """What was in the battery before is solar power, as before."""
+    store: dict[str, float] = {}
+    hour = battery_hour(store, BatteryFlows(to_house=2.0), price=0.30, feed_in=0.08)
+    assert hour.solar == pytest.approx(2.0)
+    assert hour.grid == 0.0
+    assert hour.solar_cost == pytest.approx(2.0 * 0.08)
+
+
+def test_household_hour_with_grid_power_from_the_battery() -> None:
+    """The battery's grid power is grid power, at what it cost."""
+    # 4 kWh used: 1 from the grid, 2 from the battery's grid power at 0.15
+    # each, 1 from the PV plant.
+    battery = BatteryHour(grid=2.0, grid_cost=0.30, solar=0.0)
+    hour = _hour(
+        solar=1.0,
+        battery_out=2.0,
+        devices={},
+        top_level=[],
+        tariffs={},
+        battery=battery,
+    )
+    assert hour["household_energy"] == 4.0
+    assert hour["household_solar"] == pytest.approx(1.0)
+    assert hour["household_cost"] == pytest.approx(1.0 * 0.30 + 0.30 + 1.0 * 0.08)
+    # Only what the house drew in the hour has the hour's level.
+    assert hour["household_cheap"] == pytest.approx(1.0)
+    # Stored solar power costs what it did when it was stored.
+    stored_solar = BatteryHour(solar=2.0, solar_cost=0.10)
+    hour = _hour(
+        solar=1.0,
+        battery_out=2.0,
+        devices={},
+        top_level=[],
+        tariffs={},
+        battery=stored_solar,
+    )
+    assert hour["household_solar"] == pytest.approx(3.0)
+    assert hour["household_solar_cost"] == pytest.approx(0.10 + 1.0 * 0.08)
+    # Charging from the grid takes nothing from the house's grid power.
+    night = _hour(
+        solar=0.0,
+        grid_import=3.0,
+        battery_in=2.0,
+        devices={},
+        top_level=[],
+        tariffs={},
+        battery=BatteryHour(grid_in=2.0),
+    )
+    assert night["household_energy"] == 1.0
+    assert night["household_solar"] == 0.0
+    assert night["household_cost"] == pytest.approx(0.30)
 
 
 def test_household_hour_battery_from_grid() -> None:

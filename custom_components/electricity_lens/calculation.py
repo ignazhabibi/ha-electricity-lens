@@ -230,35 +230,140 @@ def pv_saving(
     return self_used * price + export_revenue
 
 
-def battery_saving(
+@dataclass(frozen=True, slots=True)
+class BatteryFlows:
+    """Where the home batteries' energy of one hour came from and went."""
+
+    solar_in: float = 0.0
+    grid_in: float = 0.0
+    to_house: float = 0.0
+    to_grid: float = 0.0
+
+    @property
+    def charge(self) -> float:
+        """Return what went into the batteries."""
+        return self.solar_in + self.grid_in
+
+    @property
+    def discharge(self) -> float:
+        """Return what came out of the batteries."""
+        return self.to_house + self.to_grid
+
+
+def battery_flows(
     *,
     solar: float,
     export: float,
-    battery_out: float,
-    battery_in: float,
-    price: float,
-    feed_in_price: float,
-) -> float:
+    charge: float = 0.0,
+    discharge: float = 0.0,
+    from_grid: float = 0.0,
+    from_solar: float = 0.0,
+    to_home: float = 0.0,
+    to_grid: float = 0.0,
+) -> BatteryFlows:
+    """Return where the batteries' energy of one hour came from and went.
+
+    A battery measured per direction says it; for one measured in total, charge
+    and discharge, the hour's statistics do not. Then the battery is taken to
+    charge from solar power first, with what the measured ones left over, and
+    to give to the house first, after what the measured ones fed in.
+    """
+    solar_in = min(charge, max(solar - from_solar, 0.0))
+    spare_export = max(export - to_grid, 0.0)
+    solar_to_grid = min(spare_export, max(solar - from_solar - solar_in, 0.0))
+    estimated_to_grid = min(discharge, max(spare_export - solar_to_grid, 0.0))
+    return BatteryFlows(
+        solar_in=from_solar + solar_in,
+        grid_in=from_grid + charge - solar_in,
+        to_house=to_home + discharge - estimated_to_grid,
+        to_grid=to_grid + estimated_to_grid,
+    )
+
+
+def battery_saving(flows: BatteryFlows, *, price: float, feed_in_price: float) -> float:
     """Return what the battery added to the PV plant's saving in one hour.
 
     Compared with the same PV plant without a battery: the solar power it
     stored would have been fed in, what it charged from the grid would not
     have been bought, and what it gave would have come from the grid, or not
-    have been fed in. The hour's statistics do not say which power went where,
-    so the battery is taken to charge from solar power first and to give to
-    the house first. The PV plant's saving minus this is what it saved
+    have been fed in. The PV plant's saving minus this is what it saved
     without the battery, so the two add up to the PV plant's saving.
     """
-    solar_to_battery = min(battery_in, max(solar, 0.0))
-    grid_to_battery = battery_in - solar_to_battery
-    solar_to_grid = min(export, max(solar - solar_to_battery, 0.0))
-    battery_to_grid = min(battery_out, max(export - solar_to_grid, 0.0))
-    battery_to_house = battery_out - battery_to_grid
     return (
-        battery_to_house * price
-        + battery_to_grid * feed_in_price
-        - solar_to_battery * feed_in_price
-        - grid_to_battery * price
+        flows.to_house * price
+        + flows.to_grid * feed_in_price
+        - flows.solar_in * feed_in_price
+        - flows.grid_in * price
+    )
+
+
+# What a battery gives back of what it was charged with, at least and at most.
+# Below the lower bound the meters, not the battery, are off.
+BATTERY_EFFICIENCY = (0.7, 1.0)
+
+
+@dataclass(frozen=True, slots=True)
+class BatteryHour:
+    """What the batteries stored and gave to the house in one hour.
+
+    solar and grid are the energy the house got from the batteries, by where
+    it came from; solar_cost and grid_cost what it cost when it was stored,
+    with the battery's losses.
+    """
+
+    grid_in: float = 0.0
+    solar: float = 0.0
+    grid: float = 0.0
+    solar_cost: float = 0.0
+    grid_cost: float = 0.0
+
+
+def battery_hour(
+    store: dict[str, float],
+    flows: BatteryFlows,
+    *,
+    price: float,
+    feed_in: float,
+) -> BatteryHour:
+    """Store an hour's charge and return what the batteries gave to the house.
+
+    store holds the energy in the batteries by where it came from, solar and
+    grid, what it cost, solar_cost and grid_cost, and all energy charged and
+    discharged, updated here. Grid power costs the hour's price, solar power the feed-in
+    compensation it did not earn. What comes out is taken in proportion from
+    what is in, at the losses the batteries had so far. What comes out beyond
+    that was in before the statistics began, and counts as solar power, as the
+    batteries belong to the PV plant.
+    """
+    store["charged"] = store.get("charged", 0.0) + flows.charge
+    store["discharged"] = store.get("discharged", 0.0) + flows.discharge
+    store["solar"] = store.get("solar", 0.0) + flows.solar_in
+    store["solar_cost"] = store.get("solar_cost", 0.0) + flows.solar_in * feed_in
+    store["grid"] = store.get("grid", 0.0) + flows.grid_in
+    store["grid_cost"] = store.get("grid_cost", 0.0) + flows.grid_in * price
+    if not flows.discharge:
+        return BatteryHour(grid_in=flows.grid_in)
+    lowest, highest = BATTERY_EFFICIENCY
+    efficiency = (
+        min(max(store["discharged"] / store["charged"], lowest), highest)
+        if store["charged"] > 0
+        else highest
+    )
+    held = store["solar"] + store["grid"]
+    taken = min(flows.discharge / efficiency, held)
+    part = taken / held if held > 0 else 0.0
+    given: dict[str, float] = {}
+    for key in ("solar", "grid", "solar_cost", "grid_cost"):
+        given[key] = store[key] * part
+        store[key] -= given[key]
+    before = flows.discharge - taken * efficiency
+    house = flows.to_house / flows.discharge
+    return BatteryHour(
+        grid_in=flows.grid_in,
+        solar=(given["solar"] * efficiency + before) * house,
+        grid=given["grid"] * efficiency * house,
+        solar_cost=(given["solar_cost"] + before * feed_in) * house,
+        grid_cost=given["grid_cost"] * house,
     )
 
 
@@ -413,6 +518,33 @@ def price_level(price: float, normal: float | None) -> str | None:
     return None
 
 
+def _mix(
+    consumption: float, grid_import: float, feed_in: float, battery: BatteryHour
+) -> tuple[float, float, float, float]:
+    """Return the shares of solar power and stored grid power, and their prices.
+
+    What the batteries stored from the grid is not part of what the house drew
+    from the grid in the hour; the rest of the consumption is solar power.
+    Solar power from the batteries costs what it did when it was stored, the
+    rest the hour's feed-in compensation.
+    """
+    if not consumption:
+        return 0.0, 0.0, feed_in, 0.0
+    stored = min(battery.grid, consumption)
+    direct = min(max(grid_import - battery.grid_in, 0.0), consumption - stored)
+    from_solar = consumption - direct - stored
+    from_battery = min(battery.solar, from_solar)
+    solar_cost = (from_solar - from_battery) * feed_in
+    if battery.solar:
+        solar_cost += battery.solar_cost / battery.solar * from_battery
+    return (
+        from_solar / consumption,
+        stored / consumption,
+        solar_cost / from_solar if from_solar else feed_in,
+        battery.grid_cost / battery.grid if battery.grid else 0.0,
+    )
+
+
 def household_hour(
     *,
     grid_import: float,
@@ -431,6 +563,7 @@ def household_hour(
     hour_level: str | None,
     normal: float | None,
     debts: dict[str, float],
+    battery: BatteryHour | None = None,
 ) -> dict[str, float]:
     """Return consumption, mix, and costs of one hour, keyed by area and figure.
 
@@ -442,8 +575,9 @@ def household_hour(
 
     Solar power used in the house is shared among the consumers in proportion
     to their consumption. It costs the feed-in compensation it did not earn;
-    grid power costs the hour's price, or a device's own tariff. The battery
-    belongs to the PV plant, as in pv_saving. GRID_COST is what the grid
+    grid power costs the hour's price, or a device's own tariff. battery says
+    what the batteries gave to the house, as battery_hour: solar power and grid
+    power, at what they cost when they were stored. GRID_COST is what the grid
     connection cost: imports minus feed-in compensation plus the standing charge.
 
     level is the level of the price paid in the hour, hour_level that of the
@@ -460,8 +594,9 @@ def household_hour(
     "other" pay it back.
     """
     consumption = max(grid_import - export + solar + battery_out - battery_in, 0.0)
-    from_solar = min(max(consumption - grid_import, 0.0), consumption)
-    share = from_solar / consumption if consumption else 0.0
+    share, stored_share, solar_price, stored_price = _mix(
+        consumption, grid_import, feed_in, battery or BatteryHour()
+    )
     result: dict[str, float] = {
         GRID_COST: grid_import * price - export_revenue + standing_charge,
         GRID_IMPORT_COST: grid_import * price,
@@ -478,11 +613,14 @@ def household_hour(
         area: str, energy: float, unit_price: float, own_level: str | None
     ) -> dict[str, float]:
         solar_part = energy * share
-        grid_part = energy - solar_part
+        stored_part = energy * stored_share
+        grid_part = energy - solar_part - stored_part
         figures = {
             "solar": solar_part,
-            "cost": grid_part * unit_price + solar_part * feed_in,
-            "solar_cost": solar_part * feed_in,
+            "cost": grid_part * unit_price
+            + stored_part * stored_price
+            + solar_part * solar_price,
+            "solar_cost": solar_part * solar_price,
         }
         if own_level is not None:
             figures[own_level] = grid_part
@@ -506,7 +644,7 @@ def household_hour(
         if stat not in top:
             continue
         if tariff is not None:
-            grid_part = energy * (1 - share)
+            grid_part = energy * (1 - share - stored_share)
             own_grid += grid_part
             # An own tariff changes what the household costs, not what it used,
             gap = grid_part * (tariff - price)

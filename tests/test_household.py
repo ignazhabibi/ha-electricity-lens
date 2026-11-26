@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
+from homeassistant.components.energy.data import BATTERY_SOURCE_SCHEMA
 from homeassistant.components.recorder import get_instance  # pyright: ignore[reportPrivateImportUsage]
 from homeassistant.components.recorder.statistics import (
     get_metadata,
 )
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.components.recorder.common import (
+from pytest_homeassistant.components.recorder.common import (
     async_wait_recording_done,
 )
 
@@ -406,4 +407,45 @@ async def test_recompute_computes_everything(
     assert next(iter(coordinator.states.values())).fingerprint != category_fingerprint
     assert await _total(hass, "household_energy", data_start) == pytest.approx(
         COUNTED * CONSUMPTION
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_battery_charged_from_the_grid_gives_grid_power(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """Grid power a battery stored is grid power, at its price, when it is used."""
+    # Arrange: a battery measured per direction charges 1 kWh from the grid in
+    # odd hours and gives 0.9 kWh to the house in even hours.
+    battery = {
+        "type": "battery",
+        "stat_energy_from_grid": "sensor.grid_to_battery",
+        "stat_energy_to_home": "sensor.battery_to_home",
+    }
+    BATTERY_SOURCE_SCHEMA(battery)
+    await set_energy_prefs(
+        hass, {**PREFS, "energy_sources": [*PREFS["energy_sources"], battery]}
+    )
+    odd = [0.0] + [float(index % 2) for index in range(1, HOURS)]
+    even = [0.0] + [float(index % 2 == 0) for index in range(1, HOURS)]
+    import_hourly(hass, "sensor.grid_to_battery", data_start, odd)
+    import_hourly(hass, "sensor.battery_to_home", data_start, [0.9 * x for x in even])
+    import_hourly(
+        hass, "sensor.grid_import", data_start, [0.0] + [1.0 + x for x in odd[1:]]
+    )
+    await async_wait_recording_done(hass)
+
+    # Act
+    await setup_entry(hass, make_entry())
+
+    # Assert: the solar power used is the same as without the battery.
+    assert await _total(hass, "household_solar", data_start) == pytest.approx(
+        COUNTED * 1.5
+    )
+    discharges = sum(even)
+    assert await _total(hass, "household_energy", data_start) == pytest.approx(
+        COUNTED * CONSUMPTION + discharges * 0.9
+    )
+    assert await _total(hass, "household_cost", data_start) == pytest.approx(
+        COUNTED * (GRID_PRICE + 1.5 * FEED_IN_PRICE) + discharges * GRID_PRICE
     )

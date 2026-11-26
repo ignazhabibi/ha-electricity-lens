@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
-from collections.abc import Callable, Collection, Iterator
+from collections.abc import Callable, Collection, Iterable, Iterator
 from copy import deepcopy
 from datetime import date, timedelta
 from time import time
@@ -34,8 +34,11 @@ from .calculation import (
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
     NORMAL_SPAN,
+    BatteryFlows,
     GridPrices,
     average_price,
+    battery_flows,
+    battery_hour,
     battery_saving,
     combine_grid_prices,
     effective_meters,
@@ -124,7 +127,7 @@ STORAGE_VERSION = 1
 # thresholds, and the hours of each level; 6 the standing charge by the day
 # instead of by the month. Categories: 5 the battery's part of the PV plant's
 # saving.
-HOUSEHOLD_CALCULATION_VERSION = 6
+HOUSEHOLD_CALCULATION_VERSION = 7
 CATEGORY_CALCULATION_VERSION = 5
 
 type ElectricityLensConfigEntry = ConfigEntry[ElectricityLensCoordinator]
@@ -269,7 +272,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
 
     def __init__(self, hass: HomeAssistant, entry: ElectricityLensConfigEntry) -> None:
         """Initialize the coordinator."""
-        super().__init__(
+        super().__init__(  # pyright: ignore[reportUnknownMemberType]
             hass,
             _LOGGER,
             config_entry=entry,
@@ -550,7 +553,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             }
         if config.category == CATEGORY_PV:
             for battery in setup.batteries:
-                sums |= {battery.discharge_stat, battery.charge_stat}
+                sums |= set(battery.stats)
         elif end > config.setup_at:
             # Price sensors count only after the setup.
             values |= {
@@ -735,14 +738,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         for index, hour in enumerate(hours):
             solar = sum(change(stat, hour) for stat in setup.solar)
             export = sum(change(stat, hour) for stat in export_prices)
-            battery_out = sum(change(b.discharge_stat, hour) for b in setup.batteries)
-            battery_in = sum(change(b.charge_stat, hour) for b in setup.batteries)
+            flows = _battery_flows(setup, hour, change, solar=solar, export=export)
             price = prices.mean[index] or 0.0
             if saving := pv_saving(
                 solar=solar,
                 export=export,
-                battery_out=battery_out,
-                battery_in=battery_in,
+                battery_out=flows.discharge,
+                battery_in=flows.charge,
                 price=price,
                 export_revenue=sum(
                     change(stat, hour) * (rates[index] or 0.0)
@@ -751,17 +753,14 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             ):
                 state.saving += saving
                 history.append((hour, state.saving))
-            if battery_in or battery_out:
+            if flows.charge or flows.discharge:
                 if state.battery_start is None:
                     state.battery_start = hour
                 add(
                     "battery_saving",
                     hour,
                     battery_saving(
-                        solar=solar,
-                        export=export,
-                        battery_out=battery_out,
-                        battery_in=battery_in,
+                        flows,
                         price=price,
                         feed_in_price=_feed_in_price(export_prices, index),
                     ),
@@ -885,10 +884,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     for grid in setup.grids
                 ),
                 "solar": sorted(setup.solar),
-                "batteries": sorted(
-                    [battery.discharge_stat, battery.charge_stat]
-                    for battery in setup.batteries
-                ),
+                "batteries": sorted(list(battery.stats) for battery in setup.batteries),
                 "devices": sorted(
                     [device.stat, device.included_in or ""] for device in setup.devices
                 ),
@@ -1051,7 +1047,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         sums: set[str] = set(setup.solar) | set(parents)
         values: set[str] = set()
         for battery in setup.batteries:
-            sums |= {battery.discharge_stat, battery.charge_stat}
+            sums |= set(battery.stats)
         for grid in setup.grids:
             sums |= _grid_sums(self.hass, grid)
             values |= {
@@ -1114,22 +1110,29 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             for seen in (level, hour_level):
                 if seen is not None:
                     state.levels[seen] = hour
-            figures = household_hour(
-                grid_import=sum(change(stat, hour) for stat in imports),
-                export=sum(exported.values()),
-                solar=sum(change(stat, hour) for stat in setup.solar),
-                battery_out=sum(
-                    change(b.discharge_stat, hour) for b in setup.batteries
-                ),
-                battery_in=sum(change(b.charge_stat, hour) for b in setup.batteries),
-                devices={device_area(stat): change(stat, hour) for stat in parents},
-                top_level=top_level,
-                price=price,
-                feed_in=average_price(
+            solar = sum(change(stat, hour) for stat in setup.solar)
+            export = sum(exported.values())
+            flows = _battery_flows(setup, hour, change, solar=solar, export=export)
+            feed_in = (
+                average_price(
                     [rates[index] for rates in export_prices.values()],
                     list(exported.values()),
                 )
-                or 0.0,
+                or 0.0
+            )
+            figures = household_hour(
+                grid_import=sum(change(stat, hour) for stat in imports),
+                export=export,
+                solar=solar,
+                battery_out=flows.discharge,
+                battery_in=flows.charge,
+                battery=battery_hour(
+                    state.battery, flows, price=price, feed_in=feed_in
+                ),
+                devices={device_area(stat): change(stat, hour) for stat in parents},
+                top_level=top_level,
+                price=price,
+                feed_in=feed_in,
                 export_revenue=sum(
                     exported[stat] * (rates[index] or 0.0)
                     for stat, rates in export_prices.items()
@@ -1361,6 +1364,32 @@ def _battery_result(
         payback=summary.payback,
         years_left=summary.years_left,
         counting_since=dt_util.utc_from_timestamp(state.battery_start),
+    )
+
+
+def _battery_flows(
+    setup: EnergySetup,
+    hour: float,
+    change: Callable[[str, float], float],
+    *,
+    solar: float,
+    export: float,
+) -> BatteryFlows:
+    """Return where the batteries' energy of an hour came from and went."""
+
+    def total(stats: Iterable[str | None]) -> float:
+        return sum(change(stat, hour) for stat in stats if stat is not None)
+
+    batteries = setup.batteries
+    return battery_flows(
+        solar=solar,
+        export=export,
+        charge=total(battery.charge_stat for battery in batteries),
+        discharge=total(battery.discharge_stat for battery in batteries),
+        from_grid=total(battery.from_grid for battery in batteries),
+        from_solar=total(battery.from_solar for battery in batteries),
+        to_home=total(battery.to_home for battery in batteries),
+        to_grid=total(battery.to_grid for battery in batteries),
     )
 
 

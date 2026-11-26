@@ -839,7 +839,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         The entry's update listener reloads it, which applies the change.
         """
         entry = self._get_entry()
-        self.hass.config_entries.async_update_subentry(
+        self.hass.config_entries.async_update_subentry(  # pyright: ignore[reportUnknownMemberType]
             entry, self._get_reconfigure_subentry(), data=data
         )
         return self.async_abort(reason=reason, description_placeholders=placeholders)
@@ -1043,7 +1043,9 @@ class HouseholdOptionsFlow(OptionsFlow):
 
         The entry's update listener reloads it, which applies the change.
         """
-        self.hass.config_entries.async_update_entry(self.config_entry, options=options)
+        self.hass.config_entries.async_update_entry(  # pyright: ignore[reportUnknownMemberType]
+            self.config_entry, options=options
+        )
         return self.async_abort(reason=reason, description_placeholders=placeholders)
 
     async def async_step_household(
