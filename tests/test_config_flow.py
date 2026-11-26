@@ -30,6 +30,7 @@ from custom_components.electricity_lens.sources import EnergyInterfaceError
 from .conftest import (
     HEAT_PUMP_DATA,
     PREFS,
+    PV_DATA,
     WALLBOX_DATA,
     import_hourly,
     make_entry,
@@ -409,6 +410,48 @@ async def test_pv_with_battery_asks_for_its_cost(hass: HomeAssistant) -> None:
     )
     assert result["reason"] == "investment_saved"
     assert "battery_investment" not in _data(entry, "pv")
+
+
+async def test_pv_in_germany_asks_for_the_bonus(hass: HomeAssistant) -> None:
+    """A German PV plant can enter its self-consumption bonus and its end."""
+    hass.config.country = "DE"
+    entry = make_entry(("wallbox", WALLBOX_DATA))
+    await setup_entry(hass, entry)
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "pv"), context={"source": SOURCE_USER}
+    )
+    assert _fields(result) == [
+        "investment",
+        "self_consumption_bonus",
+        "self_consumption_bonus_until",
+    ]
+    await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {"self_consumption_bonus": 0.16, "self_consumption_bonus_until": "2030-12-31"},
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _data(entry, "pv")["self_consumption_bonus"] == 0.16
+
+    # Changing it computes everything again; left empty, it is gone.
+    result = await _reconfigure(hass, entry, "pv", "bonus")
+    assert _suggested(result)["self_consumption_bonus_until"] == "2030-12-31"
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {})
+    assert result["reason"] == "recomputing_all"
+    assert "self_consumption_bonus" not in _data(entry, "pv")
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_pv_elsewhere_has_no_bonus(hass: HomeAssistant) -> None:
+    """Outside Germany neither the setup nor the menu asks for the bonus."""
+    hass.config.country = "AT"
+    entry = make_entry(("pv", PV_DATA))
+    await setup_entry(hass, entry)
+    subentry = next(iter(entry.subentries.values()))
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "pv"),
+        context={"source": SOURCE_RECONFIGURE, "subentry_id": subentry.subentry_id},
+    )
+    assert result["menu_options"] == ["investment", "recompute"]
 
 
 async def test_add_heat_pump_without_former_heating(hass: HomeAssistant) -> None:

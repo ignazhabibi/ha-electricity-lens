@@ -17,6 +17,7 @@ from .const import (
     COMPARISON_NONE,
     CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
+    CONF_BONUS_UNTIL,
     CONF_COMPARISON,
     CONF_CURRENT,
     CONF_HEAT_METERS,
@@ -24,6 +25,7 @@ from .const import (
     CONF_INVESTMENT,
     CONF_METERS,
     CONF_RECOMPUTE,
+    CONF_SELF_CONSUMPTION_BONUS,
     CONF_SETUP_AT,
     CONF_STANDING_CHARGE,
     HEATING_GAS,
@@ -77,6 +79,10 @@ class CategoryConfig:
     current: Mapping[str, float] = field(default_factory=dict[str, float])
     price_entity: str | None = None
     recompute: float | None = None
+    bonus: float | None = None
+    """The PV plant's self-consumption bonus per kWh, if it earns one."""
+    bonus_until: str | None = None
+    """The bonus's last day, as an ISO date."""
 
     @classmethod
     def from_data(cls, category: str, data: Mapping[str, Any]) -> CategoryConfig:
@@ -85,6 +91,7 @@ class CategoryConfig:
         battery = data.get(CONF_BATTERY_INVESTMENT)
         current: Mapping[str, Any] = data.get(CONF_CURRENT) or {}
         recompute = data.get(CONF_RECOMPUTE)
+        bonus = data.get(CONF_SELF_CONSUMPTION_BONUS)
         return cls(
             category=category,
             investment=float(investment) if investment is not None else None,
@@ -98,6 +105,8 @@ class CategoryConfig:
             current=_numbers(current),
             price_entity=current.get(VALUE_PRICE_ENTITY) or None,
             recompute=float(recompute) if recompute is not None else None,
+            bonus=float(bonus) if bonus else None,
+            bonus_until=data.get(CONF_BONUS_UNTIL) or None,
         )
 
     @property
@@ -377,6 +386,14 @@ class BatteryResult:
 
 
 @dataclass(frozen=True, slots=True)
+class BonusResult:
+    """The self-consumption bonus's part of the PV plant's saving."""
+
+    saving: float
+    per_year: float | None
+
+
+@dataclass(frozen=True, slots=True)
 class CategoryResult:
     """What the sensors and the card show for one category."""
 
@@ -398,6 +415,8 @@ class CategoryResult:
     """Whether it saves: without a comparison it stays out of the balance."""
     battery: BatteryResult | None = None
     """The PV plant's battery, whose saving is part of the plant's."""
+    bonus: BonusResult | None = None
+    """The PV plant's self-consumption bonus, part of its saving."""
 
     @property
     def balance_ready(self) -> bool:

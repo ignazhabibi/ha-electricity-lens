@@ -16,11 +16,12 @@ from their bills and devices.
 | Erzeugung | Production | The kWh the PV plant / solar produces | |
 | Eigenverbrauch | Self-consumption | PV / solar power used in the house | |
 | Einspeisung | Feed-in | PV / solar power sent to the grid, and its compensation | |
+| Eigenverbrauchsvergütung, kurz Vergütung neben „davon“ | Self-consumption bonus, short bonus | What the grid operator pays per kWh of PV / solar power used on site, for plants under EEG 2009 | The feed-in compensation |
 | Netzbezug | Grid import | The kWh drawn from the grid | |
 | Leistung | Power | What flows right now, in W or kW | Amounts |
 | Strom | Electricity | The medium, in compounds: Netzstrom, PV-Strom, Strompreis, Stromkosten, Stromrechnung, Strommix | The name of an amount, except next to Wärme (see below) |
 | PV | Solar | The plant and its power. German: PV-Anlage, PV-Strom, PV-Erzeugung, PV-Anteil; "Solar" also means solar thermal there. English: Solar, solar power, solar production, solar share, as Home Assistant says; "PV" is a word for experts there | German "Solar"; English "PV" |
-| Kosten | Costs | Grid power at its price plus PV / solar power at the lost feed-in compensation | What the supplier bills |
+| Kosten | Costs | Grid power at its price plus PV / solar power at the lost feed-in compensation, less a self-consumption bonus | What the supplier bills |
 | Stromrechnung | Electricity bill | What the supplier bills: grid power, standing charge; the feed-in compensation is apart | |
 | Ø Netzpreis | Avg. grid price | Grid costs per kWh of grid import | |
 | Ø Strompreis | Avg. price | Costs per kWh of consumption: grid and PV / solar power together; "inkl. PV" / "incl. solar" where there is a PV plant | |

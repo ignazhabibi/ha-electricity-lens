@@ -16,6 +16,11 @@ CATEGORIES: Final = (CATEGORY_PV, CATEGORY_HEAT_PUMP, CATEGORY_WALLBOX)
 CONF_INVESTMENT: Final = "investment"
 CONF_BATTERY_INVESTMENT: Final = "battery_investment"
 """The PV plant's battery, on its own; the PV plant's payback counts both."""
+CONF_SELF_CONSUMPTION_BONUS: Final = "self_consumption_bonus"
+"""What a German PV plant of 2009 to March 2012 earns per kWh used on site
+(Eigenverbrauchsvergütung, EEG 2009), besides the feed-in compensation."""
+CONF_BONUS_UNTIL: Final = "self_consumption_bonus_until"
+"""The bonus's last day, as an ISO date; without it, it has no end."""
 CONF_METERS: Final = "meters"
 CONF_HEAT_METERS: Final = "heat_meters"
 CONF_HEATING: Final = "heating"

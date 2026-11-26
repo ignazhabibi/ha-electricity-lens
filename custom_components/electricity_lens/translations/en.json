@@ -41,11 +41,15 @@
         "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
-          "battery_investment": "Battery purchase cost (optional)"
+          "battery_investment": "Battery purchase cost (optional)",
+          "self_consumption_bonus": "Self-consumption bonus per kWh (optional)",
+          "self_consumption_bonus_until": "Paid until (optional)"
         },
         "data_description": {
           "investment": "For the payback",
-          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
+          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
+          "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+          "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
         }
       },
       "pv_no_export": {
@@ -53,11 +57,15 @@
         "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
         "data": {
           "investment": "Purchase cost (optional)",
-          "battery_investment": "Battery purchase cost (optional)"
+          "battery_investment": "Battery purchase cost (optional)",
+          "self_consumption_bonus": "Self-consumption bonus per kWh (optional)",
+          "self_consumption_bonus_until": "Paid until (optional)"
         },
         "data_description": {
           "investment": "For the payback",
-          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
+          "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
+          "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+          "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
         }
       },
       "heat_pump": {
@@ -485,11 +493,15 @@
           "description": "Counted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
-            "battery_investment": "Battery purchase cost (optional)"
+            "battery_investment": "Battery purchase cost (optional)",
+            "self_consumption_bonus": "Self-consumption bonus per kWh (optional)",
+            "self_consumption_bonus_until": "Paid until (optional)"
           },
           "data_description": {
             "investment": "For the payback",
-            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
+            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
+            "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+            "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
           }
         },
         "pv_no_export": {
@@ -497,17 +509,22 @@
           "description": "**The energy dashboard has no feed-in.** All solar power then counts as used in the house.\n\nCounted from {since}, when Home Assistant's solar data begins. Production, feed-in, battery, and electricity prices come from the energy dashboard.",
           "data": {
             "investment": "Purchase cost (optional)",
-            "battery_investment": "Battery purchase cost (optional)"
+            "battery_investment": "Battery purchase cost (optional)",
+            "self_consumption_bonus": "Self-consumption bonus per kWh (optional)",
+            "self_consumption_bonus_until": "Paid until (optional)"
           },
           "data_description": {
             "investment": "For the payback",
-            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
+            "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
+            "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+            "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
           }
         },
         "reconfigure": {
           "title": "What do you want to change?",
           "menu_options": {
             "investment": "Purchase cost",
+            "bonus": "Self-consumption bonus",
             "recompute": "Recompute"
           }
         },
@@ -520,6 +537,18 @@
           "data_description": {
             "investment": "For the payback",
             "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
+          }
+        },
+        "bonus": {
+          "title": "Self-consumption bonus",
+          "description": "Only for solar plants in Germany commissioned from 2009 to March 2012 (EEG 2009). Saving it computes everything again.",
+          "data": {
+            "self_consumption_bonus": "Self-consumption bonus per kWh (optional)",
+            "self_consumption_bonus_until": "Paid until (optional)"
+          },
+          "data_description": {
+            "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+            "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
           }
         },
         "recompute": {
@@ -540,6 +569,7 @@
         "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
+        "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         "investment_saved": "Saved. The purchase cost applies at once."
       }
     },
@@ -1122,6 +1152,7 @@
         "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
+        "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         "investment_saved": "Saved. The purchase cost applies at once."
       }
     },
@@ -1265,6 +1296,7 @@
         "not_available": "The energy dashboard does not provide the data for this. Solar needs solar production, heat pump and electric car need individual devices.",
         "values_from": "The new values apply from {time}.",
         "recomputing": "It is being computed again. This usually takes less than a minute.",
+        "recomputing_all": "Everything is being computed again. With several years of data this can take a few minutes.",
         "investment_saved": "Saved. The purchase cost applies at once."
       }
     }
@@ -1448,6 +1480,7 @@
         "alternative_cost": "comparison costs",
         "solar_saving": "saving by solar power",
         "battery_saving": "battery saving",
+        "bonus_saving": "self-consumption bonus",
         "saving": "saving"
       }
     }

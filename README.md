@@ -134,7 +134,10 @@ household needs it.
 3. **Solar**: since when it counts, and the purchase cost (optional). With a
    battery in the energy dashboard, its purchase cost too (optional), for its
    own payback; the solar payback counts both, so enter the plant's cost
-   without the battery.
+   without the battery. With Germany as the country in Home Assistant, also
+   the **self-consumption bonus per kWh** (optional, *Eigenverbrauchsvergütung*)
+   that plants commissioned from 2009 to March 2012 earn under EEG 2009, and
+   its last day (optional). It applies to the whole history up to that day.
 4. **Heat pump**:
    | Field | Description |
    |---|---|
@@ -451,7 +454,9 @@ hour Electricity Lens derives:
   had so far. What it held before the statistics began counts as solar power.
 - **Costs** of each consumption: grid power at what a kWh cost in that hour, or
   at the own tariff of heat pump or electric car for their devices; solar power
-  at the feed-in compensation it did not earn, as evcc does. A battery's energy
+  at the feed-in compensation it did not earn, as evcc does. With a
+  self-consumption bonus it gives up the feed-in compensation less the bonus,
+  never less than nothing. A battery's energy
   costs what it did when it was stored, with its losses. What a kWh cost
   comes from the energy dashboard's costs, which price each kWh at its moment,
   so a car charging in the cheap minutes of an hour pays less than the hour's
@@ -490,7 +495,7 @@ replaced.
 
 | Category | Saving | Compared with |
 |---|---|---|
-| Solar | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received. A home battery counts as part of the solar panels; its part of the saving is shown on its own. | No solar: all electricity from the grid, no feed-in. |
+| Solar | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received, plus a self-consumption bonus on production minus feed-in, as the grid operator pays it. A home battery counts as part of the solar panels; its part of the saving and the bonus are shown on their own. | No solar: all electricity from the grid, no feed-in. |
 | Heat pump | What the former heating would have cost for the same heat, minus what the heat pump's electricity cost. | The former heating, with the fixed values below. Heat comes from heat meters where they measured, otherwise from electricity × COP. |
 | Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. |
 
@@ -558,7 +563,7 @@ show.
 
 | Entity | Description |
 |---|---|
-| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. The solar's has its battery's part, with its saving, investment, yearly saving, payback, years left, and since when it counts. |
+| Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. The solar's has its battery's part, with its saving, investment, yearly saving, payback, years left, and since when it counts, and its self-consumption bonus, with its saving and yearly saving. |
 | Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
 | Saving per year | Average saving per year. Unknown before twelve months of data. |
 | Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
@@ -598,6 +603,7 @@ They appear in Home Assistant's statistics pickers, for example in the
 | `electricity_lens:grid_hours`, `…grid_cheap_hours`, `…grid_expensive_hours` | The hours counted, and those whose price was cheap or expensive, whatever the household drew |
 | `electricity_lens:pv_saving`, `…heat_pump_saving`, `…wallbox_saving` | The categories' savings |
 | `electricity_lens:pv_battery_saving` | The battery's part of the solar saving |
+| `electricity_lens:pv_bonus_saving` | The self-consumption bonus, part of the solar saving |
 | `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost`, `…heat_pump_solar_saving` | The heat pump's heat (measured or estimated), what the former heating would have cost for it, and what its solar power adds to its saving |
 | `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost`, `…wallbox_solar_saving` | The distance charged, what a combustion car would have paid for fuel, and what its solar power adds to its saving |
 
@@ -625,6 +631,7 @@ opens a menu:
 | Meters and extra cost | Other meters or another former heating compute everything again; another former heating asks for its prices. The extra cost applies at once. |
 | Recompute | Computes the category again with the current data, for example after you fixed a wrong reading in the statistics. All values stay. |
 | Purchase cost (solar) | The plant's and the battery's. Applies at once. |
+| Self-consumption bonus (solar) | In Germany, or once entered. Computes everything again. |
 
 Changes in the energy dashboard are followed automatically: changes to its
 grid, solar, battery, or devices compute the household again, and a category

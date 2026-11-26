@@ -251,6 +251,7 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
             "surplus",
             "surplus_percent",
             "battery",
+            "bonus",
         }
     )
 
@@ -316,4 +317,7 @@ class CategorySensor(ElectricityLensEntity, SensorEntity):  # pyright: ignore[re
                 "years_left": battery.years_left,
                 "counting_since": battery.counting_since.isoformat(),
             }
+        if (bonus := result.bonus) is not None:
+            # The self-consumption bonus's part of the PV plant's saving.
+            attributes["bonus"] = {"saving": bonus.saving, "per_year": bonus.per_year}
         return attributes

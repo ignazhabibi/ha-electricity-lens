@@ -143,23 +143,42 @@ export class ElectricityLensBalanceCard extends LensCard {
         columns,
         known
       );
-      if (!category.battery || category.calculating) return [own];
+      if (category.calculating) return [own];
+      const parts: TableRow[] = [];
       const battery = category.battery;
-      return [
-        own,
-        this._row(
-          {
-            name: t("battery_part"),
-            entityId: category.entityId,
-            perYear: battery.perYear,
-            saving: battery.saving,
-            investment: battery.investment ?? undefined,
-            balance: battery.saving - (battery.investment ?? 0),
-            part: true,
-          },
-          columns
-        ),
-      ];
+      if (battery) {
+        parts.push(
+          this._row(
+            {
+              name: t("battery_part"),
+              entityId: category.entityId,
+              perYear: battery.perYear,
+              saving: battery.saving,
+              investment: battery.investment ?? undefined,
+              balance: battery.saving - (battery.investment ?? 0),
+              part: true,
+            },
+            columns
+          )
+        );
+      }
+      const bonus = category.bonus;
+      if (bonus) {
+        parts.push(
+          this._row(
+            {
+              name: t("bonus_part"),
+              entityId: category.entityId,
+              perYear: bonus.perYear,
+              saving: bonus.saving,
+              balance: bonus.saving,
+              part: true,
+            },
+            columns
+          )
+        );
+      }
+      return [own, ...parts];
     });
     const total = this._row(
       {
@@ -188,6 +207,9 @@ export class ElectricityLensBalanceCard extends LensCard {
         : []),
       ...(categories.some((category) => category.battery)
         ? ([[t("battery_part"), t("info.economics.battery")]] as Explanation)
+        : []),
+      ...(categories.some((category) => category.bonus)
+        ? ([[t("bonus_part"), t("info.economics.bonus")]] as Explanation)
         : []),
       t("info.economics.note"),
     ];
