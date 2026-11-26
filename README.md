@@ -2,7 +2,6 @@
 
 # Electricity Lens
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![Release](https://img.shields.io/github/v/release/ignazhabibi/ha-electricity-lens)](https://github.com/ignazhabibi/ha-electricity-lens/releases)
 
 **What your electricity really costs, where it comes from, and whether your
@@ -50,12 +49,13 @@ template sensor to write.
 - [FAQ](#faq)
 - [Troubleshooting](#troubleshooting)
 - [Known limitations](#known-limitations)
+- [Testing a pre-release](#testing-a-pre-release)
 - [Removal](#removal)
 
 ## What you get
 
-Electricity Lens is one package with three parts. HACS installs and updates
-them together.
+Electricity Lens is one package with three parts. The Marketplace installs
+and updates them together.
 
 | Part | What it does |
 |---|---|
@@ -96,14 +96,13 @@ service and sends no data anywhere.
 
 ## Installation
 
-[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ignazhabibi&repository=ha-electricity-lens&category=integration)
+[![Open your Home Assistant instance and open Electricity Lens in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ignazhabibi&repository=ha-electricity-lens&category=integration)
 
 1. Set up the energy dashboard with grid import and electricity price, your
    solar production, and the meters of heat pump and wallbox under
    *Individual devices*.
-2. Install Electricity Lens from the Marketplace (Settings › Marketplace) or
-   HACS as a custom repository: `https://github.com/ignazhabibi/ha-electricity-lens`,
-   type *Integration*.
+2. Install Electricity Lens from the Marketplace: **Settings › Marketplace**,
+   search for *Electricity Lens*, and choose **Install**.
 3. Restart Home Assistant.
 4. Add the integration:
    [![Open your Home Assistant instance and start setting up Electricity Lens.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=electricity_lens)
@@ -767,14 +766,23 @@ English and German, following Home Assistant's language.
   a repair issue instead of showing wrong numbers if a Home Assistant update
   changes them.
 
+## Testing a pre-release
+
+Pre-releases, such as `v0.36.0-beta.1`, are for testers. In the Marketplace,
+open Electricity Lens, open its menu (⋮), and choose **Include pre-releases**.
+The newest pre-release is then offered as an update; **Install another
+version** in the same menu picks a specific one. Restart Home Assistant
+afterwards. **Exclude pre-releases** in that menu returns to stable versions:
+an installed pre-release stays until a newer stable version is out. To go
+back to an earlier version, restoring a backup is the safer way.
+
 ## Removal
 
 1. Remove the cards from your dashboards.
 2. Go to **Settings › Devices & services › Electricity Lens**, open the menu
    (⋮) and choose **Delete**. To remove one category only, use **Delete** in
    that category's menu.
-3. Uninstall Electricity Lens in the Marketplace or HACS and restart Home
-   Assistant.
+3. Uninstall Electricity Lens in the Marketplace and restart Home Assistant.
 
 Deleting Electricity Lens removes all statistics it wrote; deleting a category
 removes that category's saving statistic.

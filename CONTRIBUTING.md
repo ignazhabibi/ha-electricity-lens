@@ -41,7 +41,7 @@ CI runs the same gate, and validates the integration with Home Assistant's
 
 ## Generated Files
 
-Both are committed, because HACS installs exactly what is published.
+Both are committed, because the Marketplace installs exactly what is published.
 
 - **Translations:** edit `scripts/translations.py`, then run it.
 - **Card:** edit `card/src/`, then run `npm --prefix card run build`.
