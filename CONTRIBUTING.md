@@ -13,6 +13,11 @@ npm --prefix card ci
 pre-commit install --install-hooks
 ```
 
+The tests use `pytest-homeassistant`, whose version is the Home Assistant
+release they run against. It replaces `pytest-homeassistant-custom-component`;
+uninstall that from an older environment, as the two cannot be installed
+together.
+
 ## Quality Checks
 
 ```bash

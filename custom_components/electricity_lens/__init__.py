@@ -134,7 +134,7 @@ async def async_migrate_entry(
     if entry.version != 1 or entry.minor_version < 2:
         return False
     if entry.minor_version == 2:
-        hass.config_entries.async_update_entry(
+        hass.config_entries.async_update_entry(  # pyright: ignore[reportUnknownMemberType]
             entry,
             options={
                 key: value

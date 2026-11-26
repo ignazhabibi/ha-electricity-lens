@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.typing import WebSocketGenerator
+from pytest_homeassistant.typing import WebSocketGenerator
 
 from custom_components.electricity_lens.sources import EnergyInterfaceError
 

@@ -14,8 +14,8 @@ from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.components.recorder.common import (
+from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.components.recorder.common import (
     async_wait_recording_done,
 )
 

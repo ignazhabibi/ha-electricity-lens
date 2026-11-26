@@ -269,7 +269,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
 
     def __init__(self, hass: HomeAssistant, entry: ElectricityLensConfigEntry) -> None:
         """Initialize the coordinator."""
-        super().__init__(
+        super().__init__(  # pyright: ignore[reportUnknownMemberType]
             hass,
             _LOGGER,
             config_entry=entry,

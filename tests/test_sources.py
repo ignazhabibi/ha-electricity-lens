@@ -12,8 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import IntegrationNotFound
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.components.recorder.common import (
+from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.components.recorder.common import (
     async_wait_recording_done,
 )
 

@@ -46,7 +46,7 @@
       "description": "The test stack pins a Home Assistant release; its frontend has to follow it in the same pull request.",
       "matchPackageNames": [
         "home-assistant-frontend",
-        "pytest-homeassistant-custom-component"
+        "pytest-homeassistant"
       ],
       "groupName": "home assistant test stack",
       "separateMajorMinor": false,

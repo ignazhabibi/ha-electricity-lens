@@ -23,8 +23,8 @@ from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.components.recorder.common import (
+from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.components.recorder.common import (
     async_wait_recording_done,
 )
 
@@ -111,12 +111,11 @@ WALLBOX_PER_HOUR = 1.0 / 20 * 7 * 1.80 - 1.0 * GRID_PRICE
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(
-    recorder_mock: Any, enable_custom_integrations: None
-) -> None:
-    """Enable custom integrations and the recorder in all tests.
+def auto_recorder(recorder_mock: Any) -> None:
+    """Start the recorder in all tests.
 
     The integration depends on the recorder, which must start before hass.
+    The hass fixture enables custom integrations by itself.
     """
 
 
