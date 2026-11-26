@@ -292,6 +292,8 @@ class HouseholdState:
     """Start and mean price of the hours of the last seven days."""
     levels: dict[str, float] = field(default_factory=dict[str, float])
     """Start of the last hour of each price level, cheap or expensive."""
+    battery: dict[str, float] = field(default_factory=dict[str, float])
+    """What the batteries hold by origin and its cost, as battery_hour keeps it."""
 
     def reset(self, fingerprint: str) -> None:
         """Forget the computed past, keeping the standing charge's timeline."""
@@ -304,6 +306,7 @@ class HouseholdState:
         self.debts = {}
         self.recent_prices = []
         self.levels = {}
+        self.battery = {}
 
     @property
     def computing_past(self) -> bool:
@@ -323,6 +326,7 @@ class HouseholdState:
             "debts": self.debts,
             "recent_prices": self.recent_prices,
             "levels": self.levels,
+            "battery": self.battery,
         }
 
     @classmethod
@@ -339,6 +343,7 @@ class HouseholdState:
             debts=_numbers(data.get("debts")),
             recent_prices=[list(row) for row in data.get("recent_prices", [])],
             levels=_numbers(data.get("levels")),
+            battery=_numbers(data.get("battery")),
         )
 
 

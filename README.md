@@ -445,10 +445,14 @@ hour Electricity Lens derives:
 - **Mix**: how much of each consumption was solar power and cheap, normal, or
   expensive grid power. Solar power used in the house is shared among the
   consumers of that hour in proportion to their consumption. A home battery
-  counts as solar power, as in the solar saving.
+  keeps where its energy came from: what it charged from the grid is grid
+  power when it is used, what it charged from solar power is solar power.
+  What it gives is taken in proportion from what it holds, at the losses it
+  had so far. What it held before the statistics began counts as solar power.
 - **Costs** of each consumption: grid power at what a kWh cost in that hour, or
   at the own tariff of heat pump or electric car for their devices; solar power
-  at the feed-in compensation it did not earn, as evcc does. What a kWh cost
+  at the feed-in compensation it did not earn, as evcc does. A battery's energy
+  costs what it did when it was stored, with its losses. What a kWh cost
   comes from the energy dashboard's costs, which price each kWh at its moment,
   so a car charging in the cheap minutes of an hour pays less than the hour's
   mean price. Where those costs do not fit the prices of the hour, for example
@@ -504,9 +508,11 @@ replaced.
   electricity price or, when fed in, the feed-in compensation, minus the solar
   power it stores at the feed-in compensation it did not earn and the grid
   power it charges at the hour's price. The rest is what the solar panels saved
-  without the battery, so the two add up to the solar saving. An hour's
-  statistics do not say which power went where, so the battery is taken to
-  charge from solar power first and to give to the house first.
+  without the battery, so the two add up to the solar saving. A battery
+  measured per direction in the energy dashboard (from the grid, from solar,
+  to home, to the grid) says which power went where. For one measured only in
+  total, the battery is taken to charge from solar power first and to give to
+  the house first.
 - **Prices at the time of use.** The electricity price of each hour is what the
   energy dashboard charged for it, so dynamic tariffs are handled hour by hour.
   With several tariffs, such as day and night, the average of the hour counts.

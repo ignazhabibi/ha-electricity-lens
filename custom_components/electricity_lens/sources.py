@@ -69,10 +69,35 @@ class GridSource:
 
 @dataclass(frozen=True, slots=True)
 class Battery:
-    """One home battery of the energy dashboard."""
+    """One home battery of the energy dashboard.
 
-    discharge_stat: str
-    charge_stat: str
+    It is measured either in total, what went in and what came out, or per
+    direction, from the battery's point of view. A direction it does not
+    report is None and counts zero.
+    """
+
+    discharge_stat: str | None = None
+    charge_stat: str | None = None
+    from_grid: str | None = None
+    from_solar: str | None = None
+    to_home: str | None = None
+    to_grid: str | None = None
+
+    @property
+    def stats(self) -> tuple[str, ...]:
+        """Return all energy statistics of the battery."""
+        return tuple(
+            stat
+            for stat in (
+                self.discharge_stat,
+                self.charge_stat,
+                self.from_grid,
+                self.from_solar,
+                self.to_home,
+                self.to_grid,
+            )
+            if stat is not None
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,9 +224,7 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
                     solar.append(source["stat_energy_from"])
                     forecasts.extend(source.get("config_entry_solar_forecast") or ())
                 case "battery":
-                    batteries.append(
-                        Battery(source["stat_energy_from"], source["stat_energy_to"])
-                    )
+                    batteries.append(_battery(source))
                 case _:
                     pass
             if source["type"] in power and (rate := source.get("stat_rate")):
@@ -228,6 +251,31 @@ def parse_preferences(prefs: Mapping[str, Any] | None) -> EnergySetup:
         grid_power=tuple(power["grid"]),
         solar_power=tuple(power["solar"]),
         battery_power=tuple(power["battery"]),
+    )
+
+
+_BATTERY_DIRECTIONS = (
+    "stat_energy_from_grid",
+    "stat_energy_from_solar",
+    "stat_energy_to_home",
+    "stat_energy_to_grid",
+)
+
+
+def _battery(source: Mapping[str, Any]) -> Battery:
+    """Return a battery measured in total or, since 2026.12, per direction."""
+    if "stat_energy_from" in source or not any(
+        key in source for key in _BATTERY_DIRECTIONS
+    ):
+        return Battery(
+            discharge_stat=source["stat_energy_from"],
+            charge_stat=source["stat_energy_to"],
+        )
+    return Battery(
+        from_grid=source.get("stat_energy_from_grid"),
+        from_solar=source.get("stat_energy_from_solar"),
+        to_home=source.get("stat_energy_to_home"),
+        to_grid=source.get("stat_energy_to_grid"),
     )
 
 

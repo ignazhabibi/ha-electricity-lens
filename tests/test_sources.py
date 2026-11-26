@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.components.energy.data import BATTERY_SOURCE_SCHEMA
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import IntegrationNotFound
 from homeassistant.setup import async_setup_component
@@ -18,6 +19,7 @@ from pytest_homeassistant.components.recorder.common import (
 )
 
 from custom_components.electricity_lens.sources import (
+    Battery,
     EnergyInterfaceError,
     EnergySetup,
     GridSource,
@@ -94,6 +96,44 @@ def test_parse_legacy_grid_and_battery() -> None:
     assert setup.grids[1].export_price_entity == "sensor.feed_in"
     assert setup.batteries[0].charge_stat == "sensor.charge"
     assert setup.devices[0].included_in == "sensor.hp"
+
+
+def test_parse_battery_per_direction() -> None:
+    """Since 2026.12 a battery can be measured per direction."""
+    battery = {
+        "type": "battery",
+        "stat_energy_from_grid": "sensor.grid_to_battery",
+        "stat_energy_from_solar": "sensor.solar_to_battery",
+        "stat_energy_to_home": "sensor.battery_to_home",
+        "power_config": {"stat_rate_to_home": "sensor.home_power"},
+        "stat_rate": "sensor.energy_battery_net_power",
+    }
+    # The energy dashboard itself accepts it.
+    BATTERY_SOURCE_SCHEMA(battery)
+    setup = parse_preferences(
+        {**PREFS, "energy_sources": [*PREFS["energy_sources"], battery]}
+    )
+    assert setup.batteries == (
+        Battery(
+            from_grid="sensor.grid_to_battery",
+            from_solar="sensor.solar_to_battery",
+            to_home="sensor.battery_to_home",
+        ),
+    )
+    assert setup.batteries[0].stats == (
+        "sensor.grid_to_battery",
+        "sensor.solar_to_battery",
+        "sensor.battery_to_home",
+    )
+    assert setup.battery_power == ("sensor.energy_battery_net_power",)
+
+
+def test_parse_battery_without_meters() -> None:
+    """A battery without any meter is a format this integration does not know."""
+    with pytest.raises(EnergyInterfaceError):
+        parse_preferences(
+            {**PREFS, "energy_sources": [{"type": "battery", "stat_soc": "sensor.soc"}]}
+        )
 
 
 def test_parse_power_sensors() -> None:
