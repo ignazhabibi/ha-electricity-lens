@@ -13,7 +13,7 @@ affect the solution.
 ## Project Context
 
 - This is a Home Assistant custom integration with its own Lit cards and
-  dashboard strategy, installed as one package through HACS.
+  dashboard strategy, installed as one package through the Marketplace.
 - Integration code is in `custom_components/electricity_lens/`; tests are in
   `tests/`; card and strategy sources are in `card/src/`.
 - **The integration computes, the cards show.** Every figure is computed once,
@@ -45,7 +45,7 @@ affect the solution.
   not reach it. Check `lovelace/config` for `strategy` before suspecting a deploy.
 - Generated and committed: `custom_components/electricity_lens/translations/`
   from `scripts/translations.py`, and `custom_components/electricity_lens/frontend/`
-  from `card/src/`. HACS installs exactly what is published. Edit the sources and
+  from `card/src/`. The Marketplace installs exactly what is published. Edit the sources and
   regenerate; the quality gate fails when the generated files are stale.
 - User-facing text exists in English and German. Card texts are in
   `card/src/localize.ts`, the integration's in `scripts/translations.py`.
