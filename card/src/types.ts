@@ -82,9 +82,16 @@ export interface CategoryFigures {
   heating: Heating | null;
   /** The PV plant's battery, whose saving is part of the plant's. */
   battery: BatteryFigures | null;
+  /** The PV plant's self-consumption bonus, part of its saving. */
+  bonus: BonusFigures | null;
 }
 
 /** The battery's part of the PV plant, as the integration computed it. */
+export interface BonusFigures {
+  saving: number;
+  perYear: number | null;
+}
+
 export interface BatteryFigures {
   saving: number;
   investment: number | null;

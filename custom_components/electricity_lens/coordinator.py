@@ -40,6 +40,7 @@ from .calculation import (
     battery_flows,
     battery_hour,
     battery_saving,
+    bonus_saving,
     combine_grid_prices,
     effective_meters,
     electricity_prices,
@@ -49,6 +50,7 @@ from .calculation import (
     heat_pump_saving,
     heating_cost,
     household_hour,
+    lost_feed_in,
     normal_price,
     paid_prices,
     price_level,
@@ -77,6 +79,7 @@ from .const import (
 )
 from .models import (
     BatteryResult,
+    BonusResult,
     CategoryConfig,
     CategoryResult,
     CategoryState,
@@ -148,7 +151,7 @@ def next_full_hour() -> float:
 
 # The figures each category keeps besides its saving.
 CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
-    CATEGORY_PV: ("battery_saving",),
+    CATEGORY_PV: ("battery_saving", "bonus_saving"),
     CATEGORY_HEAT_PUMP: ("heat", "alternative_cost", "solar_saving"),
     CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving"),
 }
@@ -611,6 +614,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
 
         if is_pv:
             self._add_pv_hours(
+                config=config,
                 setup=setup,
                 state=state,
                 add=add,
@@ -714,6 +718,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
     def _add_pv_hours(
         self,
         *,
+        config: CategoryConfig,
         setup: EnergySetup,
         state: CategoryState,
         add: Callable[[str, float, float], None],
@@ -740,6 +745,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             export = sum(change(stat, hour) for stat in export_prices)
             flows = _battery_flows(setup, hour, change, solar=solar, export=export)
             price = prices.mean[index] or 0.0
+            bonus = _bonus_at(config, hour)
             if saving := pv_saving(
                 solar=solar,
                 export=export,
@@ -750,9 +756,15 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     change(stat, hour) * (rates[index] or 0.0)
                     for stat, rates in export_prices.items()
                 ),
+                bonus=bonus,
             ):
                 state.saving += saving
                 history.append((hour, state.saving))
+            add(
+                "bonus_saving",
+                hour,
+                bonus_saving(solar=solar, export=export, bonus=bonus),
+            )
             if flows.charge or flows.discharge:
                 if state.battery_start is None:
                     state.battery_start = hour
@@ -762,7 +774,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     battery_saving(
                         flows,
                         price=price,
-                        feed_in_price=_feed_in_price(export_prices, index),
+                        feed_in_price=lost_feed_in(
+                            _feed_in_price(export_prices, index), bonus
+                        ),
                     ),
                 )
 
@@ -890,6 +904,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 ),
                 "recompute": self.household.recompute,
                 "calculation": HOUSEHOLD_CALCULATION_VERSION,
+                "bonus": [pv.bonus, pv.bonus_until]
+                if (pv := self._pv_config()) is not None and pv.bonus
+                else None,
                 "tariffs": sorted(
                     [sorted(config.meters), tariff]
                     for config in self.configs.values()
@@ -897,6 +914,17 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                     and (tariff := config.before.get(VALUE_TARIFF)) is not None
                 ),
             }
+        )
+
+    def _pv_config(self) -> CategoryConfig | None:
+        """Return the PV plant's settings, if it is set up."""
+        return next(
+            (
+                config
+                for config in self.configs.values()
+                if config.category == CATEGORY_PV
+            ),
+            None,
         )
 
     def _tariff_owners(self, setup: EnergySetup) -> dict[str, str]:
@@ -1079,6 +1107,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         }
         top_level = [device_area(stat) for stat in effective_meters(parents, parents)]
         owners = self._tariff_owners(setup)
+        pv = self._pv_config()
 
         def change(stat: str, hour: float) -> float:
             return changes.get(stat, {}).get(hour, 0.0)
@@ -1113,12 +1142,15 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             solar = sum(change(stat, hour) for stat in setup.solar)
             export = sum(exported.values())
             flows = _battery_flows(setup, hour, change, solar=solar, export=export)
-            feed_in = (
+            # Solar power used on site gives up the feed-in compensation, less
+            # the self-consumption bonus it earns.
+            feed_in = lost_feed_in(
                 average_price(
                     [rates[index] for rates in export_prices.values()],
                     list(exported.values()),
                 )
-                or 0.0
+                or 0.0,
+                _bonus_at(pv, hour) if pv is not None else 0.0,
             )
             figures = household_hour(
                 grid_import=sum(change(stat, hour) for stat in imports),
@@ -1226,7 +1258,11 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         """Return the statistics a category writes: its saving and figures."""
         if config.category == CATEGORY_PV:
             has_battery = self.setup is not None and bool(self.setup.batteries)
-            return ("saving", "battery_saving") if has_battery else ("saving",)
+            return (
+                "saving",
+                *(("battery_saving",) if has_battery else ()),
+                *(("bonus_saving",) if config.bonus else ()),
+            )
         if not config.is_compared:
             return UNCOMPARED_FIGURES[config.category]
         return ("saving", *CATEGORY_FIGURES[config.category])
@@ -1282,6 +1318,7 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 yearly_from=dt_util.utc_from_timestamp(summary.yearly_from),
                 heat_estimated=state.estimated if is_heat_pump else None,
                 battery=_battery_result(config, state),
+                bonus=_bonus_result(config, state, counting_since),
                 **base,
             )
         return PaybackData(results)
@@ -1365,6 +1402,38 @@ def _battery_result(
         years_left=summary.years_left,
         counting_since=dt_util.utc_from_timestamp(state.battery_start),
     )
+
+
+def _bonus_at(config: CategoryConfig, hour: float) -> float:
+    """Return the PV plant's self-consumption bonus per kWh in an hour.
+
+    It is paid up to and including its last day, in local time.
+    """
+    if not config.bonus:
+        return 0.0
+    if config.bonus_until is not None and (
+        end := dt_util.parse_date(config.bonus_until)
+    ):
+        after = dt_util.start_of_local_day(end + timedelta(days=1))
+        if hour >= after.timestamp():
+            return 0.0
+    return config.bonus
+
+
+def _bonus_result(
+    config: CategoryConfig, state: CategoryState, counting_since: float
+) -> BonusResult | None:
+    """Return the self-consumption bonus's part of the PV plant's saving."""
+    if config.category != CATEGORY_PV or not config.bonus or state.next_hour is None:
+        return None
+    saving = state.totals.get("bonus_saving", 0.0)
+    summary = summarize(
+        saving=saving,
+        counting_since=counting_since,
+        until=state.next_hour,
+        investment=None,
+    )
+    return BonusResult(saving=saving, per_year=summary.per_year)
 
 
 def _battery_flows(

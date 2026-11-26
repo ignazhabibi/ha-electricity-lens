@@ -25,6 +25,7 @@ from .conftest import (
     HOURS,
     PREFS,
     PV_DATA,
+    PV_PER_HOUR,
     WALLBOX_DATA,
     import_hourly,
     import_hourly_mean,
@@ -448,4 +449,48 @@ async def test_battery_charged_from_the_grid_gives_grid_power(
     )
     assert await _total(hass, "household_cost", data_start) == pytest.approx(
         COUNTED * (GRID_PRICE + 1.5 * FEED_IN_PRICE) + discharges * GRID_PRICE
+    )
+
+
+@pytest.mark.usefixtures("energy")
+async def test_self_consumption_bonus(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """The bonus lowers what solar power costs and adds to the solar saving."""
+    bonus = 0.05
+    await setup_entry(
+        hass, make_entry(("pv", {**PV_DATA, "self_consumption_bonus": bonus}))
+    )
+
+    # Solar power used on site gives up the feed-in compensation less the bonus.
+    solar = COUNTED * CONSUMPTION * SOLAR_SHARE
+    assert await _total(hass, "household_solar_cost", data_start) == pytest.approx(
+        solar * (FEED_IN_PRICE - bonus)
+    )
+    # The bonus pays for production minus feed-in, 1.5 kWh an hour.
+    earned = COUNTED * 1.5 * bonus
+    assert await _total(hass, "pv_bonus_saving", data_start) == pytest.approx(earned)
+    assert await _total(hass, "pv_saving", data_start) == pytest.approx(
+        COUNTED * PV_PER_HOUR + earned
+    )
+    state = hass.states.get("sensor.solar_saving")
+    assert state is not None
+    assert state.attributes["bonus"] == {
+        "saving": pytest.approx(earned),
+        "per_year": None,
+    }
+
+
+@pytest.mark.usefixtures("energy")
+async def test_self_consumption_bonus_ends(
+    hass: HomeAssistant, data_start: datetime
+) -> None:
+    """After its last day the bonus earns nothing."""
+    data = {**PV_DATA, "self_consumption_bonus": 0.05}
+    await setup_entry(
+        hass, make_entry(("pv", {**data, "self_consumption_bonus_until": "2020-12-31"}))
+    )
+    assert await _total(hass, "pv_bonus_saving", data_start) is None
+    assert await _total(hass, "pv_saving", data_start) == pytest.approx(
+        COUNTED * PV_PER_HOUR
     )

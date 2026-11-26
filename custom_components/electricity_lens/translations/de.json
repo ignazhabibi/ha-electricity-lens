@@ -41,11 +41,15 @@
         "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
           "investment": "Anschaffungskosten (optional)",
-          "battery_investment": "Anschaffungskosten der Batterie (optional)"
+          "battery_investment": "Anschaffungskosten der Batterie (optional)",
+          "self_consumption_bonus": "Eigenverbrauchsvergütung pro kWh (optional)",
+          "self_consumption_bonus_until": "Gezahlt bis (optional)"
         },
         "data_description": {
           "investment": "Für die Amortisation",
-          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
+          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+          "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+          "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
         }
       },
       "pv_no_export": {
@@ -53,11 +57,15 @@
         "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze PV-Strom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
         "data": {
           "investment": "Anschaffungskosten (optional)",
-          "battery_investment": "Anschaffungskosten der Batterie (optional)"
+          "battery_investment": "Anschaffungskosten der Batterie (optional)",
+          "self_consumption_bonus": "Eigenverbrauchsvergütung pro kWh (optional)",
+          "self_consumption_bonus_until": "Gezahlt bis (optional)"
         },
         "data_description": {
           "investment": "Für die Amortisation",
-          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
+          "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+          "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+          "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
         }
       },
       "heat_pump": {
@@ -485,11 +493,15 @@
           "description": "Gerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
             "investment": "Anschaffungskosten (optional)",
-            "battery_investment": "Anschaffungskosten der Batterie (optional)"
+            "battery_investment": "Anschaffungskosten der Batterie (optional)",
+            "self_consumption_bonus": "Eigenverbrauchsvergütung pro kWh (optional)",
+            "self_consumption_bonus_until": "Gezahlt bis (optional)"
           },
           "data_description": {
             "investment": "Für die Amortisation",
-            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
+            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+            "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+            "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
           }
         },
         "pv_no_export": {
@@ -497,17 +509,22 @@
           "description": "**Im Energie-Dashboard ist keine Einspeisung erfasst.** Dann zählt der ganze PV-Strom als selbst verbraucht.\n\nGerechnet wird ab dem {since}, seitdem hat Home Assistant PV-Daten. Erzeugung, Einspeisung, Batterie und Strompreise kommen aus dem Energie-Dashboard.",
           "data": {
             "investment": "Anschaffungskosten (optional)",
-            "battery_investment": "Anschaffungskosten der Batterie (optional)"
+            "battery_investment": "Anschaffungskosten der Batterie (optional)",
+            "self_consumption_bonus": "Eigenverbrauchsvergütung pro kWh (optional)",
+            "self_consumption_bonus_until": "Gezahlt bis (optional)"
           },
           "data_description": {
             "investment": "Für die Amortisation",
-            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
+            "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+            "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+            "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
           }
         },
         "reconfigure": {
           "title": "Was möchtest du ändern?",
           "menu_options": {
             "investment": "Anschaffungskosten",
+            "bonus": "Eigenverbrauchsvergütung",
             "recompute": "Neu berechnen"
           }
         },
@@ -520,6 +537,18 @@
           "data_description": {
             "investment": "Für die Amortisation",
             "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
+          }
+        },
+        "bonus": {
+          "title": "Eigenverbrauchsvergütung",
+          "description": "Nur für PV-Anlagen in Deutschland mit Inbetriebnahme von 2009 bis März 2012 (EEG 2009). Beim Speichern wird alles neu berechnet.",
+          "data": {
+            "self_consumption_bonus": "Eigenverbrauchsvergütung pro kWh (optional)",
+            "self_consumption_bonus_until": "Gezahlt bis (optional)"
+          },
+          "data_description": {
+            "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+            "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
           }
         },
         "recompute": {
@@ -540,6 +569,7 @@
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
+        "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
       }
     },
@@ -1122,6 +1152,7 @@
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
+        "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
       }
     },
@@ -1265,6 +1296,7 @@
         "not_available": "Das Energie-Dashboard liefert die Daten dafür nicht. Die PV-Anlage braucht die PV-Erzeugung, Wärmepumpe und E-Auto brauchen einzelne Geräte.",
         "values_from": "Die neuen Werte gelten ab {time} Uhr.",
         "recomputing": "Wird neu berechnet. Das dauert meist unter einer Minute.",
+        "recomputing_all": "Alles wird neu berechnet. Bei mehreren Jahren an Daten kann das ein paar Minuten dauern.",
         "investment_saved": "Gespeichert. Die Anschaffungskosten gelten sofort."
       }
     }
@@ -1448,6 +1480,7 @@
         "alternative_cost": "Vergleichskosten",
         "solar_saving": "Ersparnis durch PV-Strom",
         "battery_saving": "Batterie-Ersparnis",
+        "bonus_saving": "Eigenverbrauchsvergütung",
         "saving": "Ersparnis"
       }
     }

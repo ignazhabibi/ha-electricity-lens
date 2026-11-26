@@ -3,6 +3,7 @@
 import type {
   BalanceFigures,
   BatteryFigures,
+  BonusFigures,
   Category,
   CategoryFigures,
   FiguresInfo,
@@ -58,6 +59,7 @@ export function readCategories(hass: HomeAssistant): CategoryFigures[] {
       entityId: entry.entity_id,
       heating: HEATINGS.includes(attributes.heating as Heating) ? (attributes.heating as Heating) : null,
       battery: readBattery(attributes.battery),
+      bonus: readBonus(attributes.bonus),
     });
   }
   return figures.sort(
@@ -78,6 +80,15 @@ function readBattery(value: unknown): BatteryFigures | null {
     payback: number(battery.payback),
     yearsLeft: number(battery.years_left),
   };
+}
+
+/** The self-consumption bonus from the PV plant's saving sensor, if it earns one. */
+function readBonus(value: unknown): BonusFigures | null {
+  if (typeof value !== "object" || value === null) return null;
+  const bonus = value as Record<string, unknown>;
+  const saving = number(bonus.saving);
+  if (saving === null) return null;
+  return { saving, perYear: number(bonus.per_year) };
 }
 
 /** The categories with an investment, and the sensors about it. */

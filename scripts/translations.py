@@ -72,6 +72,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "alternative_cost": "comparison costs",
             "solar_saving": "saving by solar power",
             "battery_saving": "battery saving",
+            "bonus_saving": "self-consumption bonus",
             "saving": "saving",
         },
         "pv": {
@@ -105,6 +106,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "description": "Other meters or another former heating compute everything again. The extra cost applies at once.",
         },
         "investment": {"title": "Purchase cost"},
+        "bonus": {
+            "title": "Self-consumption bonus",
+            "description": "Only for solar plants in Germany commissioned from 2009 to March 2012 (EEG 2009). Saving it computes everything again.",
+        },
         "recompute": {
             "title": "Recompute",
             "pv": "Computes the solar saving again with the current data, for example after you corrected a wrong reading in the statistics. Your values stay as they are.",
@@ -117,6 +122,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "before": "Averages before the setup",
             "meters": "Meters and extra cost",
             "investment": "Purchase cost",
+            "bonus": "Self-consumption bonus",
             "recompute": "Recompute",
         },
         "fields": {
@@ -124,6 +130,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             "battery_investment": (
                 "Battery purchase cost (optional)",
                 "For the battery's own payback. Solar's counts both, so leave the battery out above",
+            ),
+            "self_consumption_bonus": (
+                "Self-consumption bonus per kWh (optional)",
+                "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
+            ),
+            "self_consumption_bonus_until": (
+                "Paid until (optional)",
+                "Its last day, usually 31 December of the 20th year after commissioning",
             ),
             "standing_charge": (
                 "Standing charge per month (optional)",
@@ -394,6 +408,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "alternative_cost": "Vergleichskosten",
             "solar_saving": "Ersparnis durch PV-Strom",
             "battery_saving": "Batterie-Ersparnis",
+            "bonus_saving": "Eigenverbrauchsvergütung",
             "saving": "Ersparnis",
         },
         "pv": {
@@ -427,6 +442,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "description": "Andere Zähler oder eine andere frühere Heizung berechnen alles neu. Mehrkosten gelten sofort.",
         },
         "investment": {"title": "Anschaffungskosten"},
+        "bonus": {
+            "title": "Eigenverbrauchsvergütung",
+            "description": "Nur für PV-Anlagen in Deutschland mit Inbetriebnahme von 2009 bis März 2012 (EEG 2009). Beim Speichern wird alles neu berechnet.",
+        },
         "recompute": {
             "title": "Neu berechnen",
             "pv": "Rechnet die PV-Anlage mit den aktuellen Messdaten neu, zum Beispiel nachdem du einen falschen Messwert in den Statistiken korrigiert hast. Deine Werte bleiben, wie sie sind.",
@@ -439,6 +458,7 @@ TEXTS: dict[str, dict[str, Any]] = {
             "before": "Durchschnittswerte vor der Einrichtung",
             "meters": "Zähler und Mehrkosten",
             "investment": "Anschaffungskosten",
+            "bonus": "Eigenverbrauchsvergütung",
             "recompute": "Neu berechnen",
         },
         "fields": {
@@ -446,6 +466,14 @@ TEXTS: dict[str, dict[str, Any]] = {
             "battery_investment": (
                 "Anschaffungskosten der Batterie (optional)",
                 "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
+            ),
+            "self_consumption_bonus": (
+                "Eigenverbrauchsvergütung pro kWh (optional)",
+                "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
+            ),
+            "self_consumption_bonus_until": (
+                "Gezahlt bis (optional)",
+                "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme",
             ),
             "standing_charge": (
                 "Grundpreis pro Monat (optional)",
@@ -725,7 +753,15 @@ def household_step(t: dict[str, Any], title: str, description: str) -> dict[str,
 def pv_steps(t: dict[str, Any]) -> dict[str, Any]:
     """Return the PV step and its variant without feed-in."""
     title = t["categories"]["pv"]
-    block = fields(t, ["investment", "battery_investment"])
+    block = fields(
+        t,
+        [
+            "investment",
+            "battery_investment",
+            "self_consumption_bonus",
+            "self_consumption_bonus_until",
+        ],
+    )
     return {
         "pv": form(title, t["pv"]["description"], block),
         "pv_no_export": form(
@@ -853,11 +889,16 @@ def subentry_steps(t: dict[str, Any], category: str) -> dict[str, Any]:
     if category == "pv":
         return {
             **pv_steps(t),
-            "reconfigure": menu(t, ["investment", "recompute"]),
+            "reconfigure": menu(t, ["investment", "bonus", "recompute"]),
             "investment": form(
                 t["investment"]["title"],
                 None,
                 fields(t, ["investment", "battery_investment"]),
+            ),
+            "bonus": form(
+                t["bonus"]["title"],
+                t["bonus"]["description"],
+                fields(t, ["self_consumption_bonus", "self_consumption_bonus_until"]),
             ),
             "recompute": recompute,
         }
@@ -950,6 +991,7 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                         "not_available",
                         "values_from",
                         "recomputing",
+                        "recomputing_all",
                         "investment_saved",
                     )
                 },

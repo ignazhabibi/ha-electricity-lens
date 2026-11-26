@@ -85,6 +85,7 @@ const PLACES: Record<string, Place> = {
       "category.heat_pump",
       "category.wallbox",
       "battery_part",
+      "bonus_part",
       "total",
       "savings_pv",
       "savings_feed_in",

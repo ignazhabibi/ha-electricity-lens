@@ -219,15 +219,39 @@ def pv_saving(
     battery_in: float,
     price: float,
     export_revenue: float,
+    bonus: float = 0.0,
 ) -> float:
     """Return what the PV plant saved in one hour.
 
     Without PV and battery all electricity used in the house would come from
     the grid and nothing would be fed in. The battery belongs to the PV plant:
-    what it gives back is valued when it is used.
+    what it gives back is valued when it is used. A self-consumption bonus
+    adds bonus_saving.
     """
     self_used = solar - export + battery_out - battery_in
-    return self_used * price + export_revenue
+    return (
+        self_used * price
+        + export_revenue
+        + bonus_saving(solar=solar, export=export, bonus=bonus)
+    )
+
+
+def bonus_saving(*, solar: float, export: float, bonus: float) -> float:
+    """Return what a self-consumption bonus earned in one hour.
+
+    The grid operator pays it for what the meters say was used on site: solar
+    production minus feed-in. What a battery stored counts, its losses too.
+    """
+    return bonus * max(solar - export, 0.0)
+
+
+def lost_feed_in(feed_in: float, bonus: float) -> float:
+    """Return what a kWh of solar power used on site gives up.
+
+    It does not earn the feed-in compensation but earns the self-consumption
+    bonus, so it costs their difference, and never less than nothing.
+    """
+    return max(feed_in - bonus, 0.0)
 
 
 @dataclass(frozen=True, slots=True)

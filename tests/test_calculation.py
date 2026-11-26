@@ -18,6 +18,7 @@ from custom_components.electricity_lens.calculation import (
     battery_flows,
     battery_hour,
     battery_saving,
+    bonus_saving,
     combine_grid_prices,
     effective_meters,
     electricity_prices,
@@ -27,6 +28,7 @@ from custom_components.electricity_lens.calculation import (
     heating_cost,
     household_hour,
     internal_rate_of_return,
+    lost_feed_in,
     normal_price,
     paid_prices,
     price_level,
@@ -113,6 +115,24 @@ def test_pv_saving() -> None:
     assert pv_saving(
         solar=5, export=2, battery_out=1, battery_in=1.5, price=0.3, export_revenue=0.16
     ) == pytest.approx(2.5 * 0.3 + 0.16)
+
+
+def test_self_consumption_bonus() -> None:
+    """The bonus pays for production minus feed-in; it lowers what solar costs."""
+    assert bonus_saving(solar=5.0, export=2.0, bonus=0.16) == pytest.approx(0.48)
+    assert bonus_saving(solar=0.0, export=1.0, bonus=0.16) == 0.0
+    assert pv_saving(
+        solar=5,
+        export=2,
+        battery_out=0,
+        battery_in=0,
+        price=0.3,
+        export_revenue=0.5,
+        bonus=0.16,
+    ) == pytest.approx(3 * 0.3 + 0.5 + 3 * 0.16)
+    # 28.75 ct feed-in less a 16 ct bonus: a kWh used on site gives up 12.75 ct.
+    assert lost_feed_in(0.2875, 0.16) == pytest.approx(0.1275)
+    assert lost_feed_in(0.08, 0.16) == 0.0
 
 
 def test_battery_saving() -> None:

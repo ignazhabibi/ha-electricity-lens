@@ -27,6 +27,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import (
+    DateSelector,  # pyright: ignore[reportUnknownVariableType]
     EntitySelector,  # pyright: ignore[reportUnknownVariableType]
     EntitySelectorConfig,
     NumberSelector,  # pyright: ignore[reportUnknownVariableType]
@@ -50,6 +51,7 @@ from .const import (
     COMPARISON_NONE,
     CONF_BATTERY_INVESTMENT,
     CONF_BEFORE,
+    CONF_BONUS_UNTIL,
     CONF_COMPARISON,
     CONF_CURRENT,
     CONF_HEAT_METERS,
@@ -57,6 +59,7 @@ from .const import (
     CONF_INVESTMENT,
     CONF_METERS,
     CONF_RECOMPUTE,
+    CONF_SELF_CONSUMPTION_BONUS,
     CONF_SETUP_AT,
     CONF_STANDING_CHARGE,
     DOMAIN,
@@ -203,6 +206,40 @@ def investment_schema(hass: HomeAssistant, setup: EnergySetup) -> probatio.Schem
             hass.config.currency, step=1
         )
     return probatio.Schema(fields)
+
+
+BONUS_FIELDS = (CONF_SELF_CONSUMPTION_BONUS, CONF_BONUS_UNTIL)
+
+
+def asks_bonus(hass: HomeAssistant, data: Mapping[str, Any] | None = None) -> bool:
+    """Return whether to ask for a self-consumption bonus.
+
+    Only German PV plants of 2009 to March 2012 earn one, so only a German
+    household is asked, or one that entered it already.
+    """
+    return hass.config.country == "DE" or bool(
+        data and data.get(CONF_SELF_CONSUMPTION_BONUS)
+    )
+
+
+def bonus_schema(hass: HomeAssistant) -> probatio.Schema:
+    """Return the fields of the self-consumption bonus."""
+    return probatio.Schema(
+        {
+            probatio.Optional(CONF_SELF_CONSUMPTION_BONUS): _number(
+                f"{hass.config.currency}/kWh"
+            ),
+            probatio.Optional(CONF_BONUS_UNTIL): DateSelector(),
+        }
+    )
+
+
+def pv_schema(hass: HomeAssistant, setup: EnergySetup) -> probatio.Schema:
+    """Return the form of a new PV plant: its purchase cost, and its bonus."""
+    schema = investment_schema(hass, setup)
+    if asks_bonus(hass):
+        schema = schema.extend(bonus_schema(hass).schema)
+    return schema
 
 
 def alternative(category: str, data: Mapping[str, Any]) -> str:
@@ -516,7 +553,7 @@ class ElectricityLensConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self._async_add(CATEGORY_PV, dict(user_input))
         return self.async_show_form(
             step_id=_pv_step(self._setup),
-            data_schema=investment_schema(self.hass, self._setup),
+            data_schema=pv_schema(self.hass, self._setup),
             description_placeholders={
                 "since": format_date(
                     self.hass,
@@ -713,7 +750,7 @@ class CategorySubentryFlow(ConfigSubentryFlow):
                 return await self._async_create(dict(user_input))
             return self.async_show_form(
                 step_id=_pv_step(self._setup),
-                data_schema=investment_schema(self.hass, self._setup),
+                data_schema=pv_schema(self.hass, self._setup),
                 description_placeholders={
                     "since": format_date(
                         self.hass,
@@ -824,11 +861,15 @@ class CategorySubentryFlow(ConfigSubentryFlow):
         """Ask what to change."""
         if (abort := await self._async_load_setup()) is not None:
             return abort
-        options = (
-            ["investment", "recompute"]
-            if self._category == CATEGORY_PV
-            else ["now", "before", "meters", "recompute"]
-        )
+        if self._category == CATEGORY_PV:
+            subentry = self._get_reconfigure_subentry()
+            options = [
+                "investment",
+                *(["bonus"] if asks_bonus(self.hass, subentry.data) else []),
+                "recompute",
+            ]
+        else:
+            options = ["now", "before", "meters", "recompute"]
         return self.async_show_menu(step_id="reconfigure", menu_options=options)
 
     def _async_save(
@@ -860,6 +901,25 @@ class CategorySubentryFlow(ConfigSubentryFlow):
             step_id="investment",
             data_schema=self.add_suggested_values_to_schema(
                 investment_schema(self.hass, self._setup), subentry.data
+            ),
+        )
+
+    async def async_step_bonus(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Change the self-consumption bonus, which computes everything again."""
+        subentry = self._get_reconfigure_subentry()
+        if user_input is not None:
+            data = {
+                key: value
+                for key, value in subentry.data.items()
+                if key not in BONUS_FIELDS
+            }
+            return self._async_save({**data, **user_input}, "recomputing_all", {})
+        return self.async_show_form(
+            step_id="bonus",
+            data_schema=self.add_suggested_values_to_schema(
+                bonus_schema(self.hass), subentry.data
             ),
         )
 
