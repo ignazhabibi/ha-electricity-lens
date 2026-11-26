@@ -416,23 +416,27 @@
           "combustion_consumption": "Verbrauch Verbrenner",
           "fuel_price": "Spritpreis",
           "tariff": "Eigener Stromtarif (optional)",
+          "reimbursement": "Erstattung pro kWh (optional)",
           "fuel_price_entity": "Spritpreis-Sensor (optional)"
         },
         "data_description": {
           "ev_consumption": "Ab Wallbox mit Ladeverlusten, meist 10–15 % über der Anzeige im Auto. Bei mehreren Autos der Durchschnitt.",
           "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
           "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+          "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt",
           "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
         }
       },
       "wallbox_values_none": {
         "title": "Durchschnitt seit {since}",
-        "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+        "description": "Ohne Vergleich gibt es keine Ersparnis, außer der Arbeitgeber erstattet das Laden. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif und eine Erstattung gelten seit dem {since} und ab jetzt, bis du sie änderst.",
         "data": {
-          "tariff": "Eigener Stromtarif (optional)"
+          "tariff": "Eigener Stromtarif (optional)",
+          "reimbursement": "Erstattung pro kWh (optional)"
         },
         "data_description": {
-          "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+          "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+          "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt"
         }
       }
     },
@@ -1211,43 +1215,51 @@
             "combustion_consumption": "Verbrauch Verbrenner",
             "fuel_price": "Spritpreis",
             "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)",
             "fuel_price_entity": "Spritpreis-Sensor (optional)"
           },
           "data_description": {
             "ev_consumption": "Ab Wallbox mit Ladeverlusten, meist 10–15 % über der Anzeige im Auto. Bei mehreren Autos der Durchschnitt.",
             "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
             "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt",
             "fuel_price_entity": "Ersetzt den Durchschnitt ab jetzt"
           }
         },
         "wallbox_values_none": {
           "title": "Durchschnitt seit {since}",
-          "description": "Ohne Vergleich gibt es keine Ersparnis. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif gilt seit dem {since} und ab jetzt, bis du ihn änderst.",
+          "description": "Ohne Vergleich gibt es keine Ersparnis, außer der Arbeitgeber erstattet das Laden. Electricity Lens zeigt Ladekosten, Strommix und Durchschnittspreis. Ein eigener Tarif und eine Erstattung gelten seit dem {since} und ab jetzt, bis du sie änderst.",
           "data": {
-            "tariff": "Eigener Stromtarif (optional)"
+            "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)"
           },
           "data_description": {
-            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt"
           }
         },
         "now_none": {
           "title": "Werte ab jetzt",
           "description": "Neue Werte gelten ab der nächsten vollen Stunde. Bisher Berechnetes bleibt.",
           "data": {
-            "tariff": "Eigener Stromtarif (optional)"
+            "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)"
           },
           "data_description": {
-            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt"
           }
         },
         "before_none": {
           "title": "Vor der Einrichtung",
           "description": "Durchschnittswerte für den {since} bis {until}. Änderst du sie, wird dieser Zeitraum neu berechnet.",
           "data": {
-            "tariff": "Eigener Stromtarif (optional)"
+            "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)"
           },
           "data_description": {
-            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt"
           }
         },
         "now": {
@@ -1258,12 +1270,14 @@
             "combustion_consumption": "Verbrauch Verbrenner",
             "fuel_price": "Spritpreis",
             "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)",
             "fuel_price_entity": "Spritpreis-Sensor (optional)"
           },
           "data_description": {
             "ev_consumption": "Ab Wallbox mit Ladeverlusten, meist 10–15 % über der Anzeige im Auto. Bei mehreren Autos der Durchschnitt.",
             "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
             "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt",
             "fuel_price_entity": "Ersetzt den Spritpreis"
           }
         },
@@ -1274,12 +1288,14 @@
             "ev_consumption": "Verbrauch E-Auto",
             "combustion_consumption": "Verbrauch Verbrenner",
             "fuel_price": "Spritpreis",
-            "tariff": "Eigener Stromtarif (optional)"
+            "tariff": "Eigener Stromtarif (optional)",
+            "reimbursement": "Erstattung pro kWh (optional)"
           },
           "data_description": {
             "ev_consumption": "Ab Wallbox mit Ladeverlusten, meist 10–15 % über der Anzeige im Auto. Bei mehreren Autos der Durchschnitt.",
             "combustion_consumption": "Was ein vergleichbarer Verbrenner gebraucht hätte",
-            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard"
+            "tariff": "Nur bei eigenem Autostromtarif, sonst gilt der Preis aus dem Energie-Dashboard",
+            "reimbursement": "Beim Dienstwagen: was der Arbeitgeber je zu Hause geladener kWh zahlt"
           }
         }
       },
@@ -1479,6 +1495,7 @@
         "distance": "Strecke",
         "alternative_cost": "Vergleichskosten",
         "solar_saving": "Ersparnis durch PV-Strom",
+        "reimbursement": "Erstattung",
         "battery_saving": "Batterie-Ersparnis",
         "bonus_saving": "Eigenverbrauchsvergütung",
         "saving": "Ersparnis"

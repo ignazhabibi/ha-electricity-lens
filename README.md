@@ -156,12 +156,15 @@ household needs it.
    car or nothing), and the extra purchase cost over a combustion car
    (optional). Compared with nothing, as for a second car, the car has no
    saving, no saving sensors, and no place in the economics, but its charging
-   costs, mix, and the Charging view.
+   costs, mix, and the Charging view; unless its charging is reimbursed.
 7. **Electric car, average since the first data**: consumption of the electric
    car (measured at the wallbox, with charging losses; with several cars,
    their average), consumption of a comparable combustion car, fuel price, an
-   own tariff (optional), and a fuel price sensor (optional). Compared with
-   nothing, only the own tariff (optional).
+   own tariff (optional), a **reimbursement per kWh** (optional), and a fuel
+   price sensor (optional). Compared with nothing, only the own tariff and the
+   reimbursement (both optional). The reimbursement is for a company car whose
+   charging at home the employer pays per kWh; it is income of the car, and
+   also counts under *Values from now on*.
 
 Then assign areas to the new devices if you like.
 
@@ -497,7 +500,7 @@ replaced.
 |---|---|---|
 | Solar | Solar power used in the house, valued at the electricity price of that hour, plus the feed-in compensation received, plus a self-consumption bonus on production minus feed-in, as the grid operator pays it. A home battery counts as part of the solar panels; its part of the saving and the bonus are shown on their own. | No solar: all electricity from the grid, no feed-in. |
 | Heat pump | What the former heating would have cost for the same heat, minus what the heat pump's electricity cost. | The former heating, with the fixed values below. Heat comes from heat meters where they measured, otherwise from electricity × COP. |
-| Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. |
+| Electric car | What fuel would have cost for the same distance, minus what the charging electricity cost, plus a reimbursement per kWh charged. | A combustion car. The distance follows from the energy charged at the wallbox and the electric car's consumption. Compared with nothing, a reimbursed car saves its reimbursement minus what the charging electricity cost. |
 
 - **No double counting.** The three savings add up to the household's total
   saving, the balance before investments. The benefit of solar power belongs
@@ -606,6 +609,7 @@ They appear in Home Assistant's statistics pickers, for example in the
 | `electricity_lens:pv_bonus_saving` | The self-consumption bonus, part of the solar saving |
 | `electricity_lens:heat_pump_heat`, `…heat_pump_alternative_cost`, `…heat_pump_solar_saving` | The heat pump's heat (measured or estimated), what the former heating would have cost for it, and what its solar power adds to its saving |
 | `electricity_lens:wallbox_distance`, `…wallbox_alternative_cost`, `…wallbox_solar_saving` | The distance charged, what a combustion car would have paid for fuel, and what its solar power adds to its saving |
+| `electricity_lens:wallbox_reimbursement` | What the employer reimbursed for the energy charged at home, part of the car's saving |
 
 Energy is in kWh, money in your currency. Hours in which a figure did not
 change are not stored; statistics cards carry the sum over them.

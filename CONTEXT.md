@@ -30,6 +30,7 @@ from their bills and devices.
 | Tarifersparnis | Tariff saving | What cheap grid power cost less and expensive grid power more than at the normal price | A saving of an area; it is not in the balance |
 | Strommix | Electricity mix | The shares of PV / solar power and grid power in a consumption | |
 | Ersparnis | Saving | What an area saves against its comparison, in money | Energy |
+| Erstattung | Reimbursement | What an employer pays per kWh charged at home, as for a company car; income of the car | The feed-in compensation, a saving of its own |
 | Vergleich | Comparison | What a heat pump or car is compared with: the former heating, a combustion car | |
 | Investition | Investment | Purchase cost or extra cost of an area | |
 | Bilanz | Balance | Savings minus investments, the column of the economics card and its sensor | A share of a saving: name the area that counts it, such as "davon PV-Anlage" |

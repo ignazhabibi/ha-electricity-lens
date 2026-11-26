@@ -65,6 +65,7 @@ from .const import (
     CATEGORY_HEAT_PUMP,
     CATEGORY_PV,
     CATEGORY_WALLBOX,
+    COMPARISON_NONE,
     DOMAIN,
     ISSUE_ENERGY_INTERFACE,
     ISSUE_MISSING_METER,
@@ -74,6 +75,7 @@ from .const import (
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
     VALUE_PRICE_ENTITY,
+    VALUE_REIMBURSEMENT,
     VALUE_SCOP,
     VALUE_TARIFF,
 )
@@ -153,7 +155,7 @@ def next_full_hour() -> float:
 CATEGORY_FIGURES: dict[str, tuple[str, ...]] = {
     CATEGORY_PV: ("battery_saving", "bonus_saving"),
     CATEGORY_HEAT_PUMP: ("heat", "alternative_cost", "solar_saving"),
-    CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving"),
+    CATEGORY_WALLBOX: ("distance", "alternative_cost", "solar_saving", "reimbursement"),
 }
 # Of them, those without a comparison: the heat. A car's distance only serves
 # the comparison with a combustion car.
@@ -161,6 +163,24 @@ UNCOMPARED_FIGURES: dict[str, tuple[str, ...]] = {
     CATEGORY_HEAT_PUMP: ("heat",),
     CATEGORY_WALLBOX: (),
 }
+
+
+def category_figures(config: CategoryConfig) -> tuple[str, ...]:
+    """Return the figures besides its saving that a category has data for.
+
+    A car's reimbursement only where it is reimbursed; a reimbursed car
+    compared with nothing has no distance and no comparison costs.
+    """
+    if not config.is_compared:
+        return UNCOMPARED_FIGURES.get(config.category, ())
+    figures = CATEGORY_FIGURES[config.category]
+    if config.category != CATEGORY_WALLBOX:
+        return figures
+    if config.comparison == COMPARISON_NONE:
+        figures = ("solar_saving", "reimbursement")
+    if not config.is_reimbursed:
+        figures = tuple(figure for figure in figures if figure != "reimbursement")
+    return figures
 
 
 # The figures the household keeps for each area: energy, solar power, costs,
@@ -210,6 +230,52 @@ def value_at(
         return config.before.get(key)
     value = state.timeline(key).value_at(hour)
     return float(value) if isinstance(value, int | float) else None
+
+
+def _car_hour(
+    config: CategoryConfig,
+    add: Callable[[str, float, float], None],
+    hour: float,
+    *,
+    electricity: float,
+    electricity_price: float,
+    fuel_price: float,
+    cost: float,
+    value: Callable[[str, float], float | None],
+) -> float:
+    """Add an hour of the electric car's figures and return its saving.
+
+    Against a combustion car it saves the fuel less the electricity; compared
+    with nothing, the electricity is all it spends. The employer's
+    reimbursement is income on top, and not part of the solar power's share.
+    """
+    alternative = 0.0
+    saving = -electricity * electricity_price
+    if config.comparison != COMPARISON_NONE:
+        saving = 0.0
+        if (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
+            combustion := value(VALUE_COMBUSTION_CONSUMPTION, hour)
+        ) is not None:
+            saving = wallbox_saving(
+                electricity=electricity,
+                ev_consumption=ev,
+                combustion_consumption=combustion,
+                fuel_price=fuel_price,
+                electricity_price=electricity_price,
+            )
+            distance = wallbox_distance(electricity, ev)
+            alternative = fuel_cost(distance, combustion, fuel_price)
+            add("distance", hour, distance)
+            add("alternative_cost", hour, alternative)
+    if saving:
+        add(
+            "solar_saving",
+            hour,
+            solar_saving(alternative_cost=alternative, cost=cost, saving=saving),
+        )
+    reimbursement = electricity * (value(VALUE_REIMBURSEMENT, hour) or 0.0)
+    add("reimbursement", hour, reimbursement)
+    return saving + reimbursement
 
 
 def _heat_meter_figures(
@@ -687,28 +753,16 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                         device_costs=device_costs,
                     ):
                         add(figure, hour, amount)
-            elif (ev := value(VALUE_EV_CONSUMPTION, hour)) and (
-                combustion := value(VALUE_COMBUSTION_CONSUMPTION, hour)
-            ) is not None:
-                saving = wallbox_saving(
-                    electricity=electricity,
-                    ev_consumption=ev,
-                    combustion_consumption=combustion,
-                    fuel_price=fuel_price,
-                    electricity_price=electricity_price,
-                )
-                distance = wallbox_distance(electricity, ev)
-                alternative = fuel_cost(distance, combustion, fuel_price)
-                add("distance", hour, distance)
-                add("alternative_cost", hour, alternative)
-                add(
-                    "solar_saving",
+            elif config.is_compared:
+                saving = _car_hour(
+                    config,
+                    add,
                     hour,
-                    solar_saving(
-                        alternative_cost=alternative,
-                        cost=sum(device_costs.values()),
-                        saving=saving,
-                    ),
+                    electricity=electricity,
+                    electricity_price=electricity_price,
+                    fuel_price=fuel_price,
+                    cost=sum(device_costs.values()),
+                    value=value,
                 )
             if saving:
                 state.saving += saving
@@ -1264,8 +1318,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 *(("bonus_saving",) if config.bonus else ()),
             )
         if not config.is_compared:
-            return UNCOMPARED_FIGURES[config.category]
-        return ("saving", *CATEGORY_FIGURES[config.category])
+            return category_figures(config)
+        return ("saving", *category_figures(config))
 
     def current_price(
         self, config: CategoryConfig, state: CategoryState

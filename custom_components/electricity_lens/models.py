@@ -34,6 +34,7 @@ from .const import (
     VALUE_EV_CONSUMPTION,
     VALUE_PRICE,
     VALUE_PRICE_ENTITY,
+    VALUE_REIMBURSEMENT,
     VALUE_SCOP,
     VALUE_TARIFF,
 )
@@ -47,6 +48,7 @@ CATEGORY_VALUES: dict[str, tuple[str, ...]] = {
         VALUE_COMBUSTION_CONSUMPTION,
         VALUE_PRICE,
         VALUE_TARIFF,
+        VALUE_REIMBURSEMENT,
     ),
 }
 
@@ -127,13 +129,24 @@ class CategoryConfig:
 
         Only then does it save. A heat pump without a former heating, as in a
         new build, still has its heat, seasonal COP, and heat price; an
-        electric car without a combustion car its charging costs and mix.
+        electric car without a combustion car its charging costs and mix, and
+        a saving only when its charging is reimbursed.
         """
         if self.category == CATEGORY_HEAT_PUMP:
             return self.heating != HEATING_NONE
         if self.category == CATEGORY_WALLBOX:
-            return self.comparison != COMPARISON_NONE
+            return self.comparison != COMPARISON_NONE or self.is_reimbursed
         return True
+
+    @property
+    def is_reimbursed(self) -> bool:
+        """Return whether an employer pays for the car's charging.
+
+        Its reimbursement is income, so a car compared with nothing saves too.
+        """
+        return self.category == CATEGORY_WALLBOX and any(
+            values.get(VALUE_REIMBURSEMENT) for values in (self.before, self.current)
+        )
 
     @property
     def fingerprint(self) -> str:

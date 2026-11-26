@@ -112,12 +112,16 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
   protected _ids(): string[] {
     if (this._config.area) {
       const statistics = this._area?.statistics;
-      return statistics?.alternative_cost?.length && statistics.cost?.length && statistics.saving?.length
+      // A reimbursed car compared with nothing has no comparison costs.
+      return (statistics?.alternative_cost?.length || statistics?.reimbursement?.length) &&
+        statistics.cost?.length &&
+        statistics.saving?.length
         ? [
-            ...statistics.alternative_cost,
+            ...(statistics.alternative_cost ?? []),
             ...statistics.cost,
             ...statistics.saving,
             ...(statistics.solar_saving ?? []),
+            ...(statistics.reimbursement ?? []),
           ]
         : [];
     }
@@ -168,16 +172,23 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const car = this._config.area === "wallbox";
     const area = this._area;
     return [
-      car
-        ? [t("savings_instead_fuel"), t("info.reckoning.fuel")]
-        : [
-            t(`savings_instead_${this._heating}`),
-            t("info.reckoning.heating", { heating: t(`heating.${this._heating}`) }),
-          ],
+      ...(area?.statistics.alternative_cost?.length
+        ? ([
+            car
+              ? [t("savings_instead_fuel"), t("info.reckoning.fuel")]
+              : [
+                  t(`savings_instead_${this._heating}`),
+                  t("info.reckoning.heating", { heating: t(`heating.${this._heating}`) }),
+                ],
+          ] as Explanation)
+        : []),
       [
         car ? t("figure.cost.wallbox") : t("figure_of", { figure: t("figure.cost.heat_pump"), area: area?.name ?? "" }),
         t("info.reckoning.electricity"),
       ],
+      ...(area?.statistics.reimbursement?.length
+        ? ([[t("savings_reimbursement"), t("info.reckoning.reimbursement")]] as Explanation)
+        : []),
       ...(area?.statistics.solar_saving?.length
         ? ([[t("info.reckoning.split_term"), t("info.reckoning.split")]] as Explanation)
         : []),
@@ -193,6 +204,7 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     const alternative = addUp(values, area?.statistics.alternative_cost);
     const cost = addUp(values, area?.statistics.cost);
     const solar = addUp(values, area?.statistics.solar_saving);
+    const reimbursement = addUp(values, area?.statistics.reimbursement);
     // The economics count the benefit of PV power for the PV plant alone.
     const own = addUp(values, area?.statistics.saving);
     const saving = own + solar;
@@ -202,7 +214,9 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
     return lensTable(
       {
         rows: [
-          { name: t(instead), cells: [fmt.value(alternative, "money")] },
+          ...(area?.statistics.alternative_cost?.length
+            ? [{ name: t(instead), cells: [fmt.value(alternative, "money")] }]
+            : []),
           {
             name:
               area?.id === "wallbox"
@@ -210,6 +224,9 @@ export class ElectricityLensSavingsCard extends PeriodSumsCard {
                 : t("figure_of", { figure: t("figure.cost.heat_pump"), area: area?.name ?? "" }),
             cells: [fmt.value(-cost, "money")],
           },
+          ...(area?.statistics.reimbursement?.length
+            ? [{ name: t("savings_reimbursement"), cells: [fmt.value(reimbursement, "money")] }]
+            : []),
         ],
         foot: [
           { name: t("savings_saved"), cells: [fmt.value(saving, "money")] },

@@ -50,6 +50,8 @@ VALUE_SCOP: Final = "scop"
 VALUE_TARIFF: Final = "tariff"
 VALUE_EV_CONSUMPTION: Final = "ev_consumption"
 VALUE_COMBUSTION_CONSUMPTION: Final = "combustion_consumption"
+VALUE_REIMBURSEMENT: Final = "reimbursement"
+"""What an employer pays per kWh charged at home, as for a company car."""
 
 HEATING_GAS: Final = "gas"
 HEATING_OIL: Final = "oil"

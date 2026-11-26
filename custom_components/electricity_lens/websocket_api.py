@@ -28,11 +28,7 @@ from .calculation import (
     effective_meters,
 )
 from .const import CATEGORY_HEAT_PUMP, CATEGORY_PV, DOMAIN
-from .coordinator import (
-    CATEGORY_FIGURES,
-    UNCOMPARED_FIGURES,
-    ElectricityLensCoordinator,
-)
+from .coordinator import ElectricityLensCoordinator, category_figures
 from .sources import (
     EnergyInterfaceError,
     async_get_energy_setup,
@@ -193,19 +189,14 @@ async def async_figures(
                     },
                     # Without a comparison there is no saving, only its own figures.
                     **(
-                        {
-                            "saving": [saving_statistic_id(category)],
-                            **{
-                                figure: [category_statistic_id(category, figure)]
-                                for figure in CATEGORY_FIGURES[category]
-                            },
-                        }
+                        {"saving": [saving_statistic_id(category)]}
                         if config.is_compared
-                        else {
-                            figure: [category_statistic_id(category, figure)]
-                            for figure in UNCOMPARED_FIGURES[category]
-                        }
+                        else {}
                     ),
+                    **{
+                        figure: [category_statistic_id(category, figure)]
+                        for figure in category_figures(config)
+                    },
                     **(
                         {"heat_meters": list(config.heat_meters)}
                         if config.heat_meters
