@@ -130,7 +130,9 @@ household needs it.
    electricity bill. It is billed by the day, as suppliers do: twelve months
    over 365 days, whatever the month, so a bill from the 12th to the 11th
    matches. It is added to the grid costs. The first value applies from the beginning.
-3. **Solar**: since when it counts, and the purchase cost (optional). With a
+3. **Solar**: since when it counts, and the purchase cost (optional) of all
+   solar panels in the energy dashboard, a balcony plant too: the solar area
+   counts them all. With a
    battery in the energy dashboard, its purchase cost too (optional), for its
    own payback; the solar payback counts both, so enter the plant's cost
    without the battery. With Germany as the country in Home Assistant, also
@@ -275,8 +277,8 @@ statistics.
 ### Economics
 
 The card finds the areas by itself and is built like the totals table of Home
-Assistant's energy dashboard: one row per area with what it saves per year on
-average, what it has saved, its investment, and its balance, then a row with
+Assistant's energy dashboard: one row per area with what it saved in the last
+twelve months, what it has saved, its investment, and its balance, then a row with
 the totals. Above the table a sentence says how much of all investments is
 paid back and, once there are yearly savings, in about how long everything is
 in the plus. Below solar a quieter row shows its battery's part. Without any
@@ -566,9 +568,9 @@ show.
 | Entity | Description |
 |---|---|
 | Saving | Total saving since counting began, in your currency. Its history is the statistic *electricity_lens:pv_saving*, *…heat_pump_saving*, or *…wallbox_saving* (named after the sensor), including the computed past; you can pick it in Home Assistant's statistics cards. Its attributes show the statistic's id, since when it counts, the investment, the saving minus the investment, from when yearly figures exist, the gas, oil, or fuel price in effect now, and for the heat pump the former heating and whether heat was partly estimated. The solar's has its battery's part, with its saving, investment, yearly saving, payback, years left, and since when it counts, and its self-consumption bonus, with its saving and yearly saving. |
-| Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the yearly average. |
-| Saving per year | Average saving per year. Unknown before twelve months of data. |
-| Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins. Its attributes show how far the saving has gone beyond the investment. |
+| Paid back | Share of the investment the saving has covered, in percent. Unknown without an investment. Its attributes show the investment and the years left at the saving per year. |
+| Saving per year | What the last twelve months saved: each season once, and a plant that grew, a new battery, or a new tariff counts as it is now. Unknown before twelve months of data. |
+| Return per year | Internal rate of return so far, in percent per year: the investment at the start of counting, the saving evenly over the years since, and no value left at the end. Zero when the saving has just covered the investment, and unknown before that or without an investment. It leaves out maintenance, and it comes out too high for a plant bought before the data begins and too low for one that grew later. Its attributes show how far the saving has gone beyond the investment. |
 | Solar left today, Solar tomorrow | The solar forecast in kWh for the rest of today and for tomorrow over all forecasts of the energy dashboard, updated every 15 minutes. Only with a forecast in the energy dashboard. Their attributes show the best solar day of the last twelve months, the scale of the dashboard's gauges, and whether the data covers all twelve months. |
 | Balance | All savings minus all investments. Unknown while any category is calculating or has no data yet. Its attributes show all savings, all investments, the yearly savings, the share of all investments the savings have covered, the years until they cover them at the yearly savings, and, while the past is computed, how far it is in percent. |
 

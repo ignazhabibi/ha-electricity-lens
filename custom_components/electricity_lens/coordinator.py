@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
-from collections.abc import Callable, Collection, Iterable, Iterator
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from copy import deepcopy
 from datetime import date, timedelta
 from time import time
@@ -34,6 +34,7 @@ from .calculation import (
     LEVEL_CHEAP,
     LEVEL_EXPENSIVE,
     NORMAL_SPAN,
+    YEAR,
     BatteryFlows,
     GridPrices,
     average_price,
@@ -96,6 +97,7 @@ from .sources import (
     EnergySetup,
     GridSource,
     async_best_day,
+    async_change,
     async_end_of_data,
     async_first_hour,
     async_get_energy_setup,
@@ -163,6 +165,8 @@ UNCOMPARED_FIGURES: dict[str, tuple[str, ...]] = {
     CATEGORY_HEAT_PUMP: ("heat",),
     CATEGORY_WALLBOX: (),
 }
+# The figures with a saving per year: the saving, and the PV plant's parts.
+SAVINGS = ("saving", "battery_saving", "bonus_saving")
 
 
 def category_figures(config: CategoryConfig) -> tuple[str, ...]:
@@ -356,6 +360,9 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
         self.setup: EnergySetup | None = None
         """The energy dashboard as of the last update."""
         self._without_data: set[str] = set()
+        # What each category saved in the twelve months before its next hour,
+        # by figure: its saving per year.
+        self._last_year: dict[str, tuple[float, dict[str, float]]] = {}
         self.forecast: tuple[float, float] | None = None
         """The solar forecast in kWh for the rest of today and for tomorrow."""
         self.forecast_sensors = False
@@ -485,7 +492,43 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
             _LOGGER.debug("Computed the past in %.0f s", time() - started)
         await async_wait_recorder(self.hass)
         await self._async_save()
+        await self._async_update_last_year()
         return self._results()
+
+    async def _async_update_last_year(self) -> None:
+        """Read what each category saved in the twelve months before its next hour.
+
+        From its own statistics: the saving, and the PV plant's parts of it.
+        """
+        for subentry_id, config in self.configs.items():
+            state = self.states[subentry_id]
+            until = state.next_hour
+            if (
+                until is None
+                or state.data_start is None
+                or state.computing_past
+                or until - YEAR < _ceil_hour(state.data_start)
+            ):
+                continue
+            changes: dict[str, float] = {}
+            for figure in self._written_figures(config):
+                if figure not in SAVINGS:
+                    continue
+                change = await async_change(
+                    self.hass,
+                    category_statistic_id(config.category, figure),
+                    until - YEAR,
+                    until,
+                )
+                if change is not None:
+                    changes[figure] = change
+            self._last_year[subentry_id] = (until, changes)
+
+    def _last_year_of(self, subentry_id: str, until: float) -> dict[str, float]:
+        """Return what a category saved in the twelve months before until, by figure."""
+        if (read := self._last_year.get(subentry_id)) is None or read[0] != until:
+            return {}
+        return read[1]
 
     def _issue(
         self,
@@ -1355,11 +1398,13 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 )
                 continue
             counting_since = _ceil_hour(state.data_start)
+            last_year = self._last_year_of(subentry_id, state.next_hour)
             summary = summarize(
                 saving=state.saving,
                 counting_since=counting_since,
                 until=state.next_hour,
                 investment=config.total_investment,
+                last_year=last_year.get("saving"),
             )
             results[subentry_id] = CategoryResult(
                 calculating=False,
@@ -1371,8 +1416,8 @@ class ElectricityLensCoordinator(DataUpdateCoordinator[PaybackData]):
                 counting_since=dt_util.utc_from_timestamp(counting_since),
                 yearly_from=dt_util.utc_from_timestamp(summary.yearly_from),
                 heat_estimated=state.estimated if is_heat_pump else None,
-                battery=_battery_result(config, state),
-                bonus=_bonus_result(config, state, counting_since),
+                battery=_battery_result(config, state, last_year),
+                bonus=_bonus_result(config, state, counting_since, last_year),
                 **base,
             )
         return PaybackData(results)
@@ -1432,7 +1477,7 @@ def _grid_sums(hass: HomeAssistant, grid: GridSource) -> set[str]:
 
 
 def _battery_result(
-    config: CategoryConfig, state: CategoryState
+    config: CategoryConfig, state: CategoryState, last_year: Mapping[str, float]
 ) -> BatteryResult | None:
     """Return the battery's part of the PV plant, counted from its first hour."""
     if (
@@ -1447,6 +1492,7 @@ def _battery_result(
         counting_since=state.battery_start,
         until=state.next_hour,
         investment=config.battery_investment,
+        last_year=last_year.get("battery_saving"),
     )
     return BatteryResult(
         saving=saving,
@@ -1475,7 +1521,10 @@ def _bonus_at(config: CategoryConfig, hour: float) -> float:
 
 
 def _bonus_result(
-    config: CategoryConfig, state: CategoryState, counting_since: float
+    config: CategoryConfig,
+    state: CategoryState,
+    counting_since: float,
+    last_year: Mapping[str, float],
 ) -> BonusResult | None:
     """Return the self-consumption bonus's part of the PV plant's saving."""
     if config.category != CATEGORY_PV or not config.bonus or state.next_hour is None:
@@ -1486,6 +1535,7 @@ def _bonus_result(
         counting_since=counting_since,
         until=state.next_hour,
         investment=None,
+        last_year=last_year.get("bonus_saving"),
     )
     return BonusResult(saving=saving, per_year=summary.per_year)
 

@@ -46,7 +46,7 @@
           "self_consumption_bonus_until": "Gezahlt bis (optional)"
         },
         "data_description": {
-          "investment": "Für die Amortisation",
+          "investment": "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
           "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
           "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
           "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
@@ -62,7 +62,7 @@
           "self_consumption_bonus_until": "Gezahlt bis (optional)"
         },
         "data_description": {
-          "investment": "Für die Amortisation",
+          "investment": "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
           "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
           "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
           "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
@@ -502,7 +502,7 @@
             "self_consumption_bonus_until": "Gezahlt bis (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation",
+            "investment": "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
             "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
             "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
             "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
@@ -518,7 +518,7 @@
             "self_consumption_bonus_until": "Gezahlt bis (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation",
+            "investment": "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
             "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",
             "self_consumption_bonus": "Nur für Anlagen nach EEG 2009: was der Netzbetreiber je selbst verbrauchter kWh zahlt",
             "self_consumption_bonus_until": "Der letzte Tag, meist der 31.12. im 20. Jahr nach der Inbetriebnahme"
@@ -539,7 +539,7 @@
             "battery_investment": "Anschaffungskosten der Batterie (optional)"
           },
           "data_description": {
-            "investment": "Für die Amortisation",
+            "investment": "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
             "battery_investment": "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie"
           }
         },

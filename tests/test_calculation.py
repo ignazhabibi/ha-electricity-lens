@@ -225,31 +225,56 @@ def test_effective_meters() -> None:
 
 
 def test_summarize() -> None:
-    """No yearly average before twelve months, no payback without investment."""
-    early = summarize(saving=100, counting_since=0, until=100 * DAY, investment=1000)
+    """The saving per year is the last twelve months', none before them."""
+    early = summarize(
+        saving=100, counting_since=0, until=100 * DAY, investment=1000, last_year=100
+    )
     assert early.per_year is None
     assert early.payback == pytest.approx(10)
     assert early.yearly_from == YEAR
 
-    later = summarize(saving=3000, counting_since=0, until=2 * YEAR, investment=None)
-    assert later.per_year == pytest.approx(1500)
+    later = summarize(
+        saving=3000, counting_since=0, until=2 * YEAR, investment=None, last_year=1800
+    )
+    assert later.per_year == pytest.approx(1800)
     assert later.payback is None
+
+    # Without the last twelve months, there is no saving per year.
+    unread = summarize(
+        saving=3000, counting_since=0, until=2 * YEAR, investment=None, last_year=None
+    )
+    assert unread.per_year is None
 
 
 def test_payback_figures() -> None:
-    """Years left until paid back, the return from then on."""
-    paying = summarize(saving=2000, counting_since=0, until=2 * YEAR, investment=5000)
+    """Years left at the last twelve months' saving, the return once paid back."""
+    paying = summarize(
+        saving=2000, counting_since=0, until=2 * YEAR, investment=5000, last_year=1000
+    )
     assert paying.years_left == pytest.approx(3)
     assert paying.annual_return is None
 
+    # A plant that grew: the last twelve months count, not the years before.
+    grown = summarize(
+        saving=2000, counting_since=0, until=3 * YEAR, investment=8000, last_year=1500
+    )
+    assert grown.per_year == pytest.approx(1500)
+    assert grown.years_left == pytest.approx(4)
+
     paid = summarize(
-        saving=24349, counting_since=0, until=10 * YEAR, investment=12174.5
+        saving=24349,
+        counting_since=0,
+        until=10 * YEAR,
+        investment=12174.5,
+        last_year=2435,
     )
     assert paid.years_left is None
     assert paid.annual_return == pytest.approx(17.28, abs=0.01)
 
-    # Before twelve months there is no average to go on.
-    early = summarize(saving=100, counting_since=0, until=100 * DAY, investment=1000)
+    # Before twelve months there is no saving per year to go on.
+    early = summarize(
+        saving=100, counting_since=0, until=100 * DAY, investment=1000, last_year=100
+    )
     assert early.years_left is None
 
 

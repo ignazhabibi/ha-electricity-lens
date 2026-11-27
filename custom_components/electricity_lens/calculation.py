@@ -727,11 +727,11 @@ class Summary:
     payback: float | None
     """Share of the investment the savings have covered, in percent."""
     per_year: float | None
-    """Average saving per year, once there are twelve months of data."""
+    """The saving of the last twelve months, once there are twelve months of data."""
     yearly_from: float
     """When the yearly average becomes available."""
     years_left: float | None
-    """Years until the investment is covered, at the yearly average."""
+    """Years until the investment is covered, at the saving per year."""
     annual_return: float | None
     """Internal rate of return so far, in percent per year, once paid back."""
 
@@ -769,13 +769,18 @@ def summarize(
     counting_since: float,
     until: float,
     investment: float | None,
+    last_year: float | None,
 ) -> Summary:
-    """Return payback figures, leaving out what the data cannot support."""
+    """Return payback figures, leaving out what the data cannot support.
+
+    last_year is what was saved in the twelve months before until. It is the
+    saving per year: an average since counting began would mix in seasons
+    twice or not at all, and the time before a plant grew, a battery came, or
+    a tariff changed.
+    """
     yearly_from = counting_since + YEAR
     years = (until - counting_since) / YEAR
-    per_year = None
-    if until >= yearly_from:
-        per_year = saving / years
+    per_year = last_year if until >= yearly_from else None
     payback = None
     years_left = None
     annual_return = None

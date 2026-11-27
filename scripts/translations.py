@@ -127,7 +127,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "recompute": "Recompute",
         },
         "fields": {
-            "investment": ("Purchase cost (optional)", "For the payback"),
+            "investment": (
+                "Purchase cost (optional)",
+                "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
+            ),
             "battery_investment": (
                 "Battery purchase cost (optional)",
                 "For the battery's own payback. Solar's counts both, so leave the battery out above",
@@ -468,7 +471,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "recompute": "Neu berechnen",
         },
         "fields": {
-            "investment": ("Anschaffungskosten (optional)", "Für die Amortisation"),
+            "investment": (
+                "Anschaffungskosten (optional)",
+                "Für die Amortisation. Aller PV-Anlagen im Energie-Dashboard, auch eines Balkonkraftwerks",
+            ),
             "battery_investment": (
                 "Anschaffungskosten der Batterie (optional)",
                 "Für die eigene Amortisation der Batterie. Die der PV-Anlage zählt beides, also oben ohne Batterie",

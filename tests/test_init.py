@@ -27,7 +27,7 @@ from pytest_homeassistant.components.recorder.common import (
 )
 
 from custom_components.electricity_lens import coordinator as coordinator_module
-from custom_components.electricity_lens.calculation import HOUR
+from custom_components.electricity_lens.calculation import HOUR, YEAR
 from custom_components.electricity_lens.const import DOMAIN, SIGNAL_ENERGY_PREFS_UPDATED
 from custom_components.electricity_lens.coordinator import ElectricityLensCoordinator
 from custom_components.electricity_lens.models import CategoryConfig, CategoryState
@@ -133,6 +133,47 @@ async def test_savings(hass: HomeAssistant, config_entry: MockConfigEntry) -> No
     assert balance.attributes["per_year"] is None
     assert balance.attributes["payback"] == pytest.approx(total / 19000 * 100)
     assert balance.attributes["years_left"] is None
+
+
+@pytest.mark.usefixtures("energy")
+async def test_saving_per_year(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """The saving per year is what the last twelve months saved.
+
+    A PV plant that grew saves more now than on average since counting began,
+    so the years left follow from the last twelve months.
+    """
+    await setup_entry(hass, config_entry)
+    coordinator: ElectricityLensCoordinator = config_entry.runtime_data
+    state = coordinator.states[_subentry(config_entry, "pv").subentry_id]
+    until = state.next_hour
+    assert until is not None
+    # The PV plant has counted for two years, the others for two days.
+    state.data_start = until - 2 * YEAR
+    asked: list[tuple[str, float, float]] = []
+
+    async def change(
+        _hass: HomeAssistant, statistic_id: str, start: float, end: float
+    ) -> float | None:
+        asked.append((statistic_id, start, end))
+        return {"electricity_lens:pv_saving": 1650.0}.get(statistic_id)
+
+    with patch.object(
+        coordinator_module, "async_change", AsyncMock(side_effect=change)
+    ):
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    assert asked == [("electricity_lens:pv_saving", until - YEAR, until)]
+    assert float(_state(hass, "sensor.solar_saving_per_year").state) == 1650
+    saving = float(_state(hass, "sensor.solar_saving").state)
+    paid_back = _state(hass, "sensor.solar_paid_back")
+    assert paid_back.attributes["years_left"] == pytest.approx((10000 - saving) / 1650)
+    assert _state(hass, "sensor.heat_pump_saving_per_year").state == "unknown"
+    # Not every area has a saving per year yet, so the balance has none.
+    balance = _state(hass, "sensor.electricity_lens_balance")
+    assert balance.attributes["per_year"] is None
 
 
 @pytest.mark.usefixtures("energy")
