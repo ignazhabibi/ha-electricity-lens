@@ -24,6 +24,7 @@ from custom_components.electricity_lens.sources import (
     EnergySetup,
     GridSource,
     async_best_day,
+    async_change,
     async_end_of_data,
     async_first_hour,
     async_get_energy_setup,
@@ -272,6 +273,11 @@ async def test_statistics(hass: HomeAssistant, data_start: datetime) -> None:
     assert await async_first_hour(hass, ["sensor.meter"]) == start + 2 * 3600
     assert await async_end_of_data(hass, "sensor.none") is None
     assert await async_end_of_data(hass, "sensor.meter") == start + 5 * 3600
+
+    # How much a statistic grew in a period: its hours 3 and 4 added 1 and 2.
+    assert await async_change(hass, "sensor.meter", start + 3 * 3600, end) == 3.0
+    assert await async_change(hass, "sensor.meter", start + 4 * 3600, end) == 2.0
+    assert await async_change(hass, "sensor.none", start, end) is None
 
 
 async def test_best_day_adds_up_the_statistics_per_day(hass: HomeAssistant) -> None:

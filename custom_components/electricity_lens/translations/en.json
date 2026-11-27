@@ -46,7 +46,7 @@
           "self_consumption_bonus_until": "Paid until (optional)"
         },
         "data_description": {
-          "investment": "For the payback",
+          "investment": "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
           "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
           "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
           "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
@@ -62,7 +62,7 @@
           "self_consumption_bonus_until": "Paid until (optional)"
         },
         "data_description": {
-          "investment": "For the payback",
+          "investment": "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
           "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
           "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
           "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
@@ -502,7 +502,7 @@
             "self_consumption_bonus_until": "Paid until (optional)"
           },
           "data_description": {
-            "investment": "For the payback",
+            "investment": "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
             "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
             "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
             "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
@@ -518,7 +518,7 @@
             "self_consumption_bonus_until": "Paid until (optional)"
           },
           "data_description": {
-            "investment": "For the payback",
+            "investment": "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
             "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above",
             "self_consumption_bonus": "Only for German plants under EEG 2009: what the grid operator pays per kWh used on site",
             "self_consumption_bonus_until": "Its last day, usually 31 December of the 20th year after commissioning"
@@ -539,7 +539,7 @@
             "battery_investment": "Battery purchase cost (optional)"
           },
           "data_description": {
-            "investment": "For the payback",
+            "investment": "For the payback. Of all solar panels in the energy dashboard, a balcony plant too",
             "battery_investment": "For the battery's own payback. Solar's counts both, so leave the battery out above"
           }
         },

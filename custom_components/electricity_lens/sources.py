@@ -24,6 +24,7 @@ from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     get_metadata,
+    statistic_during_period,
     statistics_during_period,
 )
 from homeassistant.core import HomeAssistant
@@ -586,6 +587,23 @@ async def async_first_hour(
     )
     first = [rows[0]["start"] for rows in hours.values() if rows]  # pyright: ignore[reportTypedDictNotRequiredAccess]
     return float(min(first)) if first else float(min(starts))
+
+
+async def async_change(
+    hass: HomeAssistant, stat_id: str, start: float, end: float
+) -> float | None:
+    """Return how much a sum statistic grew from start to end, if it exists."""
+    result = await get_instance(hass).async_add_executor_job(
+        statistic_during_period,
+        hass,
+        dt_util.utc_from_timestamp(start),
+        dt_util.utc_from_timestamp(end),
+        stat_id,
+        {"change"},
+        None,
+    )
+    change = result.get("change")
+    return None if change is None else float(change)
 
 
 async def async_end_of_data(hass: HomeAssistant, stat_id: str) -> float | None:
